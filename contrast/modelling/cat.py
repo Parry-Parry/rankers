@@ -14,10 +14,9 @@ class Cat(PreTrainedModel):
         sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
-        if labels is None:
-            output = loss(logits)
-        else:
-            output = loss(logits, labels)
+
+        if labels is None: output = loss(logits)
+        else: output = loss(logits, labels)
         return output
 
     def save_pretrained(self, model_dir):
@@ -30,8 +29,8 @@ class Cat(PreTrainedModel):
         return self.classifier.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name):
+    def from_pretrained(cls, model_dir_or_name, num_labels=2):
         """Load classifier from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
-        classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=2)
+        classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
         return cls(classifier, config)

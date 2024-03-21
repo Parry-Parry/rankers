@@ -1,16 +1,21 @@
-from transformers import PreTrainedModel, AutoModel, AutoConfig
+from transformers import PreTrainedModel, AutoModel, PretrainedConfig
+
+# TODO: Fix the dotconfig
+
+class DotConfig(PretrainedConfig):
+    def __init__(self, model_name_or_path : str , mode='cls', **kwargs):
+        super().__init__(model_name_or_path, **kwargs)
+        self.mode = mode
 
 class Dot(PreTrainedModel):
     def __init__(
         self,
         encoder: PreTrainedModel,
-        config: AutoConfig,
-        mode : int = 'cls'
+        config: DotConfig,
     ):
         super().__init__(config)
         self.encoder = encoder
-    
-        self.agg = lambda x: x.mean(dim=1) if mode == 'cls' else x[:,0,:]
+        self.agg = lambda x: x.mean(dim=1) if config.mode == 'mean' else x[:,0,:]
     
     def encode(self, **text):
         return self.agg(self.encoder(**text)[0])
@@ -38,8 +43,8 @@ class Dot(PreTrainedModel):
         return self.encoder.load_state_dict(AutoModel.from_pretrained(model_dir).state_dict())
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name):
+    def from_pretrained(cls, model_dir_or_name, mode='cls'):
         """Load encoder from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name)
+        config = DotConfig.from_pretrained(model_dir_or_name)
         encoder = AutoModel.from_pretrained(model_dir_or_name)
         return cls(encoder, config)

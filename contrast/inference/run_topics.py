@@ -8,6 +8,7 @@ if not pt.started():
 from contrast.inference import LOAD_FUNCS
 
 def topics():
+    pass
 
 if __name__ == "__main__":
     Fire(topics)
