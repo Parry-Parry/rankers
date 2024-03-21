@@ -35,7 +35,7 @@ def get_teacher_scores(model : pt.Transformer,
                        corpus : Optional[pd.DataFrame] = None, 
                        ir_dataset : Optional[str] = None, 
                        subset : Optional[int] = None, 
-                       negatives = Optional[dict] = None):
+                       negatives : Optional[dict] = None):
         assert corpus is not None or ir_dataset is not None, "Either corpus or ir_dataset must be provided"
         if corpus:
             for column in ["query", "text"]: assert column in corpus.columns, f"{column} not found in corpus"
@@ -53,8 +53,7 @@ def get_teacher_scores(model : pt.Transformer,
                 corpus = corpus.sample(n=subset, random_state=SEED)
 
         logger.warning("Retrieving scores, this may take a while...")
-        scores = model.transform(corpus['query'], corpus['text'])
-
+        scores = model.transform(corpus)
         return scores
 
 def initialise_triples(dataset : irds.Dataset):

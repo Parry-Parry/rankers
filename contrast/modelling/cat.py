@@ -29,7 +29,7 @@ class Cat(PreTrainedModel):
         return self.classifier.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name, num_labels=2):
+    def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
         """Load classifier from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
         classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)

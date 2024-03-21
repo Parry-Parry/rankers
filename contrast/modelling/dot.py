@@ -3,9 +3,11 @@ from transformers import PreTrainedModel, AutoModel, PretrainedConfig
 # TODO: Fix the dotconfig
 
 class DotConfig(PretrainedConfig):
+    model_type = "dot"
     def __init__(self, model_name_or_path : str , mode='cls', **kwargs):
-        super().__init__(model_name_or_path, **kwargs)
         self.mode = mode
+        super().__init__(model_name_or_path, **kwargs)
+        
 
 class Dot(PreTrainedModel):
     def __init__(
@@ -15,10 +17,10 @@ class Dot(PreTrainedModel):
     ):
         super().__init__(config)
         self.encoder = encoder
-        self.agg = lambda x: x.mean(dim=1) if config.mode == 'mean' else x[:,0,:]
+        self.pooling = lambda x: x.mean(dim=1) if config.mode == 'mean' else x[:,0,:]
     
     def encode(self, **text):
-        return self.agg(self.encoder(**text)[0])
+        return self.pooling(self.encoder(**text)[0])
 
     def forward(self, loss, queries, docs_batch, labels=None):
         """Compute the loss given (queries, docs, labels)"""

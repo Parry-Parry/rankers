@@ -1,5 +1,3 @@
-
-
 __version__ = "0.0.1"
 
 def seed_everything(seed=42):
