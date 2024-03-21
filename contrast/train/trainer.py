@@ -1,8 +1,12 @@
 import torch
+from torch import nn
 import os
 import logging
 from collections import defaultdict
 from transformers import Trainer
+from ..modelling.cat import Cat 
+from ..modelling.dot import Dot
+from .loss import catLoss, dotLoss
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +17,12 @@ class ConstrastTrainer(Trainer):
 
     def __init__(self, *args, loss=None, **kwargs) -> None:
         super(ConstrastTrainer, self).__init__(*args, **kwargs)
-        self.loss = loss
+        if isinstance(loss, nn.Module): self.loss = loss
+        elif isinstance(self.model, Dot): self.loss = dotLoss(loss, kwargs.get("num_negatives", 1), kwargs.get("margin", 1.0))
+        elif isinstance(self.model, Cat): self.loss = catLoss(loss, kwargs.get("num_negatives", 1), kwargs.get("margin", 1.0))
+        else:
+            logger.warning("Model is not Dot or Cat, defaulting to Dot for loss")
+            self.loss = dotLoss(loss, kwargs.get("num_negatives", 1), kwargs.get("margin", 1.0))
         self.custom_log = defaultdict(lambda: 0.0)
         self.tokenizer = self.data_collator.tokenizer
 

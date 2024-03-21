@@ -20,8 +20,8 @@ def main(triples_file : str,
         early_check : str = 4000,
         rank : int = None,
         fp16 : bool = False,):
+    pass
     
-
-parser = argparse.ArgumentParser(description='Train a contrastive model')
-class ContrastArguments():
-    x = 1
+class ContrastArguments(TrainingArguments):
+    def __init__(self, loss, **kwargs):
+        super().__init__(**kwargs)
