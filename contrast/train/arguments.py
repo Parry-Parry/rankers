@@ -23,3 +23,5 @@ def main(triples_file : str,
     
 
 parser = argparse.ArgumentParser(description='Train a contrastive model')
+class ContrastArguments():
+    x = 1
