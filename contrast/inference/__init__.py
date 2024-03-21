@@ -1,5 +1,20 @@
 import os
 
+class Model:
+    def __init__(self, model_name: str, **kwargs) -> None:
+        self.model_name = model_name
+        self.kwargs = kwargs
+
+    def load(self):
+        if self.model_name not in LOAD_FUNCS:
+            raise ValueError(f"Model {self.model_name} not supported. Supported models are {list(LOAD_FUNCS.keys())}")
+        return LOAD_FUNCS[self.model_name](**self.kwargs)
+
+class ModelHandler(object):
+    def __init__(self) -> None:
+        pass
+        
+
 def load_monot5(checkpoint : str ='castorini/monot5-base-msmarco', batch_size : int = 64, **kwargs):
     from pyterrier_t5 import MonoT5ReRanker 
 
