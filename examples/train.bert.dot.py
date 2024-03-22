@@ -17,6 +17,7 @@ def train(
         output_dir : str,
         train_dataset : str,
         val_dataset : str,
+        val_topics : str,
         batch_size : int = 16,
         lr : float = 0.00001,
         grad_accum : int = 1,
@@ -52,6 +53,7 @@ def train(
     val_logger = ValidationLogger(
         metric = 'ndcg_cut_10',
         ir_dataset = val_dataset,
+        val_topics = val_topics,
     )
 
     trainer = ContrastTrainer(
