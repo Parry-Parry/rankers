@@ -4,7 +4,6 @@ from .train import loss as loss
 from .train.trainer import ConstrastTrainer
 from .train.arguments import ContrastArguments
 from .train.callback import *
-from . import datasets as datasets
 from .inference import models as transformer
 
 def seed_everything(seed=42):

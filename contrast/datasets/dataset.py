@@ -22,11 +22,8 @@ class TripletDataset(Dataset):
         self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
 
-        if self.triples is None:
-            self.triples = initialise_triples(self.ir_dataset)
-        
-        if teacher_file:
-            self.teacher = json.load(open(teacher_file, 'r'))
+        if self.triples is None: self.triples = initialise_triples(self.ir_dataset)
+        if teacher_file: self.teacher = json.load(open(teacher_file, 'r'))
 
         self.labels = True if teacher_file else False
         self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
@@ -41,17 +38,13 @@ class TripletDataset(Dataset):
         query = self.queries[item['qid']]
         texts = [self.docs[item['doc_id_a']]]
 
-        if self.multi_negatives:
-            texts.extend([self.docs[doc] for doc in item['doc_id_b']])
-        else:
-            texts.append(self.docs[item['doc_id_b']])
+        if self.multi_negatives: texts.extend([self.docs[doc] for doc in item['doc_id_b']])
+        else: texts.append(self.docs[item['doc_id_b']])
 
         if self.labels:
             scores = [self.teacher[str(item['qid'])][str(item['doc_id_a'])]]
-            if self.multi_negatives:
-                scores.extend([self.teacher[str(item['qid'])][str(doc)] for doc in item['doc_id_b']])
-            else:
-                scores.append(self.teacher[str(item['qid'])][str(item['doc_id_b'])])
+            if self.multi_negatives: scores.extend([self.teacher[str(item['qid'])][str(doc)] for doc in item['doc_id_b']])
+            else: scores.append(self.teacher[str(item['qid'])][str(item['doc_id_b'])])
             return (query, texts, scores)
         else:
             return (query, texts)
