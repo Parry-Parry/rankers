@@ -51,6 +51,6 @@ class Dot(PreTrainedModel):
     @classmethod
     def from_pretrained(cls, model_dir_or_name, mode='cls'):
         """Load encoder from a directory"""
-        config = DotConfig.from_pretrained(model_dir_or_name)
+        config = DotConfig.from_pretrained(mode, model_dir_or_name)
         encoder = AutoModel.from_pretrained(model_dir_or_name)
         return cls(encoder, config)

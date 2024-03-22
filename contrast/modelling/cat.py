@@ -28,6 +28,9 @@ class Cat(PreTrainedModel):
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         return self.classifier.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
+    
+    def eval(self) -> CatTransformer:
+        return CatTransformer.from_model(self.encoder, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
@@ -35,6 +38,3 @@ class Cat(PreTrainedModel):
         config = AutoConfig.from_pretrained(model_dir_or_name)
         classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
         return cls(classifier, config)
-    
-    def eval(self) -> CatTransformer:
-        return CatTransformer.from_model(self.encoder, text_field='text')
