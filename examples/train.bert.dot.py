@@ -34,7 +34,6 @@ def train(
 
     model = Dot.from_pretrained(model_name_or_path)
     args = ContrastArguments(
-        loss_fn = contrast.loss.Contrastive,
         output_dir = output_dir,
         per_device_train_batch_size = batch_size,
         gradient_accumulation_steps = grad_accum,
