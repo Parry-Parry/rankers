@@ -62,7 +62,7 @@ def train(
         train_dataset=dataset,
         data_collator=collate_fn,
         optimizers=(opt, get_constant_schedule_with_warmup(opt, warmup_steps)),
-        loss_fn = contrast.loss.Contrastive,
+        loss_fn = contrast.loss.ContrastiveLoss,
         callbacks=[val_logger],
         )
     
