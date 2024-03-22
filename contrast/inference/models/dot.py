@@ -8,6 +8,11 @@ import pandas as pd
 import numpy as np
 from more_itertools import chunked
 from ...modelling.dot import DotConfig
+from enum import Enum
+
+class PoolingType(Enum):
+    MEAN = 'mean'
+    CLS = 'cls'
 
 class DotTransformer(pt.Transformer):
     def __init__(self, model : PreTrainedModel, tokenizer : PreTrainedTokenizer, config : DotConfig, batch_size : int, text_field : str = 'text', device : Union[str, torch.device] = None) -> None:
@@ -18,14 +23,30 @@ class DotTransformer(pt.Transformer):
         self.config = config
         self.batch_size = batch_size
         self.text_field = text_field
-        self.pooling = lambda x: x.mean(dim=1) if config.pooling == 'mean' else x[:,0,:]
-    
+        self.pooling = self._mean if config.mode == PoolingType.MEAN else self._cls
+
     @classmethod
-    def from_pretrained(cls, model_name_or_path : str, batch_size : int = 64, pooling : str = 'cls', text_field : str = 'text', device : Union[str, torch.device] = None):
+    def from_pretrained(cls, 
+                        model_name_or_path : str, 
+                        batch_size : int = 64, 
+                        pooling : str = 'cls', 
+                        text_field : str = 'text', 
+                        device : Union[str, torch.device] = None):
         model = AutoModel.from_pretrained(model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = DotConfig.from_pretrained(pooling, model_name_or_path)
         return cls(model, tokenizer, config, batch_size, pooling, text_field, device)
+    
+    @classmethod 
+    def from_model(cls, 
+                   model : PreTrainedModel, 
+                   batch_size : int = 64, 
+                   pooling : str = 'cls',
+                   text_field : str = 'text', 
+                   ): 
+        tokenizer = AutoTokenizer.from_pretrained(model.config)
+        config = DotConfig.from_pretrained(pooling, model.config) # TODO: Make sure this is correct
+        return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
         return x[:,0,:]

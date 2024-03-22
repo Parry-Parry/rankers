@@ -1,5 +1,7 @@
 import argparse
 from transformers import TrainingArguments
+from typing import Union
+import torch.nn as nn
 
 def main(triples_file : str, 
         teacher_file : str,
@@ -23,5 +25,14 @@ def main(triples_file : str,
     pass
     
 class ContrastArguments(TrainingArguments):
-    def __init__(self, loss, **kwargs):
+    def __init__(self, 
+                 loss_fn : Union[nn.Module, callable], 
+                 mode : str, 
+                 num_negatives : int = 1,
+                 margin : int = 1,
+                 **kwargs):
+        self.loss_fn = loss_fn
+        self.mode = mode
+        self.num_negatives = num_negatives
+        self.margin = margin
         super().__init__(**kwargs)

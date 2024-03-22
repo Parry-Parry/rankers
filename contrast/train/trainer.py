@@ -50,12 +50,12 @@ class ConstrastTrainer(Trainer):
         super()._load_optimizer_and_scheduler(checkpoint)
         if checkpoint is None:
             return
-        if os.path.join(checkpoint, LOSS_NAME):
+        if os.path.exists(os.path.join(checkpoint, LOSS_NAME)):
             self.loss.load_state_dict(torch.load(os.path.join(checkpoint, LOSS_NAME)))
 
     def compute_loss(self, model, inputs, return_outputs=False):
         loss_outputs = model(self.loss, **inputs)
-        for log_metric in loss_outputs[-1]: self.customed_log[log_metric] += loss_outputs[-1][log_metric]
+        for log_metric in loss_outputs[-1]: self.custom_log[log_metric] += loss_outputs[-1][log_metric]
 
         components = loss_outputs[:-1]
         loss = components[0] if len(components)==1 else sum(components)

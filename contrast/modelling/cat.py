@@ -1,4 +1,5 @@
 from transformers import PreTrainedModel, AutoModelForSequenceClassification, AutoConfig
+from ..inference.models import CatTransformer
 
 class Cat(PreTrainedModel):
     def __init__(
@@ -34,3 +35,6 @@ class Cat(PreTrainedModel):
         config = AutoConfig.from_pretrained(model_dir_or_name)
         classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
         return cls(classifier, config)
+    
+    def eval(self) -> CatTransformer:
+        return CatTransformer.from_model(self.encoder, text_field='text')

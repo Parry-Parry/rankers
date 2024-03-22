@@ -1,4 +1,5 @@
 from transformers import PreTrainedModel, AutoModel, PretrainedConfig
+from ..inference.models import DotTransformer
 
 # TODO: Fix the dotconfig
 
@@ -43,6 +44,9 @@ class Dot(PreTrainedModel):
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         return self.encoder.load_state_dict(AutoModel.from_pretrained(model_dir).state_dict())
+    
+    def eval(self) -> DotTransformer:
+        return DotTransformer.from_model(self.encoder, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name, mode='cls'):

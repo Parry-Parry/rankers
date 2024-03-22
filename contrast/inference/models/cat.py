@@ -36,6 +36,16 @@ class CatTransformer(pt.Transformer):
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device)
+
+    @classmethod 
+    def from_model(cls, 
+                   model : PreTrainedModel, 
+                   batch_size : int = 64, 
+                   text_field : str = 'text', 
+                   ): 
+        tokenizer = AutoTokenizer.from_pretrained(model.config)
+        config = AutoConfig.from_pretrained(model.config)
+        return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
         scores = []
@@ -69,6 +79,16 @@ class DuoTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    @classmethod 
+    def from_model(cls, 
+                   model : PreTrainedModel, 
+                   batch_size : int = 64, 
+                   text_field : str = 'text', 
+                   ): 
+        tokenizer = AutoTokenizer.from_pretrained(model.config)
+        config = AutoConfig.from_pretrained(model.config)
+        return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     @classmethod
     def from_pretrained(cls, 
