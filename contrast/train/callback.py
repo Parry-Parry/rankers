@@ -1,4 +1,4 @@
-from transformers import TrainerCallback
+from transformers import TrainerCallback, WandbCallback
 import ir_measures
 import numpy as np
 import ir_datasets as irds
@@ -71,6 +71,22 @@ class EarlyStopping(object):
         return self.step(value), value
 
 class EarlyStopping(TrainerCallback):
+
+    """
+    EarlyStopping
+
+    Args:
+        metric (str): ir_datasets metric
+        val_topics (pd.DataFrame): Terrier style topics
+        ir_dataset (str): ir_datasets dataset for text lookup
+        early_check (int): Check every n steps
+        min_train_steps (int): Minimum number of training steps
+        mode (str): min or max
+        min_delta (int): Minimum change to be considered an improvement
+        patience (int): Number of steps to wait before stopping
+        percentage (bool): Use percentage change
+    """    
+
     def __init__(self, 
                  metric : str, 
                  val_topics : pd.DataFrame, 
@@ -109,13 +125,22 @@ class EarlyStopping(TrainerCallback):
             if stop: control.should_training_stop = True  # Stop training
             state.log_metrics = {self.metric: value}
 
-class EvaluationLogger(TrainerCallback):
+class ValidationLogger(WandbCallback):
+    """
+    ValidationLogger
+
+    Args:
+        metric (str): ir_datasets metric
+        val_topics (pd.DataFrame): Terrier style topics
+        ir_dataset (str): ir_datasets dataset for text lookup
+    """
+
     def __init__(self, 
                  metric : str, 
                  val_topics : pd.DataFrame, 
                  ir_dataset : str) -> None:
         super().__init__()
-        self.metric = metric
+        self.metric = f'val_{metric}'
         val_topics = pd.read_csv(val_topics, sep='\t', index_col=False)
         corpus = irds.load(ir_dataset)
         queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
@@ -128,7 +153,7 @@ class EvaluationLogger(TrainerCallback):
         self.val_topics = val_topics
         self.metric = ir_measures.parse_measure(metric)
         self.evaluator = ir_measures.evaluator([self.metric], qrels)
-
+    
     def compute_metric(self, ranks):
         ranks = ranks.copy().rename(columns={'qid': 'query_id', 'docno': 'doc_id'})
         ranks['score'] = ranks['score'].astype(float)
@@ -136,13 +161,10 @@ class EvaluationLogger(TrainerCallback):
         ranks['doc_id'] = ranks['doc_id'].astype(str)
         value = self.evaluator.calc_aggregate(ranks)
         return list(value.values())[0]
-    
-    def on_step_end(self, args, state, control, **kwargs):
-        eval_steps = args.eval_steps
-        global_step = state.global_step
-        if global_step % eval_steps == 0 and args.do_eval:
-            val_model = kwargs['model'].eval()
-            val_model.batch_size = args.per_device_train_batch_size
-            ranks = val_model.transform(self.val_topics)
-            value = self.compute_metric(ranks)
-            state.log_metrics = {self.metric: value}
+
+    def on_evaluate(self, args, state, control, **kwargs):
+        val_model = kwargs['model'].eval()
+        val_model.batch_size = args.per_device_train_batch_size
+        ranks = val_model.transform(self.val_topics)
+        value = self.compute_metric(ranks)
+        self._wandb.log({self.metric: value})

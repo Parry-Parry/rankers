@@ -1,3 +1,5 @@
+from typing import List
+from transformers.trainer_utils import PredictionOutput
 import torch
 from torch import nn
 import os
