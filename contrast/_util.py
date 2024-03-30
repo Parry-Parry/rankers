@@ -3,7 +3,6 @@ from typing import Optional
 import pandas as pd
 import pyterrier as pt
 import ir_datasets as irds
-from contrast import SEED
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,8 @@ def get_teacher_scores(model : pt.Transformer,
                        corpus : Optional[pd.DataFrame] = None, 
                        ir_dataset : Optional[str] = None, 
                        subset : Optional[int] = None, 
-                       negatives : Optional[dict] = None):
+                       negatives : Optional[dict] = None,
+                       seed : int = 42):
         assert corpus is not None or ir_dataset is not None, "Either corpus or ir_dataset must be provided"
         if corpus:
             for column in ["query", "text"]: assert column in corpus.columns, f"{column} not found in corpus"
@@ -50,7 +50,7 @@ def get_teacher_scores(model : pt.Transformer,
             corpus['text'] = corpus['docno'].map(docs)
             corpus['query'] = corpus['qid'].map(queries)
             if subset:
-                corpus = corpus.sample(n=subset, random_state=SEED)
+                corpus = corpus.sample(n=subset, random_state=seed)
 
         logger.warning("Retrieving scores, this may take a while...")
         scores = model.transform(corpus)

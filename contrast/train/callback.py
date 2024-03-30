@@ -91,7 +91,7 @@ class EarlyStopping(TrainerCallback):
                  metric : str, 
                  ir_dataset : str, 
                  val_topics : pd.DataFrame, 
-                 early_check = 4000,
+                 early_check = 10000,
                  min_train_steps = 100000,
                  mode='max', 
                  min_delta=0, 

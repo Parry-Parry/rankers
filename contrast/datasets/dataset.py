@@ -18,6 +18,8 @@ class TripletDataset(Dataset):
                  ) -> None:
         super().__init__()
         self.triples = triples
+        for column in 'qid', 'doc_id_a', 'doc_id_b':
+            if column not in self.triples.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in triples dataframe")
         self.ir_dataset = irds.load(ir_dataset)
         self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()

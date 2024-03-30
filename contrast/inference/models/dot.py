@@ -13,6 +13,7 @@ from enum import Enum
 class PoolingType(Enum):
     MEAN = 'mean'
     CLS = 'cls'
+    LATE_INTERACTION = 'late_interaction'
 
 class DotTransformer(pt.Transformer):
     def __init__(self, model : PreTrainedModel, tokenizer : PreTrainedTokenizer, config : DotConfig, batch_size : int, text_field : str = 'text', device : Union[str, torch.device] = None) -> None:
@@ -23,8 +24,11 @@ class DotTransformer(pt.Transformer):
         self.config = config
         self.batch_size = batch_size
         self.text_field = text_field
-        self.pooling = self._mean if config.mode == PoolingType.MEAN else self._cls
-
+        self.pooling = {
+            PoolingType.MEAN: self._mean,
+            PoolingType.CLS: self._cls,
+            PoolingType.LATE_INTERACTION: self._late_interaction
+        }[config.mode]
     @classmethod
     def from_pretrained(cls, 
                         model_name_or_path : str, 
@@ -45,7 +49,7 @@ class DotTransformer(pt.Transformer):
                    text_field : str = 'text', 
                    ): 
         tokenizer = AutoTokenizer.from_pretrained(model.config)
-        config = DotConfig.from_pretrained(pooling, model.config) # TODO: Make sure this is correct
+        config = DotConfig.from_pretrained(pooling, model.config)
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
@@ -53,6 +57,9 @@ class DotTransformer(pt.Transformer):
     
     def _mean(self, x : torch.Tensor) -> torch.Tensor:
         return x.mean(dim=1)
+    
+    def _late_interaction(self, x : torch.Tensor, mask : torch.Tensor = None) -> torch.Tensor:
+        raise NotImplementedError("Late interaction pooling is not implemented yet, use pyterrier_colbert")
     
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []

@@ -1,14 +1,12 @@
 from transformers import PreTrainedModel, AutoModel, PretrainedConfig
-from ..inference.models import DotTransformer
-
-# TODO: Fix the dotconfig
+import torch
+from ..inference.models import DotTransformer, PoolingType
 
 class DotConfig(PretrainedConfig):
     model_type = "dot"
     def __init__(self, model_name_or_path : str , mode='cls', **kwargs):
         self.mode = mode
         super().__init__(model_name_or_path, **kwargs)
-        
 
 class Dot(PreTrainedModel):
     def __init__(
@@ -18,9 +16,24 @@ class Dot(PreTrainedModel):
     ):
         super().__init__(config)
         self.encoder = encoder
-        self.pooling = lambda x: x.mean(dim=1) if config.mode == 'mean' else x[:,0,:]
+        self.pooling_type = config.mode
+        self.pooling = {
+            PoolingType.MEAN: self._mean,
+            PoolingType.CLS: self._cls,
+            PoolingType.LATE_INTERACTION: self._late_interaction
+        }[config.mode]
     
-    def encode(self, **text):
+    def _cls(self, x : torch.Tensor, **kwargs) -> torch.Tensor:
+        return x[:,0,:]
+    
+    def _mean(self, x : torch.Tensor, **kwargs) -> torch.Tensor:
+        return x.mean(dim=1)
+    
+    def _late_interaction(self, x : torch.Tensor, mask : torch.Tensor = None) -> torch.Tensor:
+        raise NotImplementedError("Late interaction pooling is not implemented yet, use pyterrier_colbert")
+        
+    def encode(self, document : bool = False, **text):
+        if document: return self.pooling(self.encoder(**text)[0])
         return self.pooling(self.encoder(**text)[0])
 
     def forward(self, loss, queries, docs_batch, labels=None):
