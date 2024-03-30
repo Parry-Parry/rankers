@@ -51,7 +51,7 @@ class CatTransformer(pt.Transformer):
         scores = []
         it = inp[['query', self.text_field]].itertuples(index=False)
         if self.verbose:
-            it = pt.tqdm(it, total=len(inp), unit='record', desc='ELECTRA scoring')
+            it = pt.tqdm(it, total=len(inp), unit='record', desc='Cat scoring')
         with torch.no_grad():
             for chunk in chunked(it, self.batch_size):
                 queries, texts = map(list, zip(*chunk))
