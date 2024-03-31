@@ -1,7 +1,7 @@
 import pyterrier as pt
 if not pt.started():
     pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoConfig, AutoModel, AutoTokenizer
+from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModel, AutoTokenizer
 from typing import Union
 import torch
 import pandas as pd
@@ -29,6 +29,7 @@ class DotTransformer(pt.Transformer):
             PoolingType.CLS: self._cls,
             PoolingType.LATE_INTERACTION: self._late_interaction
         }[config.mode]
+
     @classmethod
     def from_pretrained(cls, 
                         model_name_or_path : str, 
