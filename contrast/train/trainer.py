@@ -1,5 +1,3 @@
-from typing import List
-from transformers.trainer_utils import PredictionOutput
 import torch
 from torch import nn
 import os
@@ -19,12 +17,12 @@ class ConstrastTrainer(Trainer):
 
     def __init__(self, *args, loss=None, **kwargs) -> None:
         super(ConstrastTrainer, self).__init__(*args, **kwargs)
-        if isinstance(loss, nn.Module): self.loss = loss
-        elif isinstance(self.model, Dot): self.loss = dotLoss(loss, kwargs.get("num_negatives", 1), kwargs.get("margin", 1.0))
-        elif isinstance(self.model, Cat): self.loss = catLoss(loss, kwargs.get("num_negatives", 1), kwargs.get("margin", 1.0))
+        if isinstance(loss, nn.Module) or loss is None: self.loss = loss
+        elif isinstance(self.model, Dot): self.loss = dotLoss(loss, self.args.num_negatives, self.args.margin)
+        elif isinstance(self.model, Cat): self.loss = catLoss(loss, self.args.num_negatives, self.args.margin)
         else:
             logger.warning("Model is not Dot or Cat, defaulting to Dot for loss")
-            self.loss = dotLoss(loss, kwargs.get("num_negatives", 1), kwargs.get("margin", 1.0))
+            self.loss = dotLoss(loss, self.args.num_negatives, self.args.margin)
         self.custom_log = defaultdict(lambda: 0.0)
         self.tokenizer = self.data_collator.tokenizer
 
@@ -56,12 +54,11 @@ class ConstrastTrainer(Trainer):
             self.loss.load_state_dict(torch.load(os.path.join(checkpoint, LOSS_NAME)))
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        loss_outputs = model(self.loss, **inputs)
-        for log_metric in loss_outputs[-1]: self.custom_log[log_metric] += loss_outputs[-1][log_metric]
-
-        components = loss_outputs[:-1]
-        loss = components[0] if len(components)==1 else sum(components)
-        return loss
+        outputs = model(**inputs) if self.loss is None else model(self.loss, **inputs)
+        to_log = outputs.to_log
+        for log_metric in to_log: self.custom_log[log_metric] += to_log[log_metric]
+        
+        return outputs.loss if not return_outputs else outputs
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
         logger.info("Loading model's weight from %s", resume_from_checkpoint)
