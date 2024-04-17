@@ -70,10 +70,10 @@ class EarlyStopping(object):
         value = self.compute_metric(ranks) 
         return self.step(value), value
 
-class EarlyStopping(TrainerCallback):
+class EarlyStoppingCallback(TrainerCallback):
 
     """
-    EarlyStopping
+    EarlyStoppingCallback
 
     Args:
         metric (str): ir_datasets metric
@@ -99,7 +99,7 @@ class EarlyStopping(TrainerCallback):
                  percentage=False) -> None:
         super().__init__()
         self.metric = metric
-        val_topics = pd.read_csv(val_topics, sep='\t', index_col=False)
+        val_topics = val_topics
         corpus = irds.load(ir_dataset)
         queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
         docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
@@ -125,9 +125,9 @@ class EarlyStopping(TrainerCallback):
             if stop: control.should_training_stop = True  # Stop training
             state.log_metrics = {self.metric: value}
 
-class ValidationLogger(WandbCallback):
+class ValidationLoggerCallback(WandbCallback):
     """
-    ValidationLogger
+    ValidationLoggerCallback
 
     Args:
         metric (str): ir_datasets metric
