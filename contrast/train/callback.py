@@ -92,7 +92,7 @@ class EarlyStoppingCallback(TrainerCallback):
                  ir_dataset : str, 
                  val_topics : pd.DataFrame, 
                  early_check = 10000,
-                 min_train_steps = 100000,
+                 every_n_steps = 100000,
                  mode='max', 
                  min_delta=0, 
                  patience=10, 
@@ -110,13 +110,13 @@ class EarlyStoppingCallback(TrainerCallback):
         del docs
         self.stopping = EarlyStopping(val_topics, metric, qrels, mode, min_delta, patience, percentage)
         self.early_check = early_check
-        self.min_train_steps = min_train_steps
+        self.every_n_steps = every_n_steps
     
     def on_step_end(self, args, state, control, **kwargs):
         global_step = state.global_step
         if (
             global_step % self.early_check == 0
-            and global_step > self.min_train_steps
+            and global_step > self.every_n_steps
         ):  
             val_model = kwargs['model'].eval()
             val_model.batch_size = args.per_device_train_batch_size
