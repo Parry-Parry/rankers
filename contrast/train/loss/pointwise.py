@@ -1,5 +1,5 @@
 from torch import Tensor
 from torch.nn import functional as F
 
-def PointwiseMSELoss(pred : Tensor, labels : Tensor, **kwargs):
-    return F.mse_loss(pred.view(-1), labels.view(-1), reduction='mean')
+def PointwiseMSELoss(pred : Tensor, labels : Tensor, reduction='none', **kwargs):
+    return F.mse_loss(pred.view(-1), labels.view(-1), reduction=reduction)

@@ -7,6 +7,30 @@ from .listwise import *
 from .pointwise import *
 from .pairwise import *
 
+def reduce(a : torch.Tensor, reduction : str):
+    """
+    Reducing a tensor along a given dimension.
+    Parameters
+    ----------
+    a: torch.Tensor
+        the input tensor
+    reduction: str
+        the reduction type
+    Returns
+    -------
+    torch.Tensor
+        the reduced tensor
+    """
+    if reduction == 'none':
+        return a
+    if reduction == 'mean':
+        return a.mean()
+    if reduction == 'sum':
+        return a.sum()
+    if reduction == 'batchmean':
+        return a.mean(dim=0).sum()
+    raise ValueError(f"Unknown reduction type: {reduction}")
+
 @dataclass
 class TrainingOutput:
     """
