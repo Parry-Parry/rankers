@@ -2,9 +2,29 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from torch import Tensor
+from dataclasses import dataclass
 from .listwise import *
 from .pointwise import *
 from .pairwise import *
+
+@dataclass
+class TrainingOutput:
+    """
+    Class to hold the output of the training process.
+    
+    Parameters
+    ----------
+    loss: torch.Tensor
+        the loss value
+    pred: torch.Tensor
+        the predicted values
+    to_log: dict
+        the values to log
+    """
+    loss: torch.Tensor
+    pred: torch.Tensor
+    to_log: dict
+   
 
 def normalize(a: Tensor, dim: int = -1):
     """
@@ -87,6 +107,18 @@ def num_non_zero(a: Tensor):
     return (a > 0).float().sum(dim=1).mean()
 
 class dotLoss(nn.Module):
+    """
+    Wrapper for Dot Model Losses
+
+    Parameters
+    ----------
+    fn: callable
+        the loss function
+    num_negatives: int
+        the number of negative samples
+    margin: float
+        the margin for the loss function
+    """
     def __init__(self, fn : callable, num_negatives=1, margin=1., **kwargs) -> None:
         super(dotLoss, self).__init__()
         self.num_negatives = num_negatives
@@ -104,13 +136,25 @@ class dotLoss(nn.Module):
         to_log = {
             "loss_no_reg": loss.detach(),
         }
-        return (
-            pred,
+        return TrainingOutput(
             loss,
+            pred,
             to_log,
         )
 
 class catLoss(nn.Module):
+    """
+    Wrapper for Cat Model Losses
+
+    Parameters
+    ----------
+    fn: callable
+        the loss function
+    num_negatives: int
+        the number of negative samples
+    margin: float
+        the margin for the loss function
+    """
     def __init__(self, fn : callable, num_negatives=1, margin=1., **kwargs) -> None:
         super(catLoss, self).__init__()
         self.num_negatives = num_negatives
@@ -126,13 +170,25 @@ class catLoss(nn.Module):
         to_log = {
             "loss_no_reg": loss.detach(),
         }
-        return (
-            pred,
+        return TrainingOutput(
             loss,
+            pred,
             to_log,
         )
 
 class duoLoss(nn.Module):
+    """
+    Wrapper for Duo Model Losses
+
+    Parameters
+    ----------
+    fn: callable
+        the loss function
+    num_negatives: int
+        the number of negative samples
+    margin: float
+        the margin for the loss function
+    """
     def __init__(self, fn : callable, num_negatives=1, margin=1., **kwargs) -> None:
         super(duoLoss, self).__init__()
         self.num_negatives = num_negatives
@@ -143,13 +199,23 @@ class duoLoss(nn.Module):
         to_log = {
             "loss_no_reg": loss.detach(),
         }
-        return (
-            F.softmax(logits, dim=-1)[:, 0],
+        return TrainingOutput(
             loss,
+            F.softmax(logits, dim=-1)[:, 0],
             to_log,
         )
     
 class CombiLoss(nn.Module):
+    """
+    Wrapper for combining multiple losses
+
+    Parameters
+    ----------
+    losses: list
+        the list of losses
+    weights: list
+        the weights for each loss
+    """
     def __init__(self, losses : list, weights : list = None) -> None:
         super(CombiLoss, self).__init__()
         self.losses = losses
@@ -164,4 +230,4 @@ class CombiLoss(nn.Module):
             if curr_scores is not None: scores = curr_scores
             loss += w * l
             to_log.update(curr_log)
-        return (scores, loss, to_log)
+        return TrainingOutput(loss, scores, to_log)

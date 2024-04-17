@@ -2,6 +2,15 @@ from transformers import PreTrainedModel, AutoModelForSequenceClassification, Au
 from ..inference.models import CatTransformer
 
 class Cat(PreTrainedModel):
+    """Wrapper for Cat Model
+    
+    Parameters
+    ----------
+    classifier : PreTrainedModel
+        the classifier model
+    config : AutoConfig
+        the configuration for the model
+    """
     def __init__(
         self,
         classifier: PreTrainedModel,
