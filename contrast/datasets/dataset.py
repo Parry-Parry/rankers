@@ -35,7 +35,7 @@ class TripletDataset(Dataset):
     def __len__(self):
         return len(self.triples)
     
-    def _teacher(self, qid, doc_id):
+    def _teacher(self, qid, doc_id, positive=False):
         assert self.labels, "No teacher file provided"
         try: return self.teacher[str(qid)][str(doc_id)] 
         except KeyError: return 0.
@@ -49,7 +49,7 @@ class TripletDataset(Dataset):
         else: texts.append(self.docs[item['doc_id_b']])
 
         if self.labels:
-            scores = [self.teacher[str(item['qid'])][str(item['doc_id_a'])]]
+            scores = [self.teacher[str(item['qid'])][str(item['doc_id_a'], True)]]
             if self.multi_negatives: scores.extend([self._teacher(str(item['qid']), str(doc)) for doc in item['doc_id_b']])
             else: scores.append(self._teacher(str(item['qid']), str(item['doc_id_b'])))
             return (query, texts, scores)
