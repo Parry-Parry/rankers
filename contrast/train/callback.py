@@ -85,6 +85,7 @@ class EarlyStoppingCallback(TrainerCallback):
         min_delta (int): Minimum change to be considered an improvement
         patience (int): Number of steps to wait before stopping
         percentage (bool): Use percentage change
+        log (bool): Log the metric to the state
     """    
 
     def __init__(self, 
