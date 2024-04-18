@@ -96,7 +96,8 @@ class EarlyStoppingCallback(TrainerCallback):
                  mode='max', 
                  min_delta=0, 
                  patience=10, 
-                 percentage=False) -> None:
+                 percentage=False,
+                 log : bool = False) -> None:
         super().__init__()
         self.metric = metric
         val_topics = val_topics
@@ -111,6 +112,7 @@ class EarlyStoppingCallback(TrainerCallback):
         self.stopping = EarlyStopping(val_topics, metric, qrels, mode, min_delta, patience, percentage)
         self.early_check = early_check
         self.every_n_steps = every_n_steps
+        self.log = log
     
     def on_step_end(self, args, state, control, **kwargs):
         global_step = state.global_step
@@ -123,7 +125,7 @@ class EarlyStoppingCallback(TrainerCallback):
             stop, better, value = self.stopping(val_model)
             if better: kwargs['model'].save_pretrained(f'{args.output_dir}/best')
             if stop: control.should_training_stop = True  # Stop training
-            state.log_metrics = {self.metric: value}
+            if self.log: state.log_metrics = {self.metric: value}
 
 class ValidationLoggerCallback(WandbCallback):
     """
