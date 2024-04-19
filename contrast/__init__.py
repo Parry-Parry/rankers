@@ -1,7 +1,7 @@
 __version__ = "0.0.2"
 
 from .train import loss as loss
-from .train.trainer import ConstrastTrainer
+from .train.trainer import ContrastTrainer
 from .train.arguments import ContrastArguments
 from .train.callback import *
 from .modelling import *

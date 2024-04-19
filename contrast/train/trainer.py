@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 LOSS_NAME = "loss.pt"
 
-class ConstrastTrainer(Trainer):
+class ContrastTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
 
     def __init__(self, *args, loss=None, **kwargs) -> None:
-        super(ConstrastTrainer, self).__init__(*args, **kwargs)
+        super(ContrastTrainer, self).__init__(*args, **kwargs)
         if isinstance(loss, nn.Module) or loss is None: self.loss = loss
         elif isinstance(self.model, Dot): self.loss = dotLoss(loss, self.args.num_negatives, self.args.margin)
         elif isinstance(self.model, Cat): self.loss = catLoss(loss, self.args.num_negatives, self.args.margin)
