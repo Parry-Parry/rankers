@@ -93,8 +93,9 @@ class Dot(PreTrainedModel):
         self.encoder = encoder
         if encoder_d is None: self.encoder_d = self.encoder if config.encoder_tied else deepcopy(self.encoder)
         self.pooling = {
-            PoolingType.MEAN: self._mean,
-            PoolingType.CLS: self._cls,
+            'mean': self._mean,
+            'cls' : self._cls,
+            'late_interaction' : self._late_interaction
         }[config.mode]
 
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
@@ -153,11 +154,6 @@ class Dot(PreTrainedModel):
     def eval(self) -> "DotTransformer":
         return DotTransformer.from_model(self, text_field='text')
 
-class PoolingType(Enum):
-    MEAN = 'mean'
-    CLS = 'cls'
-    LATE_INTERACTION = 'late_interaction'
-
 class DotTransformer(pt.Transformer):
     def __init__(self, model : PreTrainedModel, tokenizer : PreTrainedTokenizer, config : DotConfig, batch_size : int, text_field : str = 'text', device : Union[str, torch.device] = None) -> None:
         super().__init__()
@@ -168,9 +164,9 @@ class DotTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.pooling = {
-            PoolingType.MEAN: self._mean,
-            PoolingType.CLS: self._cls,
-            PoolingType.LATE_INTERACTION: self._late_interaction
+            'mean': self._mean,
+            'cls' : self._cls,
+            'late_interaction' : self._late_interaction
         }[config.mode]
 
     @classmethod
