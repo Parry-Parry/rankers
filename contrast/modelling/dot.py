@@ -34,7 +34,7 @@ class DotConfig(PretrainedConfig):
     """
     model_type = "dot"
     def __init__(self, 
-                 model_name_or_path : str,
+                 model_name_or_path : str='bert-base-uncased',
                  mode='cls', 
                  encoder_tied=True,
                  use_pooler=False,
@@ -42,13 +42,14 @@ class DotConfig(PretrainedConfig):
                  pooler_dim_out=768,
                  pooler_tied=True,
                  **kwargs):
+        self.model_name_or_path = model_name_or_path
         self.mode = mode
         self.encoder_tied = encoder_tied
         self.use_pooler = use_pooler
         self.pooler_dim_in = pooler_dim_in
         self.pooler_dim_out = pooler_dim_out
         self.pooler_tied = pooler_tied
-        super().__init__(model_name_or_path, **kwargs)
+        super().__init__(**kwargs)
 
 class Pooler(nn.Module):
     def __init__(self, config):
@@ -57,8 +58,8 @@ class Pooler(nn.Module):
         self.dense_d = nn.Linear(config.pooler_dim_in, config.pooler_dim_out) if not config.pooler_tied else self.dense_q
     
     @classmethod
-    def from_pretrained(cls, model_name_or_path : str) -> 'Pooler':
-        config = DotConfig.from_pretrained(model_name_or_path)
+    def from_pretrained(cls, model_name_or_path : str='bert-base-uncased', **kwargs) -> 'Pooler':
+        config = DotConfig(model_name_or_path, **kwargs)
         model = cls(config)
         model.load_state_dict(torch.load(model_name_or_path + "/pooler"))
         return model
