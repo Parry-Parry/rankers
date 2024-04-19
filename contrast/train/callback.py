@@ -1,4 +1,5 @@
-from transformers import TrainerCallback, WandbCallback
+from transformers import TrainerCallback
+from transformers.integrations import WandbCallback
 import ir_measures
 import numpy as np
 import ir_datasets as irds
