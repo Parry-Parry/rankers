@@ -34,7 +34,7 @@ class DotConfig(PretrainedConfig):
     """
     model_type = "dot"
     def __init__(self, 
-                 model_name_or_path : str ,
+                 model_name_or_path : str,
                  mode='cls', 
                  encoder_tied=True,
                  use_pooler=False,
@@ -145,7 +145,7 @@ class Dot(PreTrainedModel):
             pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
 
             return cls(encoder, config, encoder_d, pooler)
-        config = DotConfig.from_pretrained(model_dir_or_name, **kwargs)
+        config = DotConfig(model_dir_or_name, **kwargs)
         encoder = AutoModel.from_pretrained(model_dir_or_name)
         return cls(encoder, config)
     
