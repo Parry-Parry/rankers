@@ -95,7 +95,6 @@ class Dot(PreTrainedModel):
         self.pooling = {
             'mean': self._mean,
             'cls' : self._cls,
-            'late_interaction' : self._late_interaction
         }[config.mode]
 
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
@@ -166,7 +165,6 @@ class DotTransformer(pt.Transformer):
         self.pooling = {
             'mean': self._mean,
             'cls' : self._cls,
-            'late_interaction' : self._late_interaction
         }[config.mode]
 
     @classmethod
