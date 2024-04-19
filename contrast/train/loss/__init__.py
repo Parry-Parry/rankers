@@ -3,9 +3,6 @@ import torch.nn.functional as F
 import torch
 from torch import Tensor
 from dataclasses import dataclass
-from .listwise import *
-from .pointwise import *
-from .pairwise import *
 
 def reduce(a : torch.Tensor, reduction : str):
     """
@@ -229,7 +226,7 @@ class duoLoss(nn.Module):
             to_log,
         )
     
-class CombiLoss(nn.Module):
+class WeightedLoss(nn.Module):
     """
     Wrapper for combining multiple losses
 
@@ -241,7 +238,7 @@ class CombiLoss(nn.Module):
         the weights for each loss
     """
     def __init__(self, losses : list, weights : list = None) -> None:
-        super(CombiLoss, self).__init__()
+        super(WeightedLoss, self).__init__()
         self.losses = losses
         self.weights = [1.0 for _ in losses] if not weights else weights
         
@@ -255,3 +252,7 @@ class CombiLoss(nn.Module):
             loss += w * l
             to_log.update(curr_log)
         return TrainingOutput(loss, scores, to_log)
+    
+from .listwise import *
+from .pointwise import *
+from .pairwise import *

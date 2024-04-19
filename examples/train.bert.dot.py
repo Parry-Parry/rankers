@@ -45,6 +45,7 @@ def train(
         wandb_project = wandb_project,
         report_to='wandb',
     )
+
     dataset = TripletDataset(train_dataset)
     collate_fn = DotDataCollator(model.encoder.tokenizer)
 
