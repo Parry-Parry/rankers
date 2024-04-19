@@ -1,2 +1,2 @@
-from .cat import Cat 
-from .dot import Dot
+from .cat import Cat, CatTransformer
+from .dot import Dot, DotTransformer
