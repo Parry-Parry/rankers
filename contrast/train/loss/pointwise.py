@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor
-from torch.nn import Module, functional as F
+from torch.nn import functional as F
 from . import BaseLoss
 
 class PointwiseMSELoss(BaseLoss):

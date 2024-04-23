@@ -1,5 +1,4 @@
 import torch
-from torch.nn import Module
 from torch import Tensor
 import torch.nn.functional as F
 from . import BaseLoss
