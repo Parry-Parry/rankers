@@ -50,6 +50,7 @@ class Poly1SoftmaxLoss(BaseLoss):
         self.temperature = temperature
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        if not torch.all((labels >= 0) & (labels <= 1)):
-            labels = F.softmax(labels / self.temperature, dim=1)
-        return self._reduce(-torch.sum(labels * F.log_softmax(pred  / self.temperature, dim=1), dim=-1))
+        labels_for_softmax = torch.divide(labels, labels.sum(dim=1))
+        expansion = labels_for_softmax * F.softmax(pred / self.temperature, dim=1)
+        ce = F.cross_entropy(pred / self.temperature, labels_for_softmax, reduction='none')
+        return self._reduce(ce + (1 - expansion) * self.epsilon)
