@@ -6,7 +6,7 @@ from collections import defaultdict
 from transformers import Trainer
 from ..modelling.cat import Cat 
 from ..modelling.dot import Dot
-from .loss import catLoss, dotLoss
+from .loss import catLoss, dotLoss, BaseLoss
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class ContrastTrainer(Trainer):
 
     def __init__(self, *args, loss=None, **kwargs) -> None:
         super(ContrastTrainer, self).__init__(*args, **kwargs)
-        if isinstance(loss, nn.Module) or loss is None: self.loss = loss
+        if not issubclass(loss, BaseLoss) or loss is None: self.loss = loss
         elif isinstance(self.model, Dot): self.loss = dotLoss(loss, self.args.num_negatives)
         elif isinstance(self.model, Cat): self.loss = catLoss(loss, self.args.num_negatives)
         else:
