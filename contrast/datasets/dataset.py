@@ -42,10 +42,10 @@ class TripletDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.triples.iloc[idx]
-        query = self.queries[item['qid']]
-        texts = [self.docs[item['doc_id_a']]]
+        query = self.queries[str(item['qid'])]
+        texts = [self.docs[str(item['doc_id_a'])]]
 
-        if self.multi_negatives: texts.extend([self.docs[doc] for doc in item['doc_id_b']])
+        if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in item['doc_id_b']])
         else: texts.append(self.docs[item['doc_id_b']])
 
         if self.labels:
