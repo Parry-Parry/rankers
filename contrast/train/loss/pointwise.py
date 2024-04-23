@@ -1,5 +1,12 @@
+import torch
 from torch import Tensor
-from torch.nn import functional as F
+from torch.nn import Module, functional as F
+from . import BaseLoss
 
-def PointwiseMSELoss(pred : Tensor, labels : Tensor, reduction='mean', **kwargs):
-    return F.mse_loss(pred.view(-1), labels.view(-1), reduction=reduction)
+class PointwiseMSELoss(BaseLoss):
+    """Pointwise MSE loss"""
+
+    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+        flattened_pred = pred.view(-1)
+        flattened_labels = labels.view(-1)
+        return F.mse_loss(flattened_pred, flattened_labels, reduction=self.reduction)

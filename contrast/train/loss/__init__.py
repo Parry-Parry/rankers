@@ -28,6 +28,25 @@ def reduce(a : torch.Tensor, reduction : str):
         return a.mean(dim=0).sum()
     raise ValueError(f"Unknown reduction type: {reduction}")
 
+class BaseLoss(nn.Module):
+    """
+    Base class for Losses
+
+    Parameters
+    ----------
+    reduction: str
+        the reduction type
+    """
+    def __init__(self, reduction : str = 'mean') -> None:
+        super(BaseLoss, self).__init__()
+        self.reduction = reduction
+    
+    def _reduce(self, a : torch.Tensor):
+        return reduce(a, self.reduction)
+
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError
+
 @dataclass
 class TrainingOutput:
     """
@@ -140,10 +159,9 @@ class dotLoss(nn.Module):
     margin: float
         the margin for the loss function
     """
-    def __init__(self, fn : callable, num_negatives=1, margin=1., **kwargs) -> None:
+    def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
         super(dotLoss, self).__init__()
         self.num_negatives = num_negatives
-        self.margin = margin
         self.fn = fn
     
     def forward(self, q_reps, d_reps, labels):
@@ -152,7 +170,7 @@ class dotLoss(nn.Module):
         e_d = d_reps.view(batch_size, self.num_negatives+1, -1)
         pred = batched_dot_product(e_q, e_d)
         labels = labels.view(batch_size, self.num_negatives+1)
-        loss = self.fn(pred, labels, margin=self.margin)
+        loss = self.fn(pred, labels)
 
         to_log = {
             "loss_no_reg": loss.detach(),
@@ -176,17 +194,16 @@ class catLoss(nn.Module):
     margin: float
         the margin for the loss function
     """
-    def __init__(self, fn : callable, num_negatives=1, margin=1., **kwargs) -> None:
+    def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
         super(catLoss, self).__init__()
         self.num_negatives = num_negatives
-        self.margin = margin
         self.fn = fn
     
     def forward(self, logits, labels):
         pred = F.softmax(logits, dim=-1)[:, 1]
         pred = pred.view(-1, self.num_negatives+1)
         labels = labels.view(-1, self.num_negatives+1)
-        loss = self.fn(pred, labels, margin=self.margin)
+        loss = self.fn(pred, labels)
 
         to_log = {
             "loss_no_reg": loss.detach(),
@@ -210,13 +227,13 @@ class duoLoss(nn.Module):
     margin: float
         the margin for the loss function
     """
-    def __init__(self, fn : callable, num_negatives=1, margin=1., **kwargs) -> None:
+    def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
         super(duoLoss, self).__init__()
         self.num_negatives = num_negatives
-        self.margin = margin
         self.fn = fn
+
     def forward(self, logits, labels):
-        loss = self.fn(logits, labels, margin=self.margin)
+        loss = self.fn(logits, labels)
         to_log = {
             "loss_no_reg": loss.detach(),
         }

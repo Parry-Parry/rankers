@@ -1,24 +1,53 @@
-from torch import Tensor
 import torch
+from torch.nn import Module
+from torch import Tensor
 import torch.nn.functional as F
-from . import reduce
+from . import BaseLoss
 
 residual = lambda x : x[:, 0].unsqueeze(1) - x[:, 1:]
 
-def MarginMSELoss(pred : Tensor, labels : Tensor, reduction='mean', **kwargs):
-    return F.mse_loss(residual(pred), residual(labels), reduction=reduction)
+class MarginMSELoss(BaseLoss):
+    """Margin MSE loss with residual calculation."""
 
-def HingeLoss(pred : Tensor, labels : Tensor, margin : int = 1, reduction='mean', **kwargs):
-    pred_residuals = residual(F.sigmoid(pred))
-    label_residuals = torch.sign(residual(F.sigmoid(labels)))
+    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+        residual_pred = pred[:, 0].unsqueeze(1) - pred[:, 1:]
+        residual_label = labels[:, 0].unsqueeze(1) - labels[:, 1:]
+        return F.mse_loss(residual_pred, residual_label, reduction=self.reduction)
 
-    return reduce(F.relu(margin - (label_residuals * pred_residuals)), reduction)
 
-def ClearLoss(pred : Tensor, labels : Tensor, margin : int = 1, reduction='mean', **kwargs):
-    margin_b = margin - residual(labels)
-    return reduce(F.relu(margin_b - residual(pred)), reduction)
+class HingeLoss(BaseLoss):
+    """Hinge loss with sigmoid activation and residual calculation."""
 
-def ContrastiveLoss(pred : Tensor, reduction='mean', **kwargs):
-    softmax_scores = F.log_softmax(pred, dim=1)
-    return F.nll_loss(softmax_scores, torch.zeros(pred.size(0), dtype=torch.long, device=pred.device), reduction=reduction)
+    def __init__(self, margin=1, reduction='mean'):
+        super().__init__(reduction)
+        self.margin = margin
+
+    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+        pred_residuals = F.relu(residual(F.sigmoid(pred)))
+        label_residuals = torch.sign(residual(F.sigmoid(labels)))
+        return self._reduce(F.relu(self.margin - (label_residuals * pred_residuals)))
+
+
+class ClearLoss(BaseLoss):
+    """Clear loss with margin and residual calculation."""
+
+    def __init__(self, margin=1, reduction='mean'):
+        super().__init__(reduction)
+        self.margin = margin
+
+    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+        margin_b = self.margin - residual(labels)
+        return self._reduce(F.relu(margin_b - residual(pred)))
+
+
+class ContrastiveLoss(BaseLoss):
+    """Contrastive loss with log_softmax and negative log likelihood."""
+
+    def __init__(self, reduction='mean', temperature=1.):
+        super().__init__(reduction)
+        self.temperature = temperature
+
+    def forward(self, pred: Tensor) -> Tensor:
+        softmax_scores = F.log_softmax(pred / self.temperature, dim=1)
+        return F.nll_loss(softmax_scores, torch.zeros(pred.size(0), dtype=torch.long, device=pred.device), reduction=self.reduction)
 
