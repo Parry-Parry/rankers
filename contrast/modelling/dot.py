@@ -58,10 +58,9 @@ class Pooler(nn.Module):
         self.dense_d = nn.Linear(config.pooler_dim_in, config.pooler_dim_out) if not config.pooler_tied else self.dense_q
     
     @classmethod
-    def from_pretrained(cls, model_name_or_path : str='bert-base-uncased', **kwargs) -> 'Pooler':
-        config = DotConfig(model_name_or_path, **kwargs)
+    def from_pretrained(cls, model_name_or_path : str='bert-base-uncased') -> 'Pooler':
+        config = DotConfig.from_pretrained(model_name_or_path)
         model = cls(config)
-        model.load_state_dict(torch.load(model_name_or_path + "/pooler"))
         return model
     
     def forward(self, hidden_states, d=False):
