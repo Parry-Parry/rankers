@@ -190,11 +190,10 @@ class DotTransformer(pt.Transformer):
     def from_model(cls, 
                    model : PreTrainedModel, 
                    batch_size : int = 64, 
-                   pooling : str = 'cls',
                    text_field : str = 'text', 
                    ): 
         tokenizer = AutoTokenizer.from_pretrained(model.config)
-        config = DotConfig.from_pretrained(pooling, model.config)
+        config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
