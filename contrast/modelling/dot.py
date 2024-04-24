@@ -106,18 +106,18 @@ class Dot(PreTrainedModel):
         return x.mean(dim=1)
     
     def _encode_d(self, **text):
-        return self.pooler(self.encoder_d(**text), True)
+        return self.pooler(self.encoder_d(**text).last_hidden_state, True)
     
     def _encode_q(self, **text):
-        return self.pooler(self.encoder(**text))
+        return self.pooler(self.encoder(**text).last_hidden_state)
 
     def forward(self, loss, queries, docs_batch, labels=None):
         """Compute the loss given (queries, docs, labels)"""
         queries = {k: v.to(self.encoder.device) for k, v in queries.items()}
         docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()}
         labels = labels.to(self.encoder_d.device) if labels is not None else None
-        q_reps = self._encode_q(**queries).last_hidden_state
-        docs_batch_rep = self._encode_d(**docs_batch).last_hidden_state
+        q_reps = self._encode_q(**queries)
+        docs_batch_rep = self._encode_d(**docs_batch)
     
         return loss(q_reps, docs_batch_rep) if labels is None else loss(q_reps, docs_batch_rep, labels)
 
