@@ -165,13 +165,9 @@ class dotLoss(nn.Module):
         self.fn = fn
     
     def forward(self, q_reps, d_reps, labels=None):
-        print(q_reps.size())
-        print(d_reps.size())
         batch_size = q_reps.size(0)
         e_q = q_reps.view(batch_size, 1, -1)
         e_d = d_reps.view(batch_size, self.num_negatives+1, -1)
-        print(e_q.size())
-        print(e_d.size())
         pred = batched_dot_product(e_q, e_d)
         if labels: labels = labels.view(batch_size, self.num_negatives+1)
         loss = self.fn(pred, labels)
