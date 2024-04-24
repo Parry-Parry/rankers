@@ -117,22 +117,22 @@ class Dot(PreTrainedModel):
         queries = {k: v.to(self.encoder.device) for k, v in queries.items()}
         docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()}
         labels = labels.to(self.encoder_d.device) if labels is not None else None
-        q_reps = self.encode_q(**queries)
-        docs_batch_rep = self.encode_d(**docs_batch)
+        q_reps = self._encode_q(**queries)
+        docs_batch_rep = self._encode_d(**docs_batch)
     
         return loss(q_reps, docs_batch_rep) if labels is None else loss(q_reps, docs_batch_rep, labels)
 
     def save_pretrained(self, model_dir):
         """Save both query and document encoder"""
         self.config.save_pretrained(model_dir + "/config.json")
-        self.encoder.save_pretrained(model_dir + "/encoder")
+        self.encoder.save_pretrained(model_dir)
         if not self.config.encoder_tied: self.encoder_d.save_pretrained(model_dir + "/encoder_d")
         if self.config.use_pooler: self.pooler.save_pretrained(model_dir + "/pooler")
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         self.config = DotConfig.from_pretrained(model_dir)
-        self.encoder.load_state_dict(AutoModel.from_pretrained(model_dir + "/encoder").state_dict())
+        self.encoder.load_state_dict(AutoModel.from_pretrained(model_dir).state_dict())
         if not self.config.encoder_tied: self.encoder_d.load_state_dict(AutoModel.from_pretrained(model_dir + "/encoder_d").state_dict())
         if self.config.use_pooler: self.pooler.load_state_dict(AutoModel.from_pretrained(model_dir + "/pooler").state_dict())
 
@@ -141,7 +141,7 @@ class Dot(PreTrainedModel):
         """Load encoder"""
         if os.path.isdir(model_dir_or_name):
             config = DotConfig.from_pretrained(model_dir_or_name, **kwargs)
-            encoder = AutoModel.from_pretrained(model_dir_or_name + "/encoder")
+            encoder = AutoModel.from_pretrained(model_dir_or_name)
             encoder_d = None if config.encoder_tied else AutoModel.from_pretrained(model_dir_or_name + "/encoder_d") 
             pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
 
@@ -154,7 +154,14 @@ class Dot(PreTrainedModel):
         return DotTransformer.from_model(self, text_field='text')
 
 class DotTransformer(pt.Transformer):
-    def __init__(self, model : PreTrainedModel, tokenizer : PreTrainedTokenizer, config : DotConfig, batch_size : int, text_field : str = 'text', device : Union[str, torch.device] = None) -> None:
+    def __init__(self, 
+                 model : PreTrainedModel, 
+                 tokenizer : PreTrainedTokenizer, 
+                 config : DotConfig, 
+                 batch_size : int, 
+                 text_field : str = 'text', 
+                 device : Union[str, torch.device] = None,
+                 ) -> None:
         super().__init__()
         self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model.to(self.device)
@@ -176,7 +183,7 @@ class DotTransformer(pt.Transformer):
                         device : Union[str, torch.device] = None):
         model = AutoModel.from_pretrained(model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        config = DotConfig.from_pretrained(pooling, model_name_or_path)
+        config = DotConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, pooling, text_field, device)
     
     @classmethod 
@@ -195,9 +202,6 @@ class DotTransformer(pt.Transformer):
     
     def _mean(self, x : torch.Tensor) -> torch.Tensor:
         return x.mean(dim=1)
-    
-    def _late_interaction(self, x : torch.Tensor, mask : torch.Tensor = None) -> torch.Tensor:
-        raise NotImplementedError("Late interaction pooling is not implemented yet, use pyterrier_colbert")
     
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []
