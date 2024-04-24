@@ -100,16 +100,16 @@ class Dot(PreTrainedModel):
         else: self.pooler = lambda x, y=True : x
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
-        return x[:, 0]
+        return self.pooler(x[:, 0])
     
     def _mean(self, x : torch.Tensor) -> torch.Tensor:
-        return x.mean(dim=1)
+        return self.pooler(x.mean(dim=1))
     
     def _encode_d(self, **text):
-        return self.pooler(self.encoder_d(**text).last_hidden_state)
+        return self.pooling(self.encoder_d(**text).last_hidden_state)
     
     def _encode_q(self, **text):
-        return self.pooler(self.encoder(**text).last_hidden_state)
+        return self.pooling(self.encoder(**text).last_hidden_state)
 
     def forward(self, 
                 loss = None, 
