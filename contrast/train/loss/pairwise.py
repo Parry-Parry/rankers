@@ -46,7 +46,7 @@ class ContrastiveLoss(BaseLoss):
         super().__init__(reduction)
         self.temperature = temperature
 
-    def forward(self, pred: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels : Tensor = None) -> Tensor:
         softmax_scores = F.log_softmax(pred / self.temperature, dim=1)
         return F.nll_loss(softmax_scores, torch.zeros(pred.size(0), dtype=torch.long, device=pred.device), reduction=self.reduction)
 
