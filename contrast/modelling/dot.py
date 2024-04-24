@@ -116,8 +116,8 @@ class Dot(PreTrainedModel):
         queries = {k: v.to(self.encoder.device) for k, v in queries.items()}
         docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()}
         labels = labels.to(self.encoder_d.device) if labels is not None else None
-        q_reps = self._encode_q(**queries)
-        docs_batch_rep = self._encode_d(**docs_batch)
+        q_reps = self._encode_q(**queries).last_hidden_state
+        docs_batch_rep = self._encode_d(**docs_batch).last_hidden_state
     
         return loss(q_reps, docs_batch_rep) if labels is None else loss(q_reps, docs_batch_rep, labels)
 
