@@ -42,16 +42,17 @@ class TripletDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.triples.iloc[idx]
-        query = self.queries[str(item['qid'])]
-        texts = [self.docs[str(item['doc_id_a'])]]
+        qid, doc_id_a, doc_id_b = item['qid'], item['doc_id_a'], item['doc_id_b']
+        query = self.queries[str(qid)]
+        texts = [self.docs[str(doc_id_a)]]
 
-        if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in item['doc_id_b']])
-        else: texts.append(self.docs[item['doc_id_b']])
+        if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
+        else: texts.append(self.docs[str(doc_id_b)])
 
         if self.labels:
-            scores = [self.teacher[str(item['qid'])][str(item['doc_id_a'], True)]]
-            if self.multi_negatives: scores.extend([self._teacher(str(item['qid']), str(doc)) for doc in item['doc_id_b']])
-            else: scores.append(self._teacher(str(item['qid']), str(item['doc_id_b'])))
+            scores = [self.teacher[str(qid)][str(doc_id_a, True)]]
+            if self.multi_negatives: scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
+            else: scores.append(self._teacher(str(qid), str(doc_id_b)))
             return (query, texts, scores)
         else:
             return (query, texts)
