@@ -125,7 +125,7 @@ class Dot(PreTrainedModel):
     
         return loss(q_reps, docs_batch_rep) if labels is None else loss(q_reps, docs_batch_rep, labels)
 
-    def save_pretrained(self, model_dir):
+    def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document encoder"""
         self.config.save_pretrained(model_dir + "/config.json")
         self.encoder.save_pretrained(model_dir)

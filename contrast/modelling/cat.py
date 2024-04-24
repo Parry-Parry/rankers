@@ -36,7 +36,7 @@ class Cat(PreTrainedModel):
         else: output = loss(logits, labels)
         return output
 
-    def save_pretrained(self, model_dir):
+    def save_pretrained(self, model_dir, **kwargs):
         """Save classifier"""
         self.config.save_pretrained(model_dir)
         self.classifier.save_pretrained(model_dir)
