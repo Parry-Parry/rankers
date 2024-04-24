@@ -26,10 +26,10 @@ class ContrastTrainer(Trainer):
         self.custom_log = defaultdict(lambda: 0.0)
         self.tokenizer = self.data_collator.tokenizer
 
-    def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
+    def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
         if self.control.should_log:
             log = {}
-            for metric in self.customed_log:
+            for metric in self.custom_log:
                 log[metric] = (
                     self._nested_gather(self.custom_log[metric]).mean().item()
                 )
@@ -42,9 +42,9 @@ class ContrastTrainer(Trainer):
                     4,
                 )
             self.log(log)
-            for metric in self.customed_log: self.custom_log[metric] -= self.custom_log[metric]
+            for metric in self.custom_log: self.custom_log[metric] -= self.custom_log[metric]
             self.control.should_log = True
-        super()._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
+        super()._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
 
     def _load_optimizer_and_scheduler(self, checkpoint):
         super()._load_optimizer_and_scheduler(checkpoint)
