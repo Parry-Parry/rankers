@@ -198,19 +198,13 @@ class DotTransformer(pt.Transformer):
         config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
-    def _cls(self, x : torch.Tensor) -> torch.Tensor:
-        return x[:,0,:]
-    
-    def _mean(self, x : torch.Tensor) -> torch.Tensor:
-        return x.mean(dim=1)
-    
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []
         with torch.no_grad():
             for chunk in chunked(texts, batch_size or self.batch_size):
                 inps = self.tokenizer(list(chunk), return_tensors='pt', padding=True, truncation=True)
                 inps = {k: v.to(self.device) for k, v in inps.items()}
-                res = self.pooling(self.model._encode_q(**inps).last_hidden_state)
+                res = self.model._encode_q(**inps)
                 results.append(res.cpu().numpy())
         if not results:
             return np.empty(shape=(0, 0))
@@ -222,7 +216,7 @@ class DotTransformer(pt.Transformer):
             for chunk in chunked(texts, batch_size or self.batch_size):
                 inps = self.tokenizer(list(chunk), return_tensors='pt', padding=True, truncation=True)
                 inps = {k: v.to(self.device) for k, v in inps.items()}
-                res = self.pooling(self.model._encode_d(**inps).last_hidden_state)
+                res = self.model._encode_d(**inps)
                 results.append(res.cpu().numpy())
         if not results:
             return np.empty(shape=(0, 0))
