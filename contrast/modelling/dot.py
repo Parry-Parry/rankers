@@ -127,7 +127,7 @@ class Dot(PreTrainedModel):
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document encoder"""
-        self.config.save_pretrained(model_dir + "/config.json")
+        self.config.save_pretrained(model_dir)
         self.encoder.save_pretrained(model_dir)
         if not self.config.encoder_tied: self.encoder_d.save_pretrained(model_dir + "/encoder_d")
         if self.config.use_pooler: self.pooler.save_pretrained(model_dir + "/pooler")
