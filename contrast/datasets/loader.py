@@ -19,8 +19,6 @@ class DotDataCollator:
                 continue
             batch_scores.extend(args[0])
 
-        batch_queries = list(chain.from_iterable(batch_queries))
-        print(batch_queries)
         batch_scores = list(chain.from_iterable(batch_scores))
 
         tokenized_queries = self.tokenizer(
