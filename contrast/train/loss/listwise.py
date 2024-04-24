@@ -9,9 +9,10 @@ class KL_DivergenceLoss(BaseLoss):
     def __init__(self, reduction='batchmean', temperature=1.):
         super().__init__(reduction)
         self.temperature = temperature
+        self.kl_div = torch.nn.KLDivLoss(reduction=self.reduction)
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        return F.kl_div(F.log_softmax(pred / self.temperature, dim=1), F.softmax(labels / self.temperature, dim=1), reduction=self.reduction)
+        return self.kl_div(F.log_softmax(pred / self.temperature, dim=1), F.softmax(labels / self.temperature, dim=1))
 
 
 class RankNetLoss(BaseLoss):
@@ -20,13 +21,14 @@ class RankNetLoss(BaseLoss):
     def __init__(self, reduction='mean', temperature=1.):
         super().__init__(reduction)
         self.temperature = temperature
+        self.bce = torch.nn.BCEWithLogitsLoss(reduction=reduction)
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         if not torch.all((labels >= 0) & (labels <= 1)):
             labels = F.softmax(labels  / self.temperature, dim=1)
         if not torch.all((pred >= 0) & (pred <= 1)):
             pred = F.softmax(pred  / self.temperature, dim=1)
-        return F.soft_margin_loss(pred, labels, reduction=self.reduction)
+        return self.bce(pred, labels)
 
 
 class ListNetLoss(BaseLoss):
@@ -48,9 +50,10 @@ class Poly1SoftmaxLoss(BaseLoss):
         super().__init__(reduction)
         self.epsilon = epsilon
         self.temperature = temperature
+        self.ce = torch.nn.CrossEntropyLoss(reduction='none')
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         labels_for_softmax = torch.divide(labels, labels.sum(dim=1))
         expansion = labels_for_softmax * F.softmax(pred / self.temperature, dim=1)
-        ce = F.cross_entropy(pred / self.temperature, labels_for_softmax, reduction='none')
+        ce = self.ce(pred / self.temperature, labels_for_softmax)
         return self._reduce(ce + (1 - expansion) * self.epsilon)
