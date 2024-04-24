@@ -99,25 +99,29 @@ class Dot(PreTrainedModel):
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
         else: self.pooler = lambda x, y=True : x
     
-    def _cls(self, x : torch.Tensor, **kwargs) -> torch.Tensor:
+    def _cls(self, x : torch.Tensor) -> torch.Tensor:
         return x[:, 0]
     
-    def _mean(self, x : torch.Tensor, **kwargs) -> torch.Tensor:
+    def _mean(self, x : torch.Tensor) -> torch.Tensor:
         return x.mean(dim=1)
     
     def _encode_d(self, **text):
-        return self.pooler(self.encoder_d(**text).last_hidden_state, True)
+        return self.pooler(self.encoder_d(**text).last_hidden_state)
     
     def _encode_q(self, **text):
         return self.pooler(self.encoder(**text).last_hidden_state)
 
-    def forward(self, loss, queries, docs_batch, labels=None):
+    def forward(self, 
+                loss = None, 
+                queries = None, 
+                docs_batch = None, 
+                labels=None):
         """Compute the loss given (queries, docs, labels)"""
-        queries = {k: v.to(self.encoder.device) for k, v in queries.items()}
-        docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()}
+        queries = {k: v.to(self.encoder.device) for k, v in queries.items()} if queries is not None else None
+        docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()} if docs_batch is not None else None
         labels = labels.to(self.encoder_d.device) if labels is not None else None
-        q_reps = self._encode_q(**queries)
-        docs_batch_rep = self._encode_d(**docs_batch)
+        q_reps = self._encode_q(**queries) if queries is not None else None
+        docs_batch_rep = self._encode_d(**docs_batch) if docs_batch is not None else None
     
         return loss(q_reps, docs_batch_rep) if labels is None else loss(q_reps, docs_batch_rep, labels)
 

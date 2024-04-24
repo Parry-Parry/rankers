@@ -165,7 +165,6 @@ class dotLoss(nn.Module):
         self.fn = fn
     
     def forward(self, q_reps, d_reps, labels=None):
-        print(q_reps.size())
         batch_size = q_reps.size(0)
         print(batch_size)
         e_q = q_reps.view(batch_size, 1, -1)
