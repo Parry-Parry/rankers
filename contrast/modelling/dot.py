@@ -243,6 +243,24 @@ class DotTransformer(pt.Transformer):
         for fields, fn in modes:
             message += f'\n - {fn.__doc__.strip()}: {fields}'
         raise RuntimeError(message)
+    
+    def query_encoder(self, verbose=None, batch_size=None) -> pt.Transformer:
+        """
+        Query encoding
+        """
+        return BiQueryEncoder(self, verbose=verbose, batch_size=batch_size)
+
+    def doc_encoder(self, verbose=None, batch_size=None) -> pt.Transformer:
+        """
+        Doc encoding
+        """
+        return BiDocEncoder(self, verbose=verbose, batch_size=batch_size)
+
+    def scorer(self, verbose=None, batch_size=None) -> pt.Transformer:
+        """
+        Scoring (re-ranking)
+        """
+        return BiScorer(self, verbose=verbose, batch_size=batch_size)
 
 class BiQueryEncoder(pt.Transformer):
     def __init__(self, bi_encoder_model: DotTransformer, verbose=None, batch_size=None):
@@ -265,14 +283,32 @@ class BiQueryEncoder(pt.Transformer):
     def __repr__(self):
         return f'{repr(self.bi_encoder_model)}.query_encoder()'
     
-
-class BiScorer(pt.Transformer):
-    def __init__(self, bi_encoder_model: DotTransformer, verbose=None, batch_size=None, text_field=None, sim_fn=None):
+class BiDocEncoder(pt.Transformer):
+    def __init__(self, bi_encoder_model: DotTransformer, verbose=None, batch_size=None, text_field=None):
         self.bi_encoder_model = bi_encoder_model
         self.verbose = verbose if verbose is not None else bi_encoder_model.verbose
         self.batch_size = batch_size if batch_size is not None else bi_encoder_model.batch_size
         self.text_field = text_field if text_field is not None else bi_encoder_model.text_field
-        self.sim_fn = sim_fn if sim_fn is not None else bi_encoder_model.sim_fn
+
+    def encode(self, texts, batch_size=None) -> np.array:
+        return self.bi_encoder_model.encode_docs(texts, batch_size=batch_size or self.batch_size)
+
+    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
+        assert all(c in inp.columns for c in [self.text_field])
+        it = inp[self.text_field]
+        if self.verbose:
+            it = pt.tqdm(it, desc='Encoding Docs', unit='doc')
+        return inp.assign(doc_vec=list(self.encode(it)))
+
+    def __repr__(self):
+        return f'{repr(self.bi_encoder_model)}.doc_encoder()'
+
+class BiScorer(pt.Transformer):
+    def __init__(self, bi_encoder_model: DotTransformer, verbose=None, batch_size=None, text_field=None):
+        self.bi_encoder_model = bi_encoder_model
+        self.verbose = verbose if verbose is not None else bi_encoder_model.verbose
+        self.batch_size = batch_size if batch_size is not None else bi_encoder_model.batch_size
+        self.text_field = text_field if text_field is not None else bi_encoder_model.text_field
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         assert 'query_vec' in inp.columns or 'query' in inp.columns
