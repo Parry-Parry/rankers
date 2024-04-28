@@ -50,7 +50,7 @@ class TripletDataset(Dataset):
         else: texts.append(self.docs[str(doc_id_b)])
 
         if self.labels:
-            scores = [self.teacher[str(qid)][str(doc_id_a, True)]]
+            scores = [self._teacher(str(qid), str(doc_id_a), positive=True)]
             if self.multi_negatives: scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
             else: scores.append(self._teacher(str(qid), str(doc_id_b)))
             return (query, texts, scores)
