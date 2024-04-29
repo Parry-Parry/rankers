@@ -199,10 +199,10 @@ class catLoss(nn.Module):
         self.num_negatives = num_negatives
         self.fn = fn
     
-    def forward(self, logits, labels):
+    def forward(self, logits, labels=None):
         pred = F.softmax(logits, dim=-1)[:, 1]
         pred = pred.view(-1, self.num_negatives+1)
-        labels = labels.view(-1, self.num_negatives+1)
+        if labels is not None: labels = labels.view(-1, self.num_negatives+1)
         loss = self.fn(pred, labels)
 
         to_log = {
