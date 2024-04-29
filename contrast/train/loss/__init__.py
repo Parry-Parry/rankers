@@ -169,7 +169,7 @@ class dotLoss(nn.Module):
         e_q = q_reps.view(batch_size, 1, -1)
         e_d = d_reps.view(batch_size, self.num_negatives+1, -1)
         pred = batched_dot_product(e_q, e_d)
-        if labels: labels = labels.view(batch_size, self.num_negatives+1)
+        if labels is not None: labels = labels.view(batch_size, self.num_negatives+1)
         loss = self.fn(pred, labels)
 
         to_log = {
