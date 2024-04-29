@@ -19,8 +19,6 @@ class DotDataCollator:
                 continue
             batch_scores.extend(args[0])
 
-        batch_scores = list(chain.from_iterable(batch_scores))
-
         tokenized_queries = self.tokenizer(
             batch_queries,
             padding=True,
@@ -59,9 +57,6 @@ class CatDataCollator:
             if len(args) == 0:
                 continue
             batch_scores.extend(args[0])
-        # flatten lists 
-        batch_scores = list(chain.from_iterable(batch_scores))
-        batch_queries = list(chain.from_iterable(batch_queries))
 
         tokenized_sequences = self.tokenizer(
             batch_queries,
