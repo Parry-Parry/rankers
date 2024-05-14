@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 import os
 import logging
 from collections import defaultdict
