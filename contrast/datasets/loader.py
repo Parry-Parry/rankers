@@ -1,14 +1,18 @@
-from itertools import chain
 import torch
 
 class DotDataCollator:
-    def __init__(self, tokenizer, special_mask=False):
+    def __init__(self, 
+                 tokenizer, 
+                 special_mask=False,
+                 q_max_length=30,
+                 d_max_length=200,
+                 ) -> None:
         self.tokenizer = tokenizer
-        self.q_max_length = 30
-        self.d_max_length = 200
+        self.q_max_length = q_max_length
+        self.d_max_length = d_max_length
         self.special_mask = special_mask
 
-    def __call__(self, batch):
+    def __call__(self, batch) -> dict:
         batch_queries = []
         batch_docs = []
         batch_scores = []
@@ -42,12 +46,16 @@ class DotDataCollator:
         }
     
 class CatDataCollator:
-    def __init__(self, tokenizer):
+    def __init__(self, 
+                 tokenizer,
+                 q_max_length=30,
+                 d_max_length=200,
+                 ) -> None:
         self.tokenizer = tokenizer
-        self.q_max_length = 30
-        self.d_max_length = 200
+        self.q_max_length = q_max_length
+        self.d_max_length = d_max_length
 
-    def __call__(self, batch):
+    def __call__(self, batch) -> dict:
         batch_queries = []
         batch_docs = []
         batch_scores = []
@@ -71,7 +79,7 @@ class CatDataCollator:
             "labels": torch.tensor(batch_scores) if len(batch_scores) > 0 else None,
         }
 
-def _make_pos_pairs(texts):
+def _make_pos_pairs(texts) -> list:
     output = []
     pos = texts[0]
     for i in range(1, len(texts)):
@@ -80,11 +88,11 @@ def _make_pos_pairs(texts):
     
 class DuoDataCollator:
     # creates pairwise input for duoBERT, encoding each possible pair of documents with the query in the form CLS [query] SEP [doc1] SEP [doc2]
-    def __init__(self, tokenizer, max_length=512):
+    def __init__(self, tokenizer, max_length=512) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
     
-    def __call__(self, batch):
+    def __call__(self, batch) -> dict:
         batch_queries = []
         batch_docs = []
         batch_scores = []
