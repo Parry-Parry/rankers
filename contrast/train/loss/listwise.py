@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from . import BaseLoss
 
 class KL_DivergenceLoss(BaseLoss):
-    """KL Divergence loss with automatic softmax and reduction handling."""
+    """KL Divergence loss"""
 
     def __init__(self, reduction='batchmean', temperature=1.):
         super().__init__(reduction)
@@ -16,7 +16,7 @@ class KL_DivergenceLoss(BaseLoss):
 
 
 class RankNetLoss(BaseLoss):
-    """RankNet loss with automatic softmax handling and reduction."""
+    """RankNet loss"""
 
     def __init__(self, reduction='mean', temperature=1.):
         super().__init__(reduction)
@@ -32,7 +32,7 @@ class RankNetLoss(BaseLoss):
 
 
 class ListNetLoss(BaseLoss):
-    """ListNet loss with automatic softmax handling and reduction."""
+    """ListNet loss"""
 
     def __init__(self, reduction='mean', temperature=1.):
         super().__init__(reduction)
