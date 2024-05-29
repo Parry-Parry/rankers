@@ -37,6 +37,11 @@ class ClearLoss(BaseLoss):
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         margin_b = self.margin - residual(labels)
         return self._reduce(F.relu(margin_b - residual(pred)))
+    
+class LCELoss(BaseLoss):
+    """LCE loss."""
+    def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
+        return F.cross_entropy(pred, torch.zeros(pred.size(0), dtype=torch.long, device=pred.device), reduction=self.reduction)
 
 
 class ContrastiveLoss(BaseLoss):
