@@ -156,8 +156,6 @@ class dotLoss(nn.Module):
         the loss function
     num_negatives: int
         the number of negative samples
-    margin: float
-        the margin for the loss function
     """
     def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
         super(dotLoss, self).__init__()
@@ -191,8 +189,6 @@ class catLoss(nn.Module):
         the loss function
     num_negatives: int
         the number of negative samples
-    margin: float
-        the margin for the loss function
     """
     def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
         super(catLoss, self).__init__()
@@ -224,8 +220,6 @@ class duoLoss(nn.Module):
         the loss function
     num_negatives: int
         the number of negative samples
-    margin: float
-        the margin for the loss function
     """
     def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
         super(duoLoss, self).__init__()
