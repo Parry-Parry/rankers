@@ -154,20 +154,20 @@ class dotLoss(nn.Module):
     ----------
     fn: callable
         the loss function
-    num_negatives: int
-        the number of negative samples
+    group_size: int
+        the number of samples
     """
-    def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
+    def __init__(self, fn : callable, group_size=2, **kwargs) -> None:
         super(dotLoss, self).__init__()
-        self.num_negatives = num_negatives
+        self.group_size = group_size
         self.fn = fn
     
     def forward(self, q_reps, d_reps, labels=None):
         batch_size = q_reps.size(0)
         e_q = q_reps.view(batch_size, 1, -1)
-        e_d = d_reps.view(batch_size, self.num_negatives+1, -1)
+        e_d = d_reps.view(batch_size, self.group_size, -1)
         pred = batched_dot_product(e_q, e_d)
-        if labels is not None: labels = labels.view(batch_size, self.num_negatives+1)
+        if labels is not None: labels = labels.view(batch_size, self.group_size)
         loss = self.fn(pred, labels)
 
         to_log = {
@@ -187,18 +187,18 @@ class catLoss(nn.Module):
     ----------
     fn: callable
         the loss function
-    num_negatives: int
-        the number of negative samples
+    group_size: int
+        the number of samples
     """
-    def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
+    def __init__(self, fn : callable, group_size=2, **kwargs) -> None:
         super(catLoss, self).__init__()
-        self.num_negatives = num_negatives
+        self.group_size = group_size
         self.fn = fn
     
     def forward(self, logits, labels=None):
         pred = F.softmax(logits, dim=-1)[:, 1]
-        pred = pred.view(-1, self.num_negatives+1)
-        if labels is not None: labels = labels.view(-1, self.num_negatives+1)
+        pred = pred.view(-1, self.group_size)
+        if labels is not None: labels = labels.view(-1, self.group_size)
         loss = self.fn(pred, labels)
 
         to_log = {
@@ -218,12 +218,12 @@ class duoLoss(nn.Module):
     ----------
     fn: callable
         the loss function
-    num_negatives: int
-        the number of negative samples
+    group_size: int
+        the number of samples
     """
-    def __init__(self, fn : callable, num_negatives=1, **kwargs) -> None:
+    def __init__(self, fn : callable, group_size=2, **kwargs) -> None:
         super(duoLoss, self).__init__()
-        self.num_negatives = num_negatives
+        self.group_size = group_size
         self.fn = fn
 
     def forward(self, logits, labels):

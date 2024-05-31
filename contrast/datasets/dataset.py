@@ -14,7 +14,7 @@ class TripletDataset(Dataset):
                  ir_dataset : str,
                  triples : Optional[Any] = None, 
                  teacher_file : Optional[str] = None,
-                 num_negatives : int = 0,
+                 group_size : int = 2,
                  ) -> None:
         super().__init__()
         self.triples = triples
@@ -29,8 +29,8 @@ class TripletDataset(Dataset):
 
         self.labels = True if teacher_file else False
         self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
-        if num_negatives > 0 and self.multi_negatives:
-            self.triples['doc_id_b'] = self.triples['doc_id_b'].apply(lambda x: random.sample(x, num_negatives))
+        if group_size > 2 and self.multi_negatives:
+            self.triples['doc_id_b'] = self.triples['doc_id_b'].apply(lambda x: random.sample(x, group_size-1))
 
     def __len__(self):
         return len(self.triples)

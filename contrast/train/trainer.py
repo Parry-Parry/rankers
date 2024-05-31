@@ -17,11 +17,11 @@ class ContrastTrainer(Trainer):
     def __init__(self, *args, loss=None, **kwargs) -> None:
         super(ContrastTrainer, self).__init__(*args, **kwargs)
         if not isinstance(loss, BaseLoss) or loss is None: self.loss = loss
-        elif isinstance(self.model, Dot): self.loss = dotLoss(loss, self.args.num_negatives)
-        elif isinstance(self.model, Cat): self.loss = catLoss(loss, self.args.num_negatives)
+        elif isinstance(self.model, Dot): self.loss = dotLoss(loss, self.args.group_size)
+        elif isinstance(self.model, Cat): self.loss = catLoss(loss, self.args.group_size)
         else:
             logger.warning("Model is not Dot or Cat, defaulting to Dot for loss")
-            self.loss = dotLoss(loss, self.args.num_negatives)
+            self.loss = dotLoss(loss, self.args.group_size)
         self.custom_log = defaultdict(lambda: 0.0)
         self.tokenizer = self.data_collator.tokenizer
 

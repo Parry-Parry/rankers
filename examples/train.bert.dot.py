@@ -31,7 +31,6 @@ def train(
     if wandb_project is not None:
         wandb.init(project=wandb_project,)
     
-
     model = Dot.from_pretrained(model_name_or_path)
     args = ContrastArguments(
         output_dir = output_dir,
