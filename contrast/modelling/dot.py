@@ -175,6 +175,7 @@ class DotTransformer(pt.Transformer):
         self.pooling = {
             'mean': self._mean,
             'cls' : self._cls,
+            'none': lambda x: x,
         }[config.mode]
 
     @classmethod
