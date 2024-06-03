@@ -59,3 +59,39 @@ def get_teacher_scores(model : pt.Transformer,
 def initialise_triples(dataset : irds.Dataset):
     triples = pd.DataFrame(dataset.docpairs_iter())
     return _pivot(triples)
+
+def load_json(file : str):
+    import json
+    if file.endswith(".json"):
+        return json.load(open(file, 'r'))
+    elif file.endswith("jsonl"):
+        return [json.loads(line) for line in open(file, 'r')]
+    elif file.endswith("jsonl.gz"):
+        import gzip
+        return [json.loads(line) for line in gzip.open(file, 'rt')]
+    elif file.endswith("json.gz"):
+        import gzip
+        return json.load(gzip.open(file, 'rt'))
+    else:
+        raise ValueError(f"Unknown file type for {file}")
+
+def save_json(data, file : str):
+    import json
+    if file.endswith(".json"):
+        json.dump(data, open(file, 'w'))
+    elif file.endswith("jsonl"):
+        with open(file, 'w') as f:
+            for item in data:
+                f.write(json.dumps(item) + '\n')
+    elif file.endswith("jsonl.gz"):
+        import gzip
+        with gzip.open(file, 'wt') as f:
+            for item in data:
+                f.write(json.dumps(item) + '\n')
+    elif file.endswith("json.gz"):
+        import gzip
+        json.dump(data, gzip.open(file, 'wt'))
+    else:
+        raise ValueError(f"Unknown file type for {file}")
+        
+    

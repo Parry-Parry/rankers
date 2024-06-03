@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from typing import Optional, Any
 import ir_datasets as irds
+from .._util import load_json
 
 from contrast._util import initialise_triples
 
@@ -25,7 +26,7 @@ class TripletDataset(Dataset):
         self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
 
         if self.triples is None: self.triples = initialise_triples(self.ir_dataset)
-        if teacher_file: self.teacher = json.load(open(teacher_file, 'r'))
+        if teacher_file: self.teacher = load_json(teacher_file)
 
         self.labels = True if teacher_file else False
         self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
