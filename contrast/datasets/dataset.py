@@ -30,7 +30,7 @@ class TripletDataset(Dataset):
 
         self.labels = True if teacher_file else False
         self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
-        
+
         if group_size > 2 and self.multi_negatives:
             self.triples['doc_id_b'] = self.triples['doc_id_b'].apply(lambda x: random.sample(x, group_size-1))
         elif group_size == 2 and self.multi_negatives:
@@ -53,7 +53,7 @@ class TripletDataset(Dataset):
         texts = [self.docs[str(doc_id_a)]]
 
         if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
-        else: texts.append(self.docs[str(doc_id_b)])
+        else: texts.append(self.docs[str(doc_id_b)]))
 
         if self.labels:
             scores = [self._teacher(str(qid), str(doc_id_a), positive=True)]
