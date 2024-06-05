@@ -39,8 +39,7 @@ class DotDataCollator:
             return_tensors="pt",
             return_special_tokens_mask=self.special_mask
         )
-        print(len(batch_queries))
-        print(len(batch_docs))
+ 
         return {
             "queries": dict(tokenized_queries),
             "docs_batch": dict(tokenized_docs),
