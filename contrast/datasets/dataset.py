@@ -30,9 +30,14 @@ class TripletDataset(Dataset):
 
         self.labels = True if teacher_file else False
         self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
+        
         if group_size > 2 and self.multi_negatives:
             self.triples['doc_id_b'] = self.triples['doc_id_b'].apply(lambda x: random.sample(x, group_size-1))
-
+        elif group_size == 2 and self.multi_negatives:
+            self.triples['doc_id_b'] = self.triples['doc_id_b'].apply(lambda x: random.choice(x))
+        elif group_size > 2 and not self.multi_negatives:
+            raise ValueError("Group size > 2 not supported for single negative samples")
+    
     def __len__(self):
         return len(self.triples)
     
