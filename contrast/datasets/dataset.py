@@ -1,7 +1,6 @@
 import random
 from torch.utils.data import Dataset
 from typing import Any
-import json
 import pandas as pd
 import torch
 from typing import Optional, Any
@@ -49,6 +48,7 @@ class TripletDataset(Dataset):
     def __getitem__(self, idx):
         item = self.triples.iloc[idx]
         qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
+        if len(doc_id_b) == 0: raise ValueError(f"No negative samples found for query {qid}")
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]]
 
