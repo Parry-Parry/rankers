@@ -34,6 +34,7 @@ class TripletDataset(Dataset):
             self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.sample(x, group_size-1))
         elif group_size == 2 and self.multi_negatives:
             self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.choice(x))
+            self.multi_negatives = False
         elif group_size > 2 and not self.multi_negatives:
             raise ValueError("Group size > 2 not supported for single negative samples")
     
@@ -48,7 +49,6 @@ class TripletDataset(Dataset):
     def __getitem__(self, idx):
         item = self.triples.iloc[idx]
         qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
-        if len(doc_id_b) == 0: raise ValueError(f"No negative samples found for query {qid}")
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]]
 
