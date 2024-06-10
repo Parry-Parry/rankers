@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-from . import BaseLoss
+from . import BaseLoss, residual
 
 class KL_DivergenceLoss(BaseLoss):
     """KL Divergence loss"""
@@ -23,25 +23,28 @@ class RankNetLoss(BaseLoss):
         self.temperature = temperature
         self.bce = torch.nn.BCEWithLogitsLoss(reduction=reduction)
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        if not torch.all((labels >= 0) & (labels <= 1)):
-            labels = F.softmax(labels  / self.temperature, dim=1)
-        if not torch.all((pred >= 0) & (pred <= 1)):
-            pred = F.softmax(pred  / self.temperature, dim=1)
-        return self.bce(pred, labels)
+    def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
+        neg = pred[:, 1:]
+        pos = pred[:, 0]
+        pos = torch.repeat_interleave(pos, neg.shape[0] // pos.shape[0],dim=0)
 
+        residual = pos - neg
+        if labels is None: labels = torch.ones_like(residual)
+
+        return self.bce(residual, labels)
 
 class ListNetLoss(BaseLoss):
     """ListNet loss"""
 
-    def __init__(self, reduction='mean', temperature=1.):
+    def __init__(self, reduction='mean', temperature=1., epsilon=1e-8):
         super().__init__(reduction)
         self.temperature = temperature
+        self.epsilon = epsilon
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         if not torch.all((labels >= 0) & (labels <= 1)):
             labels = F.softmax(labels / self.temperature, dim=1)
-        return self._reduce(-torch.sum(labels * F.log_softmax(pred  / self.temperature, dim=1), dim=-1))
+        return self._reduce(-torch.sum(labels * F.log_softmax(pred + self.epsilon  / self.temperature, dim=1), dim=-1))
 
 class Poly1SoftmaxLoss(BaseLoss):
     """Poly1 softmax loss with automatic softmax handling and reduction."""

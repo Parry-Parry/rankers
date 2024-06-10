@@ -84,6 +84,28 @@ def normalize(a: Tensor, dim: int = -1):
     max_values = a.max(dim=dim, keepdim=True)[0]
     return (a - min_values) / (max_values - min_values + 1e-10)
 
+def residual(a : Tensor):
+    """
+    Calculating the residual between a positive sample and multiple negatives.
+    Parameters
+    ----------
+    a: torch.Tensor
+        the input tensor
+    Returns
+    -------
+    torch.Tensor
+        the residuals
+    """
+    if a.size(1) == 1: return a
+    if len(a.size()) == 3:
+        assert a.size(2) == 1, "Expected scalar values for residuals."
+        a = a.squeeze(2)
+
+    positive = a[:, 0]
+    negative = a[:, 1]
+
+    return positive.unsqueeze(1) - negative
+
 def dot_product(a: Tensor, b: Tensor):
     """
     Calculating row-wise dot product between two tensors a and b.
