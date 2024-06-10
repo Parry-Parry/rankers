@@ -104,7 +104,7 @@ def residual(a : Tensor):
     positive = a[:, 0]
     negative = a[:, 1]
 
-    return positive.unsqueeze(1) - negative
+    return positive - negative
 
 def dot_product(a: Tensor, b: Tensor):
     """

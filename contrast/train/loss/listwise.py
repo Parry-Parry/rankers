@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-from . import BaseLoss, residual
+from . import BaseLoss
 
 class KL_DivergenceLoss(BaseLoss):
     """KL Divergence loss"""
