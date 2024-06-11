@@ -62,7 +62,8 @@ class CatTransformer(pt.Transformer):
                  config : AutoConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
-                 device : Union[str, torch.device] = None
+                 device : Union[str, torch.device] = None,
+                 verbose : bool = False
                  ) -> None:
         super().__init__()
         self.model = model
@@ -71,6 +72,7 @@ class CatTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.verbose = verbose
     
     @classmethod
     def from_pretrained(cls, 
