@@ -81,7 +81,7 @@ class CatTransformer(pt.Transformer):
                         text_field : str = 'text', 
                         device : Union[str, torch.device] = None
                         ):
-        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path)
+        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device)
@@ -105,7 +105,7 @@ class CatTransformer(pt.Transformer):
             for chunk in chunked(it, self.batch_size):
                 queries, texts = map(list, zip(*chunk))
                 inps = self.tokenizer(queries, texts, return_tensors='pt', padding=True, truncation=True)
-                inps = {k: v.to(self.device) for k, v in inps.items()}
+                inps = {k: v.to(self.model.device) for k, v in inps.items()}
                 scores.append(self.model(**inps).logits[:, 1].cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
