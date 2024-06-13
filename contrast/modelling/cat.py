@@ -112,7 +112,7 @@ class CatTransformer(pt.Transformer):
         res = res.sort_values(['qid', 'rank'])
         return res
 
-class DuoTransformer(pt.Transformer):
+class PairTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
