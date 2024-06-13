@@ -26,14 +26,15 @@ class RankNetLoss(BaseLoss):
         self.bce = torch.nn.BCEWithLogitsLoss(reduction=reduction)
 
     def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
-        neg = pred[:, 1:]
-        pos = pred[:, 0]
-        pos = torch.repeat_interleave(pos, neg.shape[0] // pos.shape[0],dim=0)
+        b, g = pred.shape
+        i1, i2 = torch.triu_indices(g, g, offset=1)
+        pred_diff = pred[:, i1] - pred[:, i2]
+        label_diff = labels[:, i1] - labels[:, i2]
 
-        residual = pos - neg
-        if labels is None: labels = torch.ones_like(residual)
+        targets = (label_diff > 0).float()
 
-        return self.bce(residual, labels)
+        return self.bce(pred_diff, targets)
+
 
 class DistillRankNetLoss(BaseLoss):
     """DistillRankNet loss
@@ -47,16 +48,18 @@ class DistillRankNetLoss(BaseLoss):
         self.increment_margin = increment_margin
     
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        teacher_ranks = labels.sort(descending=True, dim=-1)[1]
-        # get margin between each teacher rank
-        rank_residual = teacher_ranks.unsqueeze(-1) - teacher_ranks.unsqueeze(1) 
-        teacher_margin = (rank_residual - 1) * self.increment_margin + self.base_margin
-        student_margin = pred.unsqueeze(-1) - pred.unsqueeze(1) 
+        b, g = pred.shape
+        i1, i2 = torch.triu_indices(g, g, offset=1)
 
-        positive_mask = teacher_margin > 0
+        pred_diff = pred[:, i1] - pred[:, i2]
 
-        final_margin = student_margin + teacher_margin
-        return self._reduce(final_margin[positive_mask])
+        label_diff = labels[:, i1] - labels[:, i2]
+        label_margin = (label_diff -1) * self.increment_margin + self.base_margin
+
+        final_margin = pred_diff + label_margin
+        targets = (label_diff > 0).float()
+        
+        return self._reduce(final_margin[targets])
 
 class ListNetLoss(BaseLoss):
     """ListNet loss
