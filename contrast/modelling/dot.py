@@ -10,7 +10,6 @@ from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from enum import Enum
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
