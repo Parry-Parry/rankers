@@ -1,3 +1,4 @@
+from collections import defaultdict
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -286,6 +287,14 @@ class WeightedLoss(nn.Module):
             loss += w * l
             to_log.update(curr_log)
         return TrainingOutput(loss, scores, to_log)
+    
+CONSTRUCTORS = defaultdict(lambda: dotLoss)
+
+CONSTRUCTORS.update({
+    'dot': dotLoss,
+    'cat': catLoss,
+    'duo': duoLoss,
+})
     
 from .listwise import *
 from .pointwise import *

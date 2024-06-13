@@ -5,7 +5,7 @@ from collections import defaultdict
 from transformers import Trainer
 from ..modelling.cat import Cat 
 from ..modelling.dot import Dot
-from .loss import catLoss, dotLoss, BaseLoss
+from .loss import BaseLoss, CONSTRUCTORS
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +17,11 @@ class ContrastTrainer(Trainer):
     def __init__(self, *args, loss=None, **kwargs) -> None:
         super(ContrastTrainer, self).__init__(*args, **kwargs)
         if not isinstance(loss, BaseLoss) or loss is None: self.loss = loss
-        elif isinstance(self.model, Dot): self.loss = dotLoss(loss, self.args.group_size)
-        elif isinstance(self.model, Cat): self.loss = catLoss(loss, self.args.group_size)
+        elif isinstance(self.model, Dot): self.loss = CONSTRUCTORS['dot'](loss, self.args.group_size)
+        elif isinstance(self.model, Cat): self.loss = CONSTRUCTORS['cat'](loss, self.args.group_size)
         else:
             logger.warning("Model is not Dot or Cat, defaulting to Dot for loss")
-            self.loss = dotLoss(loss, self.args.group_size)
+            self.loss = CONSTRUCTORS[''](loss, self.args.group_size)
         self.custom_log = defaultdict(lambda: 0.0)
         self.tokenizer = self.data_collator.tokenizer
 
