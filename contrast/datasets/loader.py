@@ -87,8 +87,7 @@ def _make_pos_pairs(texts) -> list:
         output.append([pos, texts[i]])
     return output
     
-class DuoDataCollator:
-    # creates pairwise input for duoBERT, encoding each possible pair of documents with the query in the form CLS [query] SEP [doc1] SEP [doc2]
+class PairDataCollator:
     def __init__(self, tokenizer, max_length=512) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
