@@ -26,7 +26,7 @@ class RankNetLoss(BaseLoss):
         self.bce = torch.nn.BCEWithLogitsLoss(reduction=reduction)
 
     def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
-        b, g = pred.shape
+        _, g = pred.shape
         i1, i2 = torch.triu_indices(g, g, offset=1)
         pred_diff = pred[:, i1] - pred[:, i2]
         label_diff = labels[:, i1] - labels[:, i2]
@@ -48,7 +48,7 @@ class DistillRankNetLoss(BaseLoss):
         self.increment_margin = increment_margin
     
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        b, g = pred.shape
+        _, g = pred.shape
         i1, i2 = torch.triu_indices(g, g, offset=1)
 
         pred_diff = pred[:, i1] - pred[:, i2]
@@ -58,7 +58,7 @@ class DistillRankNetLoss(BaseLoss):
 
         final_margin = pred_diff + label_margin
         targets = (label_diff > 0).float()
-        
+
         return self._reduce(final_margin[targets])
 
 class ListNetLoss(BaseLoss):
