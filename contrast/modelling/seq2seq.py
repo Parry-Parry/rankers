@@ -23,7 +23,7 @@ class Seq2SeqCat(PreTrainedModel):
     """
     def __init__(
         self,
-        classifier: Union[AutoModelForSeq2SeqLM],
+        classifier: AutoModelForSeq2SeqLM,
         config: AutoConfig,
     ):
         super().__init__(config)
