@@ -11,8 +11,8 @@ from contrast._util import initialise_triples
 
 class TripletDataset(Dataset):
     def __init__(self, 
+                 triples : pd.DataFrame, 
                  ir_dataset : str,
-                 triples : Optional[Any] = None, 
                  teacher_file : Optional[str] = None,
                  group_size : int = 2,
                  ) -> None:
@@ -24,7 +24,6 @@ class TripletDataset(Dataset):
         self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
 
-        if self.triples is None: self.triples = initialise_triples(self.ir_dataset)
         if teacher_file: self.teacher = load_json(teacher_file)
 
         self.labels = True if teacher_file else False
@@ -37,6 +36,16 @@ class TripletDataset(Dataset):
             self.multi_negatives = False
         elif group_size > 2 and not self.multi_negatives:
             raise ValueError("Group size > 2 not supported for single negative samples")
+    
+
+    @classmethod
+    def from_irds(cls,
+                    ir_dataset : str,
+                    teacher_file : Optional[str] = None,
+                    group_size : int = 2,
+                    ) -> 'TripletDataset':
+            triples = initialise_triples(ir_dataset)
+            return cls(triples, ir_dataset, teacher_file, group_size)
     
     def __len__(self):
         return len(self.triples)
