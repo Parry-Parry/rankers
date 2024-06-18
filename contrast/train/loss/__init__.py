@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from torch import Tensor
-from dataclasses import dataclass
 
 def reduce(a : torch.Tensor, reduction : str):
     """
@@ -47,25 +46,6 @@ class BaseLoss(nn.Module):
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
-
-@dataclass
-class TrainingOutput:
-    """
-    Class to hold the output of the training process.
-    
-    Parameters
-    ----------
-    loss: torch.Tensor
-        the loss value
-    pred: torch.Tensor
-        the predicted values
-    to_log: dict
-        the values to log
-    """
-    loss: torch.Tensor
-    pred: torch.Tensor
-    to_log: dict
-   
 
 def normalize(a: Tensor, dim: int = -1):
     """
@@ -196,7 +176,7 @@ class dotLoss(nn.Module):
         to_log = {
             "loss_no_reg": loss.detach(),
         }
-        return TrainingOutput(
+        return (
             loss,
             pred,
             to_log,
@@ -228,7 +208,7 @@ class catLoss(nn.Module):
         to_log = {
             "loss_no_reg": loss.detach(),
         }
-        return TrainingOutput(
+        return (
             loss,
             pred,
             to_log,
@@ -255,7 +235,7 @@ class duoLoss(nn.Module):
         to_log = {
             "loss_no_reg": loss.detach(),
         }
-        return TrainingOutput(
+        return (
             loss,
             F.softmax(logits, dim=-1)[:, 0],
             to_log,
@@ -286,7 +266,7 @@ class WeightedLoss(nn.Module):
             if curr_scores is not None: scores = curr_scores
             loss += w * l
             to_log.update(curr_log)
-        return TrainingOutput(loss, scores, to_log)
+        return (loss, scores, to_log)
     
 CONSTRUCTORS = defaultdict(lambda: dotLoss)
 
