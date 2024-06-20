@@ -13,19 +13,19 @@ import wandb
 from fire import Fire
 
 def train(
-        model_name_or_path : str,
-        output_dir : str,
-        train_dataset : str,
-        val_dataset : str,
-        val_topics : str,
-        batch_size : int = 16,
-        lr : float = 0.00001,
-        grad_accum : int = 1,
-        warmup_steps : int = 0,
-        eval_steps : int = 1000,
-        epochs : int = 1,
-        wandb_project : str = None,
-        seed : int = 42,
+        model_name_or_path : str, # Huggingface model name or path to model
+        output_dir : str, # Where to save the model and checkpoints
+        train_dataset : str, # The path to the training dataset
+        val_dataset : str, # The ir_dataset to validate on
+        val_topics : str, # The path to the validation rankings (re-rank)
+        batch_size : int = 16, # per device batch size
+        lr : float = 0.00001, # learning rate
+        grad_accum : int = 1, # gradient accumulation steps (used to increase the effective batch size)
+        warmup_steps : int = 0, # number of warmup steps for the scheduler
+        eval_steps : int = 1000, # number of steps between evaluations
+        epochs : int = 1, # number of training epochs
+        wandb_project : str = None, # wandb project name
+        seed : int = 42, # random seed
     ):
     seed_everything(seed)
     if wandb_project is not None:
