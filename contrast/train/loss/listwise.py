@@ -89,3 +89,11 @@ class Poly1SoftmaxLoss(BaseLoss):
         expansion = (labels_for_softmax * F.softmax(pred / self.temperature, dim=1)).sum(dim=-1)
         ce = self.ce(pred / self.temperature, labels_for_softmax)
         return self._reduce(ce + (1 - expansion) * self.epsilon)
+
+LISTWISE_LOSSES = {
+    'kl_div': KL_DivergenceLoss,
+    'ranknet': RankNetLoss,
+    'distill_ranknet': DistillRankNetLoss,
+    'listnet': ListNetLoss,
+    'poly1': Poly1SoftmaxLoss,
+}

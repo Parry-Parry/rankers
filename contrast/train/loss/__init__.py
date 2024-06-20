@@ -279,3 +279,9 @@ CONSTRUCTORS.update({
 from .listwise import *
 from .pointwise import *
 from .pairwise import *
+
+LOSSES = {
+    **POINTWISE_LOSSES,
+    **PAIRWISE_LOSSES,
+    **LISTWISE_LOSSES,
+}

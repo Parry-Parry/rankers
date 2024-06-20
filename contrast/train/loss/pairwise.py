@@ -55,3 +55,10 @@ class ContrastiveLoss(BaseLoss):
         softmax_scores = F.log_softmax(pred / self.temperature, dim=1)
         return F.nll_loss(softmax_scores, torch.zeros(pred.size(0), dtype=torch.long, device=pred.device), reduction=self.reduction)
 
+PAIRWISE_LOSSES = {
+    'margin_mse': MarginMSELoss,
+    'hinge': HingeLoss,
+    'clear': ClearLoss,
+    'lce': LCELoss,
+    'contrastive': ContrastiveLoss,
+}
