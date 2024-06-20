@@ -1,9 +1,8 @@
 import random
 from torch.utils.data import Dataset
-from typing import Any
 import pandas as pd
 import torch
-from typing import Optional, Any
+from typing import Optional
 import ir_datasets as irds
 from .._util import load_json
 
