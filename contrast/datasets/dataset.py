@@ -15,6 +15,7 @@ class TripletDataset(Dataset):
                  ir_dataset : str,
                  teacher_file : Optional[str] = None,
                  group_size : int = 2,
+                 listwise : bool = False,
                  ) -> None:
         super().__init__()
         self.triples = triples
@@ -29,13 +30,16 @@ class TripletDataset(Dataset):
         self.labels = True if teacher_file else False
         self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
 
-        if group_size > 2 and self.multi_negatives:
-            self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.sample(x, group_size-1))
-        elif group_size == 2 and self.multi_negatives:
-            self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.choice(x))
-            self.multi_negatives = False
-        elif group_size > 2 and not self.multi_negatives:
-            raise ValueError("Group size > 2 not supported for single negative samples")
+        self.listwise = listwise
+
+        if not listwise:
+            if group_size > 2 and self.multi_negatives:
+                self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.sample(x, group_size-1))
+            elif group_size == 2 and self.multi_negatives:
+                self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.choice(x))
+                self.multi_negatives = False
+            elif group_size > 2 and not self.multi_negatives:
+                raise ValueError("Group size > 2 not supported for single negative samples")
     
 
     @classmethod
@@ -59,7 +63,7 @@ class TripletDataset(Dataset):
         item = self.triples.iloc[idx]
         qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
         query = self.queries[str(qid)]
-        texts = [self.docs[str(doc_id_a)]]
+        texts = [self.docs[str(doc_id_a)]] if not self.listwise else []
 
         if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
         else: texts.append(self.docs[str(doc_id_b)])
