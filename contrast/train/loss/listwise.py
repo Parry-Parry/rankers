@@ -29,9 +29,12 @@ class RankNetLoss(BaseLoss):
         _, g = pred.shape
         i1, i2 = torch.triu_indices(g, g, offset=1)
         pred_diff = pred[:, i1] - pred[:, i2]
-        label_diff = labels[:, i1] - labels[:, i2]
-
-        targets = (label_diff > 0).float()
+        if labels is None:
+            targets = torch.zeros_like(pred_diff)
+            targets[:, 0] = 1.
+        else:
+            label_diff = labels[:, i1] - labels[:, i2]
+            targets = (label_diff > 0).float()
 
         return self.bce(pred_diff, targets)
 
