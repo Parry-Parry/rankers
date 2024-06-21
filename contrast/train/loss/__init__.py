@@ -167,10 +167,10 @@ class dotLoss(nn.Module):
     
     def forward(self, q_reps, d_reps, labels=None):
         batch_size = q_reps.size(0)
-        e_q = q_reps.view(batch_size, 1, -1)
-        e_d = d_reps.view(batch_size, self.group_size, -1)
+        e_q = q_reps.reshape(batch_size, 1, -1)
+        e_d = d_reps.reshape(batch_size, self.group_size, -1)
         pred = batched_dot_product(e_q, e_d)
-        if labels is not None: labels = labels.view(batch_size, self.group_size)
+        if labels is not None: labels = labels.reshape(batch_size, self.group_size)
         loss = self.fn(pred, labels)
 
         to_log = {
@@ -199,10 +199,10 @@ class catLoss(nn.Module):
         self.fn = fn
     
     def forward(self, logits, labels=None):
-        pred = logits.view(-1, self.group_size, 2)
+        pred = logits.reshape(-1, self.group_size, 2)
         pred = F.softmax(pred, dim=-1)[:, :, 1]
         
-        if labels is not None: labels = labels.view(-1, self.group_size)
+        if labels is not None: labels = labels.reshape(-1, self.group_size)
         loss = self.fn(pred, labels)
 
         to_log = {
