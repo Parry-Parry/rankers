@@ -17,7 +17,7 @@ class KL_DivergenceLoss(BaseLoss):
 
 class RankNetLoss(BaseLoss):
     """RankNet loss
-    Use with caution, this is a WIP
+    https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
     """
 
     def __init__(self, reduction='mean', temperature=1.):
