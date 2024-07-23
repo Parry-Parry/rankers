@@ -89,7 +89,8 @@ class Dot(PreTrainedModel):
     ):
         super().__init__(config)
         self.encoder = encoder
-        if encoder_d is None: self.encoder_d = self.encoder if config.encoder_tied else deepcopy(self.encoder)
+        if encoder_d is not None: self.encoder_d = encoder_d
+        else: self.encoder_d = self.encoder if config.encoder_tied else deepcopy(self.encoder)
         self.pooling = {
             'mean': self._mean,
             'cls' : self._cls,
