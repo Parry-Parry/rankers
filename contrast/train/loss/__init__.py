@@ -200,7 +200,7 @@ class catLoss(nn.Module):
     
     def forward(self, logits, labels=None):
         pred = logits.reshape(-1, self.group_size, 2)
-        pred = F.softmax(pred, dim=-1)[:, :, 1]
+        pred = pred[:, :, 1]
         
         if labels is not None: labels = labels.reshape(-1, self.group_size)
         loss = self.fn(pred, labels)
