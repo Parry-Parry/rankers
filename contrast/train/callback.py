@@ -27,9 +27,9 @@ class EarlyStopping(object):
         better = False
         if self.best is None:
             self.best = metrics
-            return False
+            return False, True
 
-        if np.isnan(metrics): return True
+        if np.isnan(metrics): return True, False
 
         if self.is_better(metrics, self.best):
             self.num_bad_epochs = 0
@@ -69,7 +69,7 @@ class EarlyStopping(object):
     def __call__(self, model):
         ranks = model.transform(self.val_topics)
         value = self.compute_metric(ranks) 
-        return self.step(value), value
+        return *self.step(value), value
 
 class EarlyStoppingCallback(TrainerCallback):
 
