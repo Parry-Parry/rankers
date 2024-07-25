@@ -46,7 +46,7 @@ class Cat(PreTrainedModel):
         return self.classifier.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
     
     def eval(self) -> "CatTransformer":
-        return CatTransformer.from_model(self.encoder, text_field='text')
+        return CatTransformer.from_model(self.classifier, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
