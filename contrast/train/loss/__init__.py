@@ -193,7 +193,7 @@ class catLoss(nn.Module):
     group_size: int
         the number of samples
     """
-    def __init__(self, fn : callable, group_size=2, act_fn : callable = lambda x : x, **kwargs) -> None:
+    def __init__(self, fn : callable, group_size=2, act_fn : callable = lambda x : F.log_softmax(x, dim=-1), **kwargs) -> None:
         super(catLoss, self).__init__()
         self.group_size = group_size
         self.fn = fn
