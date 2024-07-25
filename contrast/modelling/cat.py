@@ -7,6 +7,7 @@ import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
+import torch.nn.functional as F
 
 class Cat(PreTrainedModel):
     """Wrapper for Cat Model
@@ -106,7 +107,7 @@ class CatTransformer(pt.Transformer):
                 queries, texts = map(list, zip(*chunk))
                 inps = self.tokenizer(queries, texts, return_tensors='pt', padding=True, truncation=True)
                 inps = {k: v.to(self.model.device) for k, v in inps.items()}
-                scores.append(self.model(**inps).logits[:, 1].cpu().detach().numpy())
+                scores.append(F.log_softmax(self.model(**inps).logits, dim=-1)[:, 1].cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
