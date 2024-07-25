@@ -193,13 +193,14 @@ class catLoss(nn.Module):
     group_size: int
         the number of samples
     """
-    def __init__(self, fn : callable, group_size=2, **kwargs) -> None:
+    def __init__(self, fn : callable, group_size=2, act_fn : callable = lambda x : x, **kwargs) -> None:
         super(catLoss, self).__init__()
         self.group_size = group_size
         self.fn = fn
+        self.act_fn = act_fn
     
     def forward(self, logits, labels=None):
-        pred = logits.reshape(-1, self.group_size, 2)
+        pred = self.act_fn(logits.reshape(-1, self.group_size, 2))
         pred = pred[:, :, 1]
         
         if labels is not None: labels = labels.reshape(-1, self.group_size)
