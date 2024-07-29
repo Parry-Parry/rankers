@@ -2,56 +2,63 @@ import random
 from torch.utils.data import Dataset
 import pandas as pd
 import torch
-from typing import Optional
+from typing import Optional, Union
 import ir_datasets as irds
 from .._util import load_json
 
-from contrast._util import initialise_triples
+from contrast._util import initialise_triples, initialise_irds_eval
 
-class TripletDataset(Dataset):
+class TrainingDataset(Dataset):
     def __init__(self, 
-                 triples : pd.DataFrame, 
+                 training_data : pd.DataFrame, 
                  ir_dataset : str,
                  teacher_file : Optional[str] = None,
                  group_size : int = 2,
                  listwise : bool = False,
                  ) -> None:
         super().__init__()
-        self.triples = triples
-        for column in 'query_id', 'doc_id_a', 'doc_id_b':
-            if column not in self.triples.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in triples dataframe")
+        self.training_data = training_data
         self.ir_dataset = irds.load(ir_dataset)
+        self.teacher_file = teacher_file
+        self.group_size = group_size
+        self.listwise = listwise
+
+        self.__post_init__()
+
+    
+    def __post_init__(self):
+
+        for column in 'query_id', 'doc_id_a', 'doc_id_b':
+            if column not in self.training_data.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in triples dataframe")
         self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
 
-        if teacher_file: self.teacher = load_json(teacher_file)
+        if self.teacher_file: self.teacher = load_json(self.teacher_file)
 
-        self.labels = True if teacher_file else False
-        self.multi_negatives = True if type(self.triples['doc_id_b'].iloc[0]) == list else False
+        self.labels = True if self.teacher_file else False
+        self.multi_negatives = True if type(self.training_data['doc_id_b'].iloc[0]) == list else False
 
-        self.listwise = listwise
-
-        if not listwise:
-            if group_size > 2 and self.multi_negatives:
-                self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.sample(x, group_size-1))
-            elif group_size == 2 and self.multi_negatives:
-                self.triples['doc_id_b'] = self.triples['doc_id_b'].map(lambda x: random.choice(x))
+        if not self.listwise:
+            if self.group_size > 2 and self.multi_negatives:
+                self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.sample(x, self.group_size-1))
+            elif self.group_size == 2 and self.multi_negatives:
+                self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.choice(x))
                 self.multi_negatives = False
-            elif group_size > 2 and not self.multi_negatives:
+            elif self.group_size > 2 and not self.multi_negatives:
                 raise ValueError("Group size > 2 not supported for single negative samples")
-    
+        
 
     @classmethod
     def from_irds(cls,
                     ir_dataset : str,
                     teacher_file : Optional[str] = None,
                     group_size : int = 2,
-                    ) -> 'TripletDataset':
-            triples = initialise_triples(ir_dataset)
-            return cls(triples, ir_dataset, teacher_file, group_size)
+                    ) -> 'TrainingDataset':
+            training_data = initialise_triples(irds.load(ir_dataset))
+            return cls(training_data, ir_dataset, teacher_file, group_size)
     
     def __len__(self):
-        return len(self.triples)
+        return len(self.training_data)
     
     def _teacher(self, qid, doc_id, positive=False):
         assert self.labels, "No teacher file provided"
@@ -59,7 +66,7 @@ class TripletDataset(Dataset):
         except KeyError: return 0.
 
     def __getitem__(self, idx):
-        item = self.triples.iloc[idx]
+        item = self.training_data.iloc[idx]
         qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]] if not self.listwise else []
@@ -74,3 +81,38 @@ class TripletDataset(Dataset):
             return (query, texts, scores)
         else:
             return (query, texts)
+
+class EvaluationDataset(Dataset):
+    def __init__(self, 
+                 evaluation_data : Union[pd.DataFrame, str], 
+                 ir_dataset : str,
+                 ) -> None:
+        super().__init__()
+        self.evaluation_data = evaluation_data
+        self.ir_dataset = irds.load(ir_dataset)
+
+        self.__post_init__()
+    
+    def __post_init__(self):
+        if type(self.evaluation_data) == str: 
+            import pyterrier as pt
+            self.evaluation_data = pt.io.read_results(self.evaluation_data)
+        else:
+            for column in 'qid', 'docno', 'score':
+                if column not in self.evaluation_data.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in dataframe")
+        self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
+        self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
+        self.qrels = pd.DataFrame(self.ir_dataset.qrels_iter())
+
+        self.evaluation_data['text'] = self.evaluation_data['docno'].map(self.docs)
+        self.evaluation_data['query'] = self.evaluation_data['qid'].map(self.queries)
+
+    @classmethod
+    def from_irds(cls,
+                    ir_dataset : str,
+                    ) -> 'EvaluationDataset':
+            evaluation_data = initialise_irds_eval(irds.load(ir_dataset))
+            return cls(evaluation_data, ir_dataset)
+    
+    def __len__(self):
+        return len(self.evaluation_data.qid.unique())
