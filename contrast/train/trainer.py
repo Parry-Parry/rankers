@@ -10,10 +10,7 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
-from ..modelling.cat import Cat 
-from ..modelling.dot import Dot
-from .loss import BaseLoss, CONSTRUCTORS, LOSSES
-
+from .loss import  LOSSES
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +25,11 @@ class ContrastTrainer(Trainer):
             if loss not in LOSSES: 
                 raise ValueError(f"Unknown loss: {loss}")
             self.loss = LOSSES[loss]()
-        if not isinstance(loss, BaseLoss) or loss is None: self.loss = loss
-        elif isinstance(self.model, Dot): self.loss = CONSTRUCTORS['dot'](loss, self.args.group_size)
-        elif isinstance(self.model, Cat): self.loss = CONSTRUCTORS['cat'](loss, self.args.group_size)
-        else:
-            logger.warning("Model is not Dot or Cat, defaulting to Dot for loss")
-            self.loss = CONSTRUCTORS[''](loss, self.args.group_size)
+        else: 
+            self.loss = loss
         self.custom_log = defaultdict(lambda: 0.0)
         self.tokenizer = self.data_collator.tokenizer
+        self.model.config.group_size = self.args.group_size
     
     def compute_metrics(self, result_frame : pd.DataFrame):
         from ir_measures import evaluator, RR
@@ -58,8 +52,6 @@ class ContrastTrainer(Trainer):
         Works both with or without labels.
         """
         args = self.args
-
-        prediction_loss_only = prediction_loss_only if prediction_loss_only is not None else args.prediction_loss_only
 
         # if eval is called w/o train, handle model prep here
         if self.is_deepspeed_enabled and self.deepspeed is None:
@@ -99,7 +91,7 @@ class ContrastTrainer(Trainer):
         logger.info(f"  Num queries = {len(dataset)}")
         logger.info(f"  Batch size = {batch_size}")
 
-        eval_model = model.eval()
+        eval_model = model.to_pyterrier()
         result_frame = eval_model.transform(dataset.evaluation_data)
         metrics = self.compute_metrics(result_frame)
 

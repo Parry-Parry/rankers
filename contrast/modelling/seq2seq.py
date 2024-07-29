@@ -21,6 +21,7 @@ class Seq2SeqCat(PreTrainedModel):
     config : AutoConfig
         the configuration for the model
     """
+    model_architecture = 'Seq2SeqCat'
     def __init__(
         self,
         classifier: AutoModelForSeq2SeqLM,
@@ -39,16 +40,19 @@ class Seq2SeqCat(PreTrainedModel):
         else: output = loss(logits, labels)
         return output
 
+
     def save_pretrained(self, model_dir, **kwargs):
         """Save classifier"""
         self.config.save_pretrained(model_dir)
         self.classifier.save_pretrained(model_dir)
+        AutoTokenizer.from_pretrained(self.config).save_pretrained(model_dir)
+
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         return self.classifier.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
-    def eval(self) -> "Seq2SeqTransformer":
+    def to_pyterrier(self) -> "Seq2SeqTransformer":
         return Seq2SeqTransformer.from_model(self.classifier, text_field='text')
 
     @classmethod

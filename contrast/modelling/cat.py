@@ -19,6 +19,7 @@ class Cat(PreTrainedModel):
     config : AutoConfig
         the configuration for the model
     """
+    model_architecture = 'Cat'
     def __init__(
         self,
         classifier: PreTrainedModel,
@@ -26,6 +27,10 @@ class Cat(PreTrainedModel):
     ):
         super().__init__(config)
         self.classifier = classifier
+    
+    def prepare_outputs(self, logits):
+        """Prepare outputs"""
+        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1]
 
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
@@ -41,12 +46,15 @@ class Cat(PreTrainedModel):
         """Save classifier"""
         self.config.save_pretrained(model_dir)
         self.classifier.save_pretrained(model_dir)
+        AutoTokenizer.from_pretrained(self.config).save_pretrained(model_dir)
     
+
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         return self.classifier.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
     
-    def eval(self) -> "CatTransformer":
+
+    def to_pyterrier(self) -> "pt.Transformer":
         return CatTransformer.from_model(self.classifier, text_field='text')
 
     @classmethod
