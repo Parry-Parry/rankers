@@ -5,7 +5,7 @@ from contrast import (
                       seed_everything,
                       )
 from contrast.modelling import Dot
-from contrast.datasets import TripletDataset, DotDataCollator
+from contrast.datasets import TrainingDataset, DotDataCollator
 from transformers import get_constant_schedule_with_warmup
 from torch.optim import AdamW
 import wandb
@@ -13,6 +13,7 @@ from fire import Fire
 
 def train(
         model_name_or_path : str, # Huggingface model name or path to model
+        ir_dataset : str, # Path to the IR dataset
         output_dir : str, # Where to save the model and checkpoints
         train_dataset : str, # The path to the training dataset
         batch_size : int = 16, # per device batch size
@@ -42,7 +43,7 @@ def train(
         report_to='wandb',
     )
 
-    dataset = TripletDataset(train_dataset)
+    dataset = TrainingDataset(train_dataset, ir_dataset=ir_dataset)
     collate_fn = DotDataCollator(model.encoder.tokenizer)
 
     opt = AdamW(model.parameters(), lr=lr)

@@ -5,20 +5,21 @@ import torch
 from typing import Optional, Union
 import ir_datasets as irds
 from .._util import load_json
+from .corpus import Corpus
 
 from contrast._util import initialise_triples, initialise_irds_eval
 
 class TrainingDataset(Dataset):
     def __init__(self, 
                  training_data : pd.DataFrame, 
-                 ir_dataset : str,
+                 corpus : Union[Corpus, irds.IRDataset],
                  teacher_file : Optional[str] = None,
                  group_size : int = 2,
                  listwise : bool = False,
                  ) -> None:
         super().__init__()
         self.training_data = training_data
-        self.ir_dataset = irds.load(ir_dataset)
+        self.corpus = corpus
         self.teacher_file = teacher_file
         self.group_size = group_size
         self.listwise = listwise
@@ -30,8 +31,8 @@ class TrainingDataset(Dataset):
 
         for column in 'query_id', 'doc_id_a', 'doc_id_b':
             if column not in self.training_data.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in triples dataframe")
-        self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
-        self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
+        self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
+        self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
         if self.teacher_file: self.teacher = load_json(self.teacher_file)
 
@@ -54,8 +55,9 @@ class TrainingDataset(Dataset):
                     teacher_file : Optional[str] = None,
                     group_size : int = 2,
                     ) -> 'TrainingDataset':
-            training_data = initialise_triples(irds.load(ir_dataset))
-            return cls(training_data, ir_dataset, teacher_file, group_size)
+            dataset = irds.load(ir_dataset)
+            training_data = initialise_triples(dataset)
+            return cls(training_data, dataset, teacher_file, group_size)
     
     def __len__(self):
         return len(self.training_data)
@@ -85,11 +87,11 @@ class TrainingDataset(Dataset):
 class EvaluationDataset(Dataset):
     def __init__(self, 
                  evaluation_data : Union[pd.DataFrame, str], 
-                 ir_dataset : str,
+                 corpus : Union[Corpus, irds.IRDataset]
                  ) -> None:
         super().__init__()
         self.evaluation_data = evaluation_data
-        self.ir_dataset = irds.load(ir_dataset)
+        self.corpus = corpus
 
         self.__post_init__()
     
@@ -100,19 +102,20 @@ class EvaluationDataset(Dataset):
         else:
             for column in 'qid', 'docno', 'score':
                 if column not in self.evaluation_data.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in dataframe")
-        self.docs = pd.DataFrame(self.ir_dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
-        self.queries = pd.DataFrame(self.ir_dataset.queries_iter()).set_index("query_id")["text"].to_dict()
-        self.qrels = pd.DataFrame(self.ir_dataset.qrels_iter())
+        self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
+        self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
+        self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
         self.evaluation_data['text'] = self.evaluation_data['docno'].map(self.docs)
         self.evaluation_data['query'] = self.evaluation_data['qid'].map(self.queries)
 
     @classmethod
     def from_irds(cls,
-                    ir_dataset : str,
-                    ) -> 'EvaluationDataset':
-            evaluation_data = initialise_irds_eval(irds.load(ir_dataset))
-            return cls(evaluation_data, ir_dataset)
+                  ir_dataset : str,
+                  ) -> 'EvaluationDataset':
+            dataset = irds.load(ir_dataset)
+            evaluation_data = initialise_irds_eval(dataset)
+            return cls(evaluation_data, dataset)
     
     def __len__(self):
         return len(self.evaluation_data.qid.unique())
