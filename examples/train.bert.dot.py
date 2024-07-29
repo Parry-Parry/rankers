@@ -2,7 +2,6 @@ import contrast
 from contrast import ( 
                       ContrastArguments, 
                       ContrastTrainer, 
-                      ValidationLogger, 
                       seed_everything,
                       )
 from contrast.modelling import Dot
@@ -16,8 +15,6 @@ def train(
         model_name_or_path : str, # Huggingface model name or path to model
         output_dir : str, # Where to save the model and checkpoints
         train_dataset : str, # The path to the training dataset
-        val_dataset : str, # The ir_dataset to validate on
-        val_topics : str, # The path to the validation rankings (re-rank)
         batch_size : int = 16, # per device batch size
         lr : float = 0.00001, # learning rate
         grad_accum : int = 1, # gradient accumulation steps (used to increase the effective batch size)
@@ -49,11 +46,6 @@ def train(
     collate_fn = DotDataCollator(model.encoder.tokenizer)
 
     opt = AdamW(model.parameters(), lr=lr)
-    val_logger = ValidationLogger(
-        metric = 'ndcg_cut_10',
-        ir_dataset = val_dataset,
-        val_topics = val_topics,
-    )
 
     trainer = ContrastTrainer(
         model=model,
@@ -61,8 +53,7 @@ def train(
         train_dataset=dataset,
         data_collator=collate_fn,
         optimizers=(opt, get_constant_schedule_with_warmup(opt, warmup_steps)),
-        loss_fn = contrast.loss.ContrastiveLoss(),
-        callbacks=[val_logger],
+        loss_fn = "contrastive",
         )
     
     trainer.train()

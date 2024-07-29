@@ -7,6 +7,7 @@ import pandas as pd
 
 class EarlyStopping(object):
     def __init__(self, val_topics, metric, qrels, mode='min', min_delta=0, patience=10, percentage=False):
+        raise NotImplementedError("This class should not be used!")
         self.mode = mode
         self.min_delta = min_delta
         self.patience = patience
@@ -100,6 +101,7 @@ class EarlyStoppingCallback(TrainerCallback):
                  patience=10, 
                  percentage=False,
                  log : bool = False) -> None:
+        raise NotImplementedError("This class should not be used!")
         super().__init__()
         self.metric = metric
         val_topics = val_topics
@@ -144,6 +146,7 @@ class ValidationLoggerCallback(WandbCallback):
                  val_topics : pd.DataFrame, 
                  ir_dataset : str) -> None:
         super().__init__()
+        raise NotImplementedError("This class should not be used!")
         self.metric = f'val_{metric}'
         val_topics = pd.read_csv(val_topics, sep='\t', index_col=False)
         corpus = irds.load(ir_dataset)
