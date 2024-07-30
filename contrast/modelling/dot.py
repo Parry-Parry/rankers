@@ -50,6 +50,26 @@ class DotConfig(PretrainedConfig):
         self.pooler_dim_out = pooler_dim_out
         self.pooler_tied = pooler_tied
         super().__init__(**kwargs)
+    
+    @classmethod
+    def from_pretrained(cls, 
+                        model_name_or_path : str='bert-base-uncased',
+                        mode='cls', 
+                        encoder_tied=True,
+                        use_pooler=False,
+                        pooler_dim_in=768,
+                        pooler_dim_out=768,
+                        pooler_tied=True,
+                          ) -> 'DotConfig':
+        config = super().from_pretrained(model_name_or_path)
+        config.model_name_or_path = model_name_or_path
+        config.mode = mode
+        config.encoder_tied = encoder_tied
+        config.use_pooler = use_pooler
+        config.pooler_dim_in = pooler_dim_in
+        config.pooler_dim_out = pooler_dim_out
+        config.pooler_tied = pooler_tied
+        return config
 
 class Pooler(nn.Module):
     def __init__(self, config):
