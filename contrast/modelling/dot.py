@@ -10,6 +10,7 @@ from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
+from ..train.loss import batched_dot_product
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -31,7 +32,7 @@ class DotConfig(PretrainedConfig):
     pooler_tied : bool
         whether the pooler is tied
     """
-    model_type = "dot"
+    model_architecture = "Dot"
     def __init__(self, 
                  model_name_or_path : str='bert-base-uncased',
                  mode='cls', 
@@ -49,6 +50,26 @@ class DotConfig(PretrainedConfig):
         self.pooler_dim_out = pooler_dim_out
         self.pooler_tied = pooler_tied
         super().__init__(**kwargs)
+    
+    @classmethod
+    def from_pretrained(cls, 
+                        model_name_or_path : str='bert-base-uncased',
+                        mode='cls', 
+                        encoder_tied=True,
+                        use_pooler=False,
+                        pooler_dim_in=768,
+                        pooler_dim_out=768,
+                        pooler_tied=True,
+                          ) -> 'DotConfig':
+        config = super().from_pretrained(model_name_or_path)
+        config.model_name_or_path = model_name_or_path
+        config.mode = mode
+        config.encoder_tied = encoder_tied
+        config.use_pooler = use_pooler
+        config.pooler_dim_in = pooler_dim_in
+        config.pooler_dim_out = pooler_dim_out
+        config.pooler_tied = pooler_tied
+        return config
 
 class Pooler(nn.Module):
     def __init__(self, config):
@@ -89,7 +110,7 @@ class Dot(PreTrainedModel):
     ):
         super().__init__(config)
         self.encoder = encoder
-        if encoder_d is not None: self.encoder_d = encoder_d
+        if encoder_d: self.encoder_d = encoder_d
         else: self.encoder_d = self.encoder if config.encoder_tied else deepcopy(self.encoder)
         self.pooling = {
             'mean': self._mean,
@@ -98,6 +119,15 @@ class Dot(PreTrainedModel):
 
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
         else: self.pooler = lambda x, y=True : x
+
+    def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
+        batch_size = query_reps.size(0)
+        emb_q = query_reps.reshape(batch_size, 1, -1)
+        emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
+        pred = batched_dot_product(emb_q, emb_d)
+        if labels is not None: labels = labels.reshape(batch_size, self.config.group_size)
+
+        return pred, labels
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
         return self.pooler(x[:, 0])
@@ -120,10 +150,10 @@ class Dot(PreTrainedModel):
         queries = {k: v.to(self.encoder.device) for k, v in queries.items()} if queries is not None else None
         docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()} if docs_batch is not None else None
         labels = labels.to(self.encoder_d.device) if labels is not None else None
-        q_reps = self._encode_q(**queries) if queries is not None else None
-        docs_batch_rep = self._encode_d(**docs_batch) if docs_batch is not None else None
-    
-        return loss(q_reps, docs_batch_rep) if labels is None else loss(q_reps, docs_batch_rep, labels)
+        query_reps = self._encode_q(**queries) if queries is not None else None
+        docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
+        pred, labels = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        return loss(pred) if labels is None else loss(pred, labels)
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document encoder"""
@@ -131,7 +161,9 @@ class Dot(PreTrainedModel):
         self.encoder.save_pretrained(model_dir)
         if not self.config.encoder_tied: self.encoder_d.save_pretrained(model_dir + "/encoder_d")
         if self.config.use_pooler: self.pooler.save_pretrained(model_dir + "/pooler")
-    
+        AutoTokenizer.from_pretrained(self.config).save_pretrained(model_dir)
+
+
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         self.config = DotConfig.from_pretrained(model_dir)
@@ -153,7 +185,7 @@ class Dot(PreTrainedModel):
         encoder = AutoModel.from_pretrained(model_dir_or_name)
         return cls(encoder, config)
     
-    def eval(self) -> "DotTransformer":
+    def to_pyterrier(self) -> "DotTransformer":
         return DotTransformer.from_model(self, text_field='text')
 
 class DotTransformer(pt.Transformer):
@@ -173,8 +205,8 @@ class DotTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.pooling = {
-            'mean': self._mean,
-            'cls' : self._cls,
+            'mean': lambda x: x.mean(dim=1),
+            'cls' : lambda x: x[:, 0],
             'none': lambda x: x,
         }[config.mode]
 

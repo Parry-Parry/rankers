@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 from typing import Optional
 import pandas as pd
@@ -30,6 +31,17 @@ def _pivot(frame, negatives = None):
                 })
     return pd.DataFrame.from_records(new)
 
+def _qrel_pivot(frame):
+    new = []
+    for row in frame.itertuples():
+        new.append(
+            {
+                "qid": row.query_id,
+                "docno": row.doc_id,
+                "score": row.relevance
+            })
+    return pd.DataFrame.from_records(new)
+
 def get_teacher_scores(model : pt.Transformer, 
                        corpus : Optional[pd.DataFrame] = None, 
                        ir_dataset : Optional[str] = None, 
@@ -54,11 +66,20 @@ def get_teacher_scores(model : pt.Transformer,
 
         logger.warning("Retrieving scores, this may take a while...")
         scores = model.transform(corpus)
-        return scores
+        lookup = defaultdict(dict)
+        for qid, group in scores.groupby('qid'):
+            for docno, score in zip(group['docno'], group['score']):
+                lookup[qid][docno] = score
+        return lookup
+
 
 def initialise_triples(dataset : irds.Dataset):
     triples = pd.DataFrame(dataset.docpairs_iter())
     return _pivot(triples)
+
+def initialise_irds_eval(dataset : irds.Dataset):
+    qrels = pd.DataFrame(dataset.qrels_iter())
+    return _qrel_pivot(qrels)
 
 def load_json(file: str):
     import json
