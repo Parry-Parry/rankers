@@ -32,7 +32,7 @@ class DotConfig(PretrainedConfig):
     pooler_tied : bool
         whether the pooler is tied
     """
-    model_architecture = "dot"
+    model_architecture = "Dot"
     def __init__(self, 
                  model_name_or_path : str='bert-base-uncased',
                  mode='cls', 
