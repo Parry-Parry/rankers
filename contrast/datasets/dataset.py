@@ -12,7 +12,7 @@ from contrast._util import initialise_triples, initialise_irds_eval
 class TrainingDataset(Dataset):
     def __init__(self, 
                  training_data : pd.DataFrame, 
-                 corpus : Union[Corpus, irds.IRDataset],
+                 corpus : Union[Corpus, irds.Dataset],
                  teacher_file : Optional[str] = None,
                  group_size : int = 2,
                  listwise : bool = False,
@@ -87,7 +87,7 @@ class TrainingDataset(Dataset):
 class EvaluationDataset(Dataset):
     def __init__(self, 
                  evaluation_data : Union[pd.DataFrame, str], 
-                 corpus : Union[Corpus, irds.IRDataset]
+                 corpus : Union[Corpus, irds.Dataset]
                  ) -> None:
         super().__init__()
         self.evaluation_data = evaluation_data
