@@ -190,7 +190,7 @@ class Dot(PreTrainedModel):
         return cls(encoder, tokenizer, config)
     
     def to_pyterrier(self) -> "DotTransformer":
-        return DotTransformer.from_model(self, self.tokenizer text_field='text')
+        return DotTransformer.from_model(self, self.tokenizer, text_field='text')
 
 class DotTransformer(pt.Transformer):
     def __init__(self, 
