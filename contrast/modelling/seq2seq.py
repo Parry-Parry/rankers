@@ -7,7 +7,8 @@ import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
-from .output import BasicOutput
+from types import SimpleNamespace
+
 
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
@@ -41,7 +42,7 @@ class Seq2Seq(PreTrainedModel):
         logits = self.classifier(**sequences).logits
         pred = self.prepare_outputs(logits)
 
-        return BasicOutput(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
+        return SimpleNamespace(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
 
 
     def save_pretrained(self, model_dir, **kwargs):
