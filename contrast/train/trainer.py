@@ -1,7 +1,6 @@
 import torch
 import os
 import logging
-from collections import defaultdict
 from transformers import Trainer
 import math 
 import time
