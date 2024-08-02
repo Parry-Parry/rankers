@@ -27,7 +27,7 @@ class ContrastTrainer(Trainer):
             self.loss = LOSSES[loss]()
         else: 
             self.loss = loss
-        self.custom_log = defaultdict(lambda: 0.0)
+        self.custom_log = defaultdict(lambda: [])
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
     
@@ -210,7 +210,7 @@ class ContrastTrainer(Trainer):
 
     def compute_loss(self, model, inputs):
         loss = model(**inputs) if self.loss is None else model(self.loss, **inputs)
-        self.custom_log["loss"] += loss.item()
+        self.custom_log["loss"] += loss.detach()
         
         return loss
 
