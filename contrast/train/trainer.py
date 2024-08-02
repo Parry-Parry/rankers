@@ -27,7 +27,6 @@ class ContrastTrainer(Trainer):
             self.loss = LOSSES[loss]()
         else: 
             self.loss = loss
-        self.custom_log = defaultdict(lambda: [])
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
     
@@ -180,26 +179,6 @@ class ContrastTrainer(Trainer):
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
         return output.metrics
-
-    def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
-        if self.control.should_log:
-            log = {}
-            for metric in self.custom_log:
-                log[metric] = (
-                    self._nested_gather(self.custom_log[metric]).mean().item()
-                )
-                log[metric] = round(
-                    (
-                        log[metric]
-                        / (self.state.global_step - self._globalstep_last_logged)
-                        / self.args.gradient_accumulation_steps
-                    ),
-                    4,
-                )
-            self.log(log)
-            for metric in self.custom_log: self.custom_log[metric] -= self.custom_log[metric]
-            self.control.should_log = True
-        super()._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
 
     def _load_optimizer_and_scheduler(self, checkpoint):
         super()._load_optimizer_and_scheduler(checkpoint)
