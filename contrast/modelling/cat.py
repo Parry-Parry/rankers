@@ -48,7 +48,7 @@ class Cat(PreTrainedModel):
         """Save classifier"""
         self.config.save_pretrained(model_dir)
         self.classifier.save_pretrained(model_dir)
-        AutoTokenizer.from_config(self.config).save_pretrained(model_dir)
+        self.tokenizer.save_pretrained(model_dir)
     
 
     def load_state_dict(self, model_dir):

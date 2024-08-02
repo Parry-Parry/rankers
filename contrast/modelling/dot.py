@@ -164,7 +164,7 @@ class Dot(PreTrainedModel):
         self.encoder.save_pretrained(model_dir)
         if not self.config.encoder_tied: self.encoder_d.save_pretrained(model_dir + "/encoder_d")
         if self.config.use_pooler: self.pooler.save_pretrained(model_dir + "/pooler")
-        AutoTokenizer.from_pretrained(self.config).save_pretrained(model_dir)
+        self.tokenizer.save_pretrained(model_dir)
 
 
     def load_state_dict(self, model_dir):
