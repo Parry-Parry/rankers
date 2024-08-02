@@ -41,7 +41,7 @@ class Seq2Seq(PreTrainedModel):
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
         pred = self.prepare_outputs(logits)
-
+        
         return SimpleNamespace(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
 
 
