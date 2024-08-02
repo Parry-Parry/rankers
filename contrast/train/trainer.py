@@ -27,6 +27,22 @@ class ContrastTrainer(Trainer):
             self.loss = loss
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
+
+    def compute_loss(self, model, inputs, return_outputs=False):
+        outputs = model(self.loss, **inputs)
+        # Save past state if it exists
+        if self.args.past_index >= 0:
+            self._past = outputs[self.args.past_index]
+
+        if isinstance(outputs, dict) and "loss" not in outputs:
+            raise ValueError(
+                "The model did not return a loss from the inputs, only the following keys: "
+                f"{','.join(outputs.keys())}. For reference, the inputs it received are {','.join(inputs.keys())}."
+            )
+        # We don't use .loss here since the model may return tuples instead of ModelOutput.
+        loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+
+        return (loss, outputs) if return_outputs else loss
     
     def compute_metrics(self, result_frame : pd.DataFrame):
         from ir_measures import evaluator, RR

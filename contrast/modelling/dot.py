@@ -147,7 +147,6 @@ class Dot(PreTrainedModel):
                 queries = None, 
                 docs_batch = None, 
                 labels=None):
-        breakpoint()
         """Compute the loss given (queries, docs, labels)"""
         queries = {k: v.to(self.encoder.device) for k, v in queries.items()} if queries is not None else None
         docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()} if docs_batch is not None else None
