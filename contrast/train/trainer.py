@@ -187,10 +187,7 @@ class ContrastTrainer(Trainer):
             self.loss.load_state_dict(torch.load(os.path.join(checkpoint, LOSS_NAME)))
 
     def compute_loss(self, model, inputs):
-        loss = model(**inputs) if self.loss is None else model(self.loss, **inputs)
-        self.custom_log["loss"] += loss.detach()
-        
-        return loss
+        return model(**inputs) if self.loss is None else model(self.loss, **inputs)
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
         logger.info("Loading model's weight from %s", resume_from_checkpoint)
