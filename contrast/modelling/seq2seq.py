@@ -7,11 +7,12 @@ import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
+from .output import BasicOutput
 
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
-class Seq2SeqCat(PreTrainedModel):
+class Seq2Seq(PreTrainedModel):
     """Wrapper for ConditionalGenerationCat Model
     
     Parameters
@@ -21,7 +22,7 @@ class Seq2SeqCat(PreTrainedModel):
     config : AutoConfig
         the configuration for the model
     """
-    model_architecture = 'Seq2SeqCat'
+    model_architecture = 'Seq2Seq'
     def __init__(
         self,
         classifier: AutoModelForSeq2SeqLM,
@@ -30,15 +31,17 @@ class Seq2SeqCat(PreTrainedModel):
         super().__init__(config)
         self.classifier = classifier
 
+    def prepare_outputs(self, logits):
+        raise NotImplementedError
+
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
         sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
+        pred = self.prepare_outputs(logits)
 
-        if labels is None: output = loss(logits)
-        else: output = loss(logits, labels)
-        return output
+        return BasicOutput(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
 
 
     def save_pretrained(self, model_dir, **kwargs):

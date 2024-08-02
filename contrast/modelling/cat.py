@@ -8,6 +8,7 @@ import pandas as pd
 from more_itertools import chunked
 import numpy as np
 import torch.nn.functional as F
+from .output import BasicOutput
 
 class Cat(PreTrainedModel):
     """Wrapper for Cat Model
@@ -37,10 +38,8 @@ class Cat(PreTrainedModel):
         sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
-
-        if labels is None: output = loss(logits)
-        else: output = loss(logits, labels)
-        return output
+        pred = self.prepare_outputs(logits)
+        return BasicOutput(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save classifier"""
