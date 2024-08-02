@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 from more_itertools import chunked
 from ..train.loss import batched_dot_product
-from types import SimpleNamespace
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -154,7 +153,8 @@ class Dot(PreTrainedModel):
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
         pred, labels = self.prepare_outputs(query_reps, docs_batch_reps, labels)
-        return SimpleNamespace(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
+        loss_value = loss(pred, labels) if labels is not None else loss(pred)
+        return (loss_value, pred) 
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document encoder"""

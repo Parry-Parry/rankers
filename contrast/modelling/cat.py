@@ -8,7 +8,6 @@ import pandas as pd
 from more_itertools import chunked
 import numpy as np
 import torch.nn.functional as F
-from types import SimpleNamespace
 
 
 class Cat(PreTrainedModel):
@@ -40,7 +39,8 @@ class Cat(PreTrainedModel):
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
         pred = self.prepare_outputs(logits)
-        return SimpleNamespace(loss=loss(pred) if labels is None else loss(pred, labels), scores=pred)
+        loss_value = loss(pred) if labels is None else loss(pred, labels)
+        return (loss_value, pred)
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save classifier"""
