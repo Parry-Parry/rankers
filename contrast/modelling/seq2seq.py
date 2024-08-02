@@ -26,10 +26,12 @@ class Seq2Seq(PreTrainedModel):
     def __init__(
         self,
         classifier: AutoModelForSeq2SeqLM,
+        tokenizer: PreTrainedTokenizer,
         config: AutoConfig,
     ):
         super().__init__(config)
         self.classifier = classifier
+        self.tokenizer = tokenizer
 
     def prepare_outputs(self, logits):
         raise NotImplementedError
@@ -48,15 +50,14 @@ class Seq2Seq(PreTrainedModel):
         """Save classifier"""
         self.config.save_pretrained(model_dir)
         self.classifier.save_pretrained(model_dir)
-        AutoTokenizer.from_pretrained(self.config).save_pretrained(model_dir)
-
+        self.tokenizer.save_pretrained(model_dir)
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         return self.classifier.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
     def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return Seq2SeqTransformer.from_model(self.classifier, text_field='text')
+        return Seq2SeqTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
@@ -103,11 +104,11 @@ class Seq2SeqTransformer(pt.Transformer):
     @classmethod 
     def from_model(cls, 
                    model : PreTrainedModel, 
+                   tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
                    ): 
-        tokenizer = AutoTokenizer.from_pretrained(model.config)
-        config = AutoConfig.from_pretrained(model.config)
+        config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:

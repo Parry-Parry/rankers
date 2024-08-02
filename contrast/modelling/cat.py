@@ -24,10 +24,12 @@ class Cat(PreTrainedModel):
     def __init__(
         self,
         classifier: PreTrainedModel,
+        tokenizer: PreTrainedTokenizer,
         config: AutoConfig,
     ):
         super().__init__(config)
         self.classifier = classifier
+        self.tokenizer = tokenizer
     
     def prepare_outputs(self, logits):
         """Prepare outputs"""
@@ -46,7 +48,7 @@ class Cat(PreTrainedModel):
         """Save classifier"""
         self.config.save_pretrained(model_dir)
         self.classifier.save_pretrained(model_dir)
-        AutoTokenizer.from_pretrained(self.config).save_pretrained(model_dir)
+        AutoTokenizer.from_config(self.config).save_pretrained(model_dir)
     
 
     def load_state_dict(self, model_dir):
@@ -55,14 +57,15 @@ class Cat(PreTrainedModel):
     
 
     def to_pyterrier(self) -> "pt.Transformer":
-        return CatTransformer.from_model(self.classifier, text_field='text')
+        return CatTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
         """Load classifier from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
         classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
-        return cls(classifier, config)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
+        return cls(classifier, tokenizer, config)
 
 class CatTransformer(pt.Transformer):
     def __init__(self, 
@@ -98,11 +101,11 @@ class CatTransformer(pt.Transformer):
     @classmethod 
     def from_model(cls, 
                    model : PreTrainedModel, 
+                   tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
                    ): 
-        tokenizer = AutoTokenizer.from_pretrained(model.config)
-        config = AutoConfig.from_pretrained(model.config)
+        config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
@@ -141,11 +144,11 @@ class PairTransformer(pt.Transformer):
     @classmethod 
     def from_model(cls, 
                    model : PreTrainedModel, 
+                   tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
                    ): 
-        tokenizer = AutoTokenizer.from_pretrained(model.config)
-        config = AutoConfig.from_pretrained(model.config)
+        config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
     @classmethod

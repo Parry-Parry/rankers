@@ -104,12 +104,14 @@ class Dot(PreTrainedModel):
     def __init__(
         self,
         encoder : PreTrainedModel,
+        tokenizer : PreTrainedTokenizer,
         config : DotConfig,
         encoder_d : PreTrainedModel = None,
         pooler : Pooler = None
     ):
         super().__init__(config)
         self.encoder = encoder
+        self.tokenizer = tokenizer
         if encoder_d: self.encoder_d = encoder_d
         else: self.encoder_d = self.encoder if config.encoder_tied else deepcopy(self.encoder)
         self.pooling = {
@@ -183,11 +185,12 @@ class Dot(PreTrainedModel):
 
             return cls(encoder, config, encoder_d, pooler)
         config = DotConfig(model_dir_or_name, **kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         encoder = AutoModel.from_pretrained(model_dir_or_name)
-        return cls(encoder, config)
+        return cls(encoder, tokenizer, config)
     
     def to_pyterrier(self) -> "DotTransformer":
-        return DotTransformer.from_model(self, text_field='text')
+        return DotTransformer.from_model(self, self.tokenizer text_field='text')
 
 class DotTransformer(pt.Transformer):
     def __init__(self, 
@@ -229,10 +232,10 @@ class DotTransformer(pt.Transformer):
     @classmethod 
     def from_model(cls, 
                    model : PreTrainedModel, 
+                   tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
                    ): 
-        tokenizer = AutoTokenizer.from_pretrained(model.config)
         config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
