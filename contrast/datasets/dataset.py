@@ -47,8 +47,7 @@ class TrainingDataset(Dataset):
                 self.multi_negatives = False
             elif self.group_size > 2 and not self.multi_negatives:
                 raise ValueError("Group size > 2 not supported for single negative samples")
-        
-
+    
     @classmethod
     def from_irds(cls,
                     ir_dataset : str,
