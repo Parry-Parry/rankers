@@ -151,7 +151,7 @@ from .listwise import *
 from .pointwise import *
 from .pairwise import *
 
-FLAX_LOSSES = {
+FlaxLOSSES = {
     **POINTWISE_LOSSES,
     **PAIRWISE_LOSSES,
     **LISTWISE_LOSSES,
