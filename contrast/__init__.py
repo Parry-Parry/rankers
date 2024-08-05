@@ -27,6 +27,7 @@ def seed_everything(seed=42):
 
     random.seed(seed)
     np.random.seed(seed)
+
     if is_torch_available():
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)

@@ -1,6 +1,5 @@
 import jax
-from jax import random, numpy as jnp
-import flax
+from jax import numpy as jnp
 
 def reduce(a : jnp.array, reduction : str):
     """
@@ -59,8 +58,8 @@ def normalize(a: jnp.array, dim: int = -1):
     jnp.array
         the normalized jnp.array
     """
-    min_values = a.min(dim=dim, keepdim=True)[0]
-    max_values = a.max(dim=dim, keepdim=True)[0]
+    min_values = a.min(axis=dim, keepdim=True)[0]
+    max_values = a.max(axis=dim, keepdim=True)[0]
     return (a - min_values) / (max_values - min_values + 1e-10)
 
 def residual(a : jnp.array):

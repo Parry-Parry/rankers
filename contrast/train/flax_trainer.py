@@ -1,24 +1,215 @@
-import torch
 import os
 import logging
 from transformers import Trainer
 import math 
 import time
 import pandas as pd 
-from typing import Optional, Union, Dict, List
+from typing import Optional, Union, Dict, List, Callable, Tuple, Any
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
+from functools import partial
+from jax import jit
+import optax
+import inspect
+from transformers import FlaxPreTrainedModel, PreTrainedTokenizerBase, default_data_collator, EvalPrediction, TrainerCallback, TrainerControl, TrainerMemoryTracker, PrinterCallback, DEFAULT_PROGRESS_CALLBACK, DEFAULT_CALLBACKS, ParallelMode, get_reporting_integration_callbacks
 from .loss import Flax_LOSSES as LOSSES
+from .flaxstate import FlaxTrainerState
+from ..train import ContrastTrainingArguments
 
 logger = logging.getLogger(__name__)
 
-LOSS_NAME = "loss.pt"
+# heavily inspired by https://github.com/hkjeon13/flax-trainer/blob/main/flax_trainer/trainer.py
+
+LOSS_NAME = "loss.np"
 
 class FlaxContrastTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
+    def __init__(
+        self,
+        model: Union[FlaxPreTrainedModel, Any] = None,
+        args: ContrastTrainingArguments = None,
+        loss = None,
+        data_collator: Optional["DataCollator"] = None,
+        train_dataset: Optional[Union[Dataset, IterableDataset, "datasets.Dataset"]] = None,
+        eval_dataset: Optional[Union[Dataset, Dict[str, Dataset], "datasets.Dataset"]] = None,
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        model_init: Optional[Callable[[], FlaxPreTrainedModel]] = None,
+        compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
+        callbacks: Optional[List[TrainerCallback]] = None,
+        optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
+        preprocess_logits_for_metrics: Optional[Callable[[jnp.array, jnp.array], jnp.array]] = None,
+    ):
+        if args is None:
+            output_dir = "tmp_trainer"
+            logger.info(f"No `TrainingArguments` passed, using `output_dir={output_dir}`.")
+            args = ContrastTrainingArguments(output_dir=output_dir)
+        if args.batch_eval_metrics and compute_metrics is not None:
+            if "compute_result" not in inspect.signature(compute_metrics).parameters.keys():
+                raise ValueError(
+                    "When using `batch_eval_metrics`, your `compute_metrics` function must take a `compute_result`"
+                    " boolean argument which will be triggered after the last batch of the eval set to signal that the"
+                    " summary statistics should be returned by the function."
+                )
+        self.args = args
+        # Seed must be set before instantiating the model when using model
+        self.hp_name = None
+        self.is_in_train = False
 
-    def __init__(self, *args, loss=None, **kwargs) -> None:
-        super(FlaxContrastTrainer, self).__init__(*args, **kwargs)
+        # memory metrics - must set up as early as possible
+        self._memory_tracker = TrainerMemoryTracker(self.args.skip_memory_metrics)
+        self._memory_tracker.start()
+
+        # set the correct log level depending on the node
+        log_level = args.get_process_log_level()
+        logging.set_verbosity(log_level)
+
+        if model is None:
+            if model_init is not None:
+                self.model_init = model_init
+                model = self.call_model_init()
+            else:
+                raise RuntimeError("`Trainer` requires either a `model` or `model_init` argument")
+        else:
+            if model_init is not None:
+                warnings.warn(
+                    "`Trainer` requires either a `model` or `model_init` argument, but not both. `model_init` will"
+                    " overwrite your model when calling the `train` method. This will become a fatal error in the next"
+                    " release.",
+                    FutureWarning,
+                )
+            self.model_init = model_init
+
+        if getattr(model, "is_parallelizable", False) and getattr(model, "model_parallel", False):
+            self.is_model_parallel = True
+        else:
+            self.is_model_parallel = False
+
+        if getattr(model, "hf_device_map", None) is not None:
+            devices = [device for device in set(model.hf_device_map.values()) if device not in ["cpu", "disk"]]
+            if len(devices) > 1:
+                self.is_model_parallel = True
+            elif len(devices) == 1:
+                self.is_model_parallel = self.args.device != torch.device(devices[0])
+            else:
+                self.is_model_parallel = False
+
+            # warn users
+            if self.is_model_parallel:
+                logger.info(
+                    "You have loaded a model on multiple GPUs. `is_model_parallel` attribute will be force-set"
+                    " to `True` to avoid any unexpected behavior such as device placement mismatching."
+                )
+
+        # one place to sort out whether to place the model on device or not
+        # postpone switching model to cuda when:
+        # 1. MP - since we are trying to fit a much bigger than 1 gpu model
+        # 2. fp16-enabled DeepSpeed loads the model in half the size and it doesn't need .to() anyway,
+        #    and we only use deepspeed for training at the moment
+        # 3. full bf16 or fp16 eval - since the model needs to be cast to the right dtype first
+        # 4. FSDP - same as MP
+        self.place_model_on_device = args.place_model_on_device
+        if (
+            self.is_model_parallel
+            or self.is_deepspeed_enabled
+            or ((args.fp16_full_eval or args.bf16_full_eval) and not args.do_train)
+            or self.is_fsdp_xla_enabled
+            or self.is_fsdp_enabled
+        ):
+            self.place_model_on_device = False
+
+        default_collator = (
+            DataCollatorWithPadding(tokenizer)
+            if tokenizer is not None and isinstance(tokenizer, (PreTrainedTokenizerBase, SequenceFeatureExtractor))
+            else default_data_collator
+        )
+        self.data_collator = data_collator if data_collator is not None else default_collator
+        self.train_dataset = train_dataset
+        self.eval_dataset = eval_dataset
+        self.tokenizer = tokenizer
+
+        # Force n_gpu to 1 to avoid DataParallel as MP will manage the GPUs
+        if self.is_model_parallel:
+            self.args._n_gpu = 1
+
+        # later use `self.model is self.model_wrapped` to check if it's wrapped or not
+        self.model_wrapped = model
+        self.model = model
+
+        self.optimizer, self.lr_scheduler = optimizers
+        if model_init is not None and (self.optimizer is not None or self.lr_scheduler is not None):
+            raise RuntimeError(
+                "Passing a `model_init` is incompatible with providing the `optimizers` argument. "
+                "You should subclass `Trainer` and override the `create_optimizer_and_scheduler` method."
+            )
+        if self.optimizer is None:
+            self.create_optimizer_and_scheduler()
+       
+        default_callbacks = DEFAULT_CALLBACKS + get_reporting_integration_callbacks(self.args.report_to)
+        callbacks = default_callbacks if callbacks is None else default_callbacks + callbacks
+        self.callback_handler = CallbackHandler(
+            callbacks, self.model, self.tokenizer, self.optimizer, self.lr_scheduler
+        )
+        self.add_callback(PrinterCallback if self.args.disable_tqdm else DEFAULT_PROGRESS_CALLBACK)
+
+        # Will be set to True by `self._setup_loggers()` on first call to `self.log()`.
+        self._loggers_initialized = False
+
+        # Create distant repo and output directory if needed
+        self.hub_model_id = None
+        if self.args.push_to_hub:
+            self.init_hf_repo()
+        if self.args.should_save:
+            os.makedirs(self.args.output_dir, exist_ok=True)
+
+        if not callable(self.data_collator) and callable(getattr(self.data_collator, "collate_batch", None)):
+            raise ValueError("The `data_collator` should be a simple callable (function, class with `__call__`).")
+
+        if args.max_steps > 0 and args.num_train_epochs > 0:
+            logger.warning("max_steps is given, it will override any value given in num_train_epochs")
+
+        if train_dataset is not None and not has_length(train_dataset) and args.max_steps <= 0:
+            raise ValueError(
+                "The train_dataset does not implement __len__, max_steps has to be specified. "
+                "The number of steps needs to be known in advance for the learning rate scheduler."
+            )
+
+        self._signature_columns = None
+
+
+        # Label smoothing
+        if self.args.label_smoothing_factor != 0:
+            self.label_smoother = LabelSmoother(epsilon=self.args.label_smoothing_factor)
+        else:
+            self.label_smoother = None
+
+        self.control = TrainerControl()
+
+        self.state = FlaxTrainerState(
+            apply_fn=self.model.__call__,
+            params=self.model.params,
+            tx=self.optimizer,
+            is_local_process_zero=self.is_local_process_zero(),
+            is_world_process_zero=self.is_world_process_zero(),
+            stateful_callbacks=[
+                cb for cb in self.callback_handler.callbacks + [self.control] if isinstance(cb, ExportableState)
+            ],
+        )
+        # Internal variable to count flos in each process, will be accumulated in `self.state.total_flos` then
+        # returned to 0 every time flos need to be logged
+        self.current_flos = 0
+        self.hp_search_backend = None
+        default_label_names = find_labels(self.model.__class__)
+        self.label_names = default_label_names if self.args.label_names is None else self.args.label_names
+        self.can_return_loss = can_return_loss(self.model.__class__)
+        self.control = self.callback_handler.on_init_end(self.args, self.state, self.control)
+
+        # Internal variables to help with automatic batch size reduction
+        self._train_batch_size = args.train_batch_size
+        self._created_lr_scheduler = False
+
+        # very last
+        self._memory_tracker.stop_and_update_metrics()
+
         if isinstance(loss, str): 
             if loss not in LOSSES: raise ValueError(f"Unknown loss: {loss}")
             self.loss = LOSSES[loss]()
@@ -27,6 +218,10 @@ class FlaxContrastTrainer(Trainer):
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
+    def create_optimizer_and_scheduler(self):
+        self.optimizer = optax.adamw(learning_rate=self.args.learning_rate, b1=0.9, b2=0.98, eps=1e-8, weight_decay=0.01)
+
+    @partial(jit, static_argnums=0)
     def compute_loss(self, model, inputs, return_outputs=False):
         outputs = model(self.loss, **inputs)
         # Save past state if it exists
@@ -50,7 +245,8 @@ class FlaxContrastTrainer(Trainer):
         evaluator = evaluator(metrics, qrels)
 
         return evaluator.calc_aggregate(result_frame)
-
+    
+    @partial(jit, static_argnums=0)
     def evaluation_loop(
         self,
         dataset: Dataset,
@@ -76,14 +272,6 @@ class FlaxContrastTrainer(Trainer):
             # for the rest of this function `model` is the outside model, whether it was wrapped or not
             if model is not self.model:
                 self.model_wrapped = model
-
-        # if full fp16 or bf16 eval is wanted and this ``evaluation`` or ``predict`` isn't called
-        # while ``train`` is running, cast it to the right dtype first and then put on device
-        if not self.is_in_train:
-            if args.fp16_full_eval:
-                model = model.to(dtype=torch.float16, device=args.device)
-            elif args.bf16_full_eval:
-                model = model.to(dtype=torch.bfloat16, device=args.device)
 
         batch_size = self.args.eval_batch_size
 
@@ -145,80 +333,42 @@ class FlaxContrastTrainer(Trainer):
         return output.metrics
 
     def _load_optimizer_and_scheduler(self, checkpoint):
-        super()._load_optimizer_and_scheduler(checkpoint)
+        """If optimizer and scheduler states exist, load them."""
         if checkpoint is None:
             return
-        if os.path.exists(os.path.join(checkpoint, LOSS_NAME)):
-            self.loss.load_state_dict(torch.load(os.path.join(checkpoint, LOSS_NAME)))
+
+        checkpoint_file_exists = (
+            glob.glob(os.path.join(checkpoint, OPTIMIZER_NAME) + "_*")
+            if is_sagemaker_mp_enabled()
+            else (
+                os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME))
+                or os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME_BIN))
+                or (
+                    os.path.isdir(checkpoint)
+                    and any(
+                        OPTIMIZER_NAME_BIN.split(".")[0] in folder_name
+                        for folder_name in os.listdir(checkpoint)
+                        if os.path.isdir(os.path.join(checkpoint, folder_name))
+                    )
+                )
+            )
+        )
+        if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
+            # Load in optimizer and scheduler states
+
+                        # Optimizer checkpoint was saved with smp < 1.10
+            def opt_load_hook(mod, opt):
+                if IS_SAGEMAKER_MP_POST_1_10:
+                    opt.load_state_dict(
+                        smp.load(os.path.join(checkpoint, OPTIMIZER_NAME), partial=True, back_compat=True)
+                    )
+                else:
+                    opt.load_state_dict(smp.load(os.path.join(checkpoint, OPTIMIZER_NAME), partial=True))
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
         logger.info("Loading model's weight from %s", resume_from_checkpoint)
         if model: return model.load_state_dict(resume_from_checkpoint)
         else: self.model.load_state_dict(resume_from_checkpoint)
-
-    def create_optimizer(self):
-        """
-        Setup the optimizer.
-
-        We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
-        Trainer's init through `optimizers`, or subclass and override this method in a subclass.
-        """
-        opt_model = self.model_wrapped if is_sagemaker_mp_enabled() else self.model
-
-        if self.optimizer is None:
-            decay_parameters = self.get_decay_parameter_names(opt_model)
-            optimizer_grouped_parameters = [
-                {
-                    "params": [
-                        p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)
-                    ],
-                    "weight_decay": self.args.weight_decay,
-                },
-                {
-                    "params": [
-                        p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
-                    ],
-                    "weight_decay": 0.0,
-                },
-            ]
-
-            optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(self.args, opt_model)
-
-            # Overwrite `params` in case it's created by `get_optimizer_cls_and_kwargs`
-            # e.g. for GaLore optimizer.
-            if "params" in optimizer_kwargs:
-                optimizer_grouped_parameters = optimizer_kwargs.pop("params")
-
-            # Overwrite `model` in case it's created by `get_optimizer_cls_and_kwargs`
-            # e.g. for LOMO optimizer.
-            if "model" in optimizer_kwargs:
-                optimizer_grouped_parameters = optimizer_kwargs.pop("model")
-
-            # For layer-wise dummy optimizers we overwrite optimizer_grouped_parameters with `optimizer_dict`
-            # to avoid arguments conflicts.
-            if "optimizer_dict" in optimizer_kwargs:
-                optimizer_grouped_parameters = optimizer_kwargs.pop("optimizer_dict")
-
-            self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
-
-            if optimizer_cls.__name__ == "Adam8bit":
-                import bitsandbytes
-
-                manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
-
-                skipped = 0
-                for module in opt_model.modules():
-                    if isinstance(module, nn.Embedding):
-                        skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
-                        logger.info(f"skipped {module}: {skipped/2**20}M params")
-                        manager.register_module_override(module, "weight", {"optim_bits": 32})
-                        logger.debug(f"bitsandbytes: will optimize {module} in fp32")
-                logger.info(f"skipped: {skipped/2**20}M params")
-
-        if is_sagemaker_mp_enabled():
-            self.optimizer = smp.DistributedOptimizer(self.optimizer)
-
-        return self.optimizer
     
     def get_num_trainable_parameters(self):
         """
@@ -267,14 +417,6 @@ class FlaxContrastTrainer(Trainer):
 
         self.is_in_train = True
 
-        # Attach NEFTune hooks if necessary
-        if self.neftune_noise_alpha is not None:
-            self.model = self._activate_neftune(self.model)
-
-        # do_train is not a reliable argument, as it might not be set and .train() still called, so
-        # the following is a workaround:
-        if (args.fp16_full_eval or args.bf16_full_eval) and not args.do_train:
-            self._move_model_to_device(self.model, args.device)
 
         if "model_path" in kwargs:
             resume_from_checkpoint = kwargs.pop("model_path")
@@ -293,7 +435,7 @@ class FlaxContrastTrainer(Trainer):
         model_reloaded = False
         if self.model_init is not None:
             # Seed must be set before instantiating the model when using model_init.
-            enable_full_determinism(self.args.seed) if self.args.full_determinism else set_seed(self.args.seed)
+            enable_full_determinism(self.args.seed) if self.args.full_determinism else seed_everything(self.args.seed)
             self.model = self.call_model_init(trial)
             model_reloaded = True
             # Reinitializes optimizer and scheduler
@@ -306,8 +448,7 @@ class FlaxContrastTrainer(Trainer):
                 raise ValueError(f"No valid checkpoint found in output directory ({args.output_dir})")
 
         if resume_from_checkpoint is not None:
-            if not is_sagemaker_mp_enabled() and not self.is_deepspeed_enabled and not self.is_fsdp_enabled:
-                self._load_from_checkpoint(resume_from_checkpoint)
+            self._load_from_checkpoint(resume_from_checkpoint)
             # In case of repeating the find_executable_batch_size, set `self._train_batch_size` properly
             state = TrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
             if state.train_batch_size is not None:
@@ -319,9 +460,6 @@ class FlaxContrastTrainer(Trainer):
                 self._move_model_to_device(self.model, args.device)
             self.model_wrapped = self.model
 
-        inner_training_loop = find_executable_batch_size(
-            self._inner_training_loop, self._train_batch_size, args.auto_find_batch_size
-        )
         if args.push_to_hub:
             try:
                 # Disable progress bars when uploading models during checkpoints to avoid polluting stdout
@@ -868,79 +1006,18 @@ class FlaxContrastTrainer(Trainer):
         """
         model.train()
         inputs = self._prepare_inputs(inputs)
-        if is_sagemaker_mp_enabled():
-            loss_mb = smp_forward_backward(model, inputs, self.args.gradient_accumulation_steps)
-            return loss_mb.reduce_mean().detach().to(self.args.device)
 
         with self.compute_loss_context_manager():
             loss = self.compute_loss(model, inputs)
 
         del inputs
-        if (
-            self.args.torch_empty_cache_steps is not None
-            and self.state.global_step % self.args.torch_empty_cache_steps == 0
-        ):
-            if is_xpu_available():
-                torch.xpu.empty_cache()
-            elif is_mlu_available():
-                torch.mlu.empty_cache()
-            elif is_npu_available():
-                torch.npu.empty_cache()
-            elif is_torch_version(">=", "2.0") and is_mps_available():
-                torch.mps.empty_cache()
-            else:
-                torch.cuda.empty_cache()
 
         kwargs = {}
-
-        # For LOMO optimizers you need to explicitly use the learnign rate
-        if self.args.optim in [OptimizerNames.LOMO, OptimizerNames.ADALOMO]:
-            kwargs["learning_rate"] = self._get_learning_rate()
 
         if self.args.n_gpu > 1:
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
-        if self.use_apex:
-            with amp.scale_loss(loss, self.optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            self.accelerator.backward(loss, **kwargs)
+        # TODO: Backward pass NEEDED
 
         return loss.detach() / self.args.gradient_accumulation_steps
-
-    def compute_loss(self, model, inputs, return_outputs=False):
-        """
-        How the loss is computed by Trainer. By default, all models return the loss in the first element.
-
-        Subclass and override for custom behavior.
-        """
-        if self.label_smoother is not None and "labels" in inputs:
-            labels = inputs.pop("labels")
-        else:
-            labels = None
-        outputs = model(**inputs)
-        # Save past state if it exists
-        # TODO: this needs to be fixed and made cleaner later.
-        if self.args.past_index >= 0:
-            self._past = outputs[self.args.past_index]
-
-        if labels is not None:
-            unwrapped_model = self.accelerator.unwrap_model(model)
-            if _is_peft_model(unwrapped_model):
-                model_name = unwrapped_model.base_model.model._get_name()
-            else:
-                model_name = unwrapped_model._get_name()
-            if model_name in MODEL_FOR_CAUSAL_LM_MAPPING_NAMES.values():
-                loss = self.label_smoother(outputs, labels, shift_labels=True)
-            else:
-                loss = self.label_smoother(outputs, labels)
-        else:
-            if isinstance(outputs, dict) and "loss" not in outputs:
-                raise ValueError(
-                    "The model did not return a loss from the inputs, only the following keys: "
-                    f"{','.join(outputs.keys())}. For reference, the inputs it received are {','.join(inputs.keys())}."
-                )
-            # We don't use .loss here since the model may return tuples instead of ModelOutput.
-            loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-
-        return (loss, outputs) if return_outputs else loss
+        

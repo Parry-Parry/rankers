@@ -1,5 +1,10 @@
 from typing import Any
 import numpy as np
+from flax.training.common_utils import shard
+import jax.numpy as jnp
+
+def process_tokens(tokens):
+    return {k : jnp.array(v) for k, v in tokens.items()}
 
 class FlaxDotDataCollator:
     def __init__(self, 
@@ -42,9 +47,9 @@ class FlaxDotDataCollator:
         )
  
         return {
-            "queries": dict(tokenized_queries),
-            "docs_batch": dict(tokenized_docs),
-            "labels": np.array(batch_scores) if len(batch_scores) > 0 else None,
+            "queries": process_tokens(dict(tokenized_queries)),
+            "docs_batch": process_tokens(dict(tokenized_docs)),
+            "labels": jnp.array(np.array(batch_scores)) if len(batch_scores) > 0 else None,
         }
     
 class FlaxCatDataCollator:
@@ -77,8 +82,8 @@ class FlaxCatDataCollator:
             return_tensors="np",
         )
         return {
-            "sequences": dict(tokenized_sequences),
-            "labels": np.array(batch_scores) if len(batch_scores) > 0 else None,
+            "sequences": process_tokens(dict(tokenized_sequences)),
+            "labels": jnp.array(np.array(batch_scores)) if len(batch_scores) > 0 else None,
         }
 
 def _make_pos_pairs(texts) -> list:
@@ -121,8 +126,8 @@ class FlaxPairDataCollator:
         )
                 
         return {
-            "sequences": dict(tokenized_sequences),
-            "labels": np.array(batch_scores).squeeze() if len(batch_scores) > 0 else None,
+            "sequences": process_tokens(dict(tokenized_sequences)),
+            "labels": jnp.array(np.array(batch_scores)).squeeze() if len(batch_scores) > 0 else None,
         }
 
 class FlaxPromnpDataCollator:
@@ -157,8 +162,8 @@ class FlaxPromnpDataCollator:
             add_special_tokens=True,
         )
         return {
-            "sequences": dict(tokenized_sequences),
-            "labels": np.array(batch_scores) if len(batch_scores) > 0 else None,
+            "sequences": process_tokens(dict(tokenized_sequences)),
+            "labels": jnp.array(np.array(batch_scores)) if len(batch_scores) > 0 else None,
         }
     
 class FlaxPairPromnpDataCollator:
@@ -196,6 +201,6 @@ class FlaxPairPromnpDataCollator:
         )
                 
         return {
-            "sequences": dict(tokenized_sequences),
-            "labels": np.array(batch_scores).squeeze() if len(batch_scores) > 0 else None,
+            "sequences": process_tokens(dict(tokenized_sequences)),
+            "labels": jnp.array(np.array(batch_scores)).squeeze() if len(batch_scores) > 0 else None,
         }
