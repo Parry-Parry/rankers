@@ -8,7 +8,6 @@ import pandas as pd
 from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
-from transformers.integrations.deepspeed import deepspeed_init
 from .loss import LOSS_REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -65,10 +64,6 @@ class RankerTrainer(Trainer):
         """
         args = self.args
 
-        # if eval is called w/o train, handle model prep here
-        if self.is_deepspeed_enabled and self.deepspeed is None:
-            _, _ = deepspeed_init(self, num_training_steps=0, inference=True)
-
         if len(self.accelerator._models) == 0 and model is self.model:
             start_time = time.time()
             model = (
@@ -78,16 +73,9 @@ class RankerTrainer(Trainer):
             )
             self.model_preparation_time = round(time.time() - start_time, 4)
 
-            if self.is_fsdp_enabled:
-                self.model = model
-
             # for the rest of this function `model` is the outside model, whether it was wrapped or not
             if model is not self.model:
                 self.model_wrapped = model
-
-            # backward compatibility
-            if self.is_deepspeed_enabled:
-                self.deepspeed = self.model_wrapped
 
         # if full fp16 or bf16 eval is wanted and this ``evaluation`` or ``predict`` isn't called
         # while ``train`` is running, cast it to the right dtype first and then put on device
