@@ -4,7 +4,7 @@ from flax.training.common_utils import shard
 import jax.numpy as jnp
 
 def process_tokens(tokens):
-    return {k : jnp.array(v) for k, v in tokens.items()}
+    return {k : shard(jnp.array(v)) for k, v in tokens.items()}
 
 class FlaxDotDataCollator:
     def __init__(self, 
@@ -49,7 +49,7 @@ class FlaxDotDataCollator:
         return {
             "queries": process_tokens(dict(tokenized_queries)),
             "docs_batch": process_tokens(dict(tokenized_docs)),
-            "labels": jnp.array(np.array(batch_scores)) if len(batch_scores) > 0 else None,
+            "labels": shard(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
         }
     
 class FlaxCatDataCollator:
@@ -83,7 +83,7 @@ class FlaxCatDataCollator:
         )
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
-            "labels": jnp.array(np.array(batch_scores)) if len(batch_scores) > 0 else None,
+            "labels": shard(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
         }
 
 def _make_pos_pairs(texts) -> list:
@@ -127,17 +127,17 @@ class FlaxPairDataCollator:
                 
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
-            "labels": jnp.squeeze(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
+            "labels": shard(jnp.squeeze(jnp.array(np.array(batch_scores)))) if len(batch_scores) > 0 else None,
         }
 
-class FlaxPromnpDataCollator:
+class FlaxPromptDataCollator:
     def __init__(self, 
                  tokenizer,
-                 promnp : Any,
+                 prompt : Any,
                  max_length=512,
                  ) -> None:
         self.tokenizer = tokenizer
-        self.promnp = promnp
+        self.prompt = prompt
         self.max_length = max_length
 
     def __call__(self, batch) -> dict:
@@ -151,7 +151,7 @@ class FlaxPromnpDataCollator:
                 continue
             batch_scores.extend(args[0])
         
-        sequences = [self.promnp(query=q, doc=d) for q, d in zip(batch_queries, batch_docs)]
+        sequences = [self.prompt(query=q, doc=d) for q, d in zip(batch_queries, batch_docs)]
 
         tokenized_sequences = self.tokenizer(
             sequences,
@@ -163,17 +163,17 @@ class FlaxPromnpDataCollator:
         )
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
-            "labels": jnp.array(np.array(batch_scores)) if len(batch_scores) > 0 else None,
+            "labels": shard(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
         }
     
-class FlaxPairPromnpDataCollator:
+class FlaxPairPromptDataCollator:
     def __init__(self, 
                  tokenizer, 
-                 promnp : Any,
+                 prompt : Any,
                  max_length=512) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.promnp = promnp
+        self.prompt = prompt
     
     def __call__(self, batch) -> dict:
         batch_queries = []
@@ -189,7 +189,7 @@ class FlaxPairPromnpDataCollator:
             batch_scores.extend(batch_score_pairs)
             
         # tokenize each pair with each query
-        sequences = [self.promnp(query=query, document_1=pair[0], document_2=pair[1]) for query, pairs in zip(batch_queries, batch_docs) for pair in pairs]
+        sequences = [self.prompt(query=query, document_1=pair[0], document_2=pair[1]) for query, pairs in zip(batch_queries, batch_docs) for pair in pairs]
 
         tokenized_sequences = self.tokenizer(
             sequences,
@@ -202,5 +202,5 @@ class FlaxPairPromnpDataCollator:
                 
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
-            "labels": jnp.squeeze(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
+            "labels": shard(jnp.squeeze(jnp.array(np.array(batch_scores)))) if len(batch_scores) > 0 else None,
         }

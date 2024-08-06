@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import jax
 import jax.numpy as jnp
+import flax.linen as nn
 from more_itertools import chunked
 from ...train.loss.flax import batched_dot_product
 
@@ -74,8 +75,8 @@ class DotConfig(PretrainedConfig):
 class Pooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense_q = nn.Linear(config.pooler_dim_in, config.pooler_dim_out)
-        self.dense_d = nn.Linear(config.pooler_dim_in, config.pooler_dim_out) if not config.pooler_tied else self.dense_q
+        self.dense_q = nn.Dense(config.pooler_dim_out)
+        self.dense_d = nn.Dense(config.pooler_dim_out) if not config.pooler_tied else self.dense_q
     
     @classmethod
     def from_pretrained(cls, model_name_or_path : str='bert-base-uncased') -> 'Pooler':
@@ -83,7 +84,7 @@ class Pooler(nn.Module):
         model = cls(config)
         return model
     
-    def forward(self, hidden_states, d=False):
+    def __call__(self, hidden_states, d=False):
         return self.dense_d(hidden_states) if d else self.dense_q(hidden_states)
 
 class Dot(FlaxPreTrainedModel):

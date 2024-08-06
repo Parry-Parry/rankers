@@ -28,7 +28,7 @@ class FlaxRankNetLoss(FlaxBaseLoss):
         self.bce = L.sigmoid_binary_cross_entropy
     @jit
     def forward(self, pred: jax.Array, labels: jax.Array = None) -> jax.Array:
-        _, g = jnp.shape(pred)
+        g = jnp.shape(pred, 1)
         i1, i2 = jnp.triu_indices(g, k=1)
         pred_diff = pred[:, i1] - pred[:, i2]
         if labels is None:
