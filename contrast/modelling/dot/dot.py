@@ -10,7 +10,7 @@ from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from ..train.loss import batched_dot_product
+from ...train.loss.torch import batched_dot_product
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model

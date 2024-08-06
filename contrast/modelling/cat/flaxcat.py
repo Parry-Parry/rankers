@@ -3,11 +3,12 @@ if not pt.started():
     pt.init()
 from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 from typing import Union
-import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
-import torch.nn.functional as F
+import jax 
+import jax.numpy as jnp
+import jax.nn as nn
 
 
 class Cat(PreTrainedModel):
@@ -33,12 +34,10 @@ class Cat(PreTrainedModel):
     
     def prepare_outputs(self, logits):
         """Prepare outputs"""
-        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1]
-
+        return nn.log_softmax(jnp.reshape(logits, (-1, self.config.group_size, 2)), dim=-1)[:, :, 1]
+            
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
-        labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
         pred = self.prepare_outputs(logits)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
@@ -113,12 +112,10 @@ class CatTransformer(pt.Transformer):
         it = inp[['query', self.text_field]].itertuples(index=False)
         if self.verbose:
             it = pt.tqdm(it, total=len(inp), unit='record', desc='Cat scoring')
-        with torch.no_grad():
-            for chunk in chunked(it, self.batch_size):
-                queries, texts = map(list, zip(*chunk))
-                inps = self.tokenizer(queries, texts, return_tensors='pt', padding=True, truncation=True)
-                inps = {k: v.to(self.model.device) for k, v in inps.items()}
-                scores.append(F.log_softmax(self.model(**inps).logits, dim=-1)[:, 1].cpu().detach().numpy())
+        for chunk in chunked(it, self.batch_size):
+            queries, texts = map(list, zip(*chunk))
+            inps = self.tokenizer(queries, texts, return_tensors='np', padding=True, truncation=True)
+            scores.append(nn.log_softmax(self.model(**inps).logits, axist=-1)[:, 1])
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
@@ -169,12 +166,10 @@ class PairTransformer(pt.Transformer):
         it = inp[['query', self.text_field]].itertuples(index=False)
         if self.verbose:
             it = pt.tqdm(it, total=len(inp), unit='record', desc='Duo scoring')
-        with torch.no_grad():
-            for chunk in chunked(it, self.batch_size):
-                queries, texts = map(list, zip(*chunk))
-                inps = self.tokenizer(queries, texts, return_tensors='pt', padding=True, truncation=True)
-                inps = {k: v.to(self.device) for k, v in inps.items()}
-                scores.append(self.model(**inps).logits.cpu().detach().numpy())
+        for chunk in chunked(it, self.batch_size):
+            queries, texts = map(list, zip(*chunk))
+            inps = self.tokenizer(queries, texts, return_tensors='np', padding=True, truncation=True)
+            scores.append(self.model(**inps).logits)
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])

@@ -127,7 +127,7 @@ class FlaxPairDataCollator:
                 
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
-            "labels": jnp.array(np.array(batch_scores)).squeeze() if len(batch_scores) > 0 else None,
+            "labels": jnp.squeeze(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
         }
 
 class FlaxPromnpDataCollator:
@@ -202,5 +202,5 @@ class FlaxPairPromnpDataCollator:
                 
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
-            "labels": jnp.array(np.array(batch_scores)).squeeze() if len(batch_scores) > 0 else None,
+            "labels": jnp.squeeze(jnp.array(np.array(batch_scores))) if len(batch_scores) > 0 else None,
         }
