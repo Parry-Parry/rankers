@@ -200,17 +200,15 @@ class DotTransformer(pt.Transformer):
                  config : DotConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
-                 device : Union[str, torch.device] = None,
                  ) -> None:
         super().__init__()
-        self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = model.eval().to(self.device)
         self.tokenizer = tokenizer
         self.config = config
         self.batch_size = batch_size
         self.text_field = text_field
         self.pooling = {
-            'mean': lambda x: x.mean(dim=1),
+            'mean': lambda x: jnp.mean(x, axis=1),
             'cls' : lambda x: x[:, 0],
             'none': lambda x: x,
         }[config.mode]
@@ -220,15 +218,14 @@ class DotTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         pooling : str = 'cls', 
-                        text_field : str = 'text', 
-                        device : Union[str, torch.device] = None):
+                        text_field : str = 'text'):
         config = DotConfig.from_pretrained(model_name_or_path)
         config.mode = pooling
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
         encoder_d = None if config.encoder_tied else AutoModel.from_pretrained(model_name_or_path + "/encoder_d")
         encoder_q = AutoModel.from_pretrained(model_name_or_path)
         model = Dot(encoder_q, config, encoder_d, pooler)
-        return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field, device)
+        return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field)
     
     @classmethod 
     def from_model(cls, 
@@ -238,7 +235,7 @@ class DotTransformer(pt.Transformer):
                    text_field : str = 'text', 
                    ): 
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device)
+        return cls(model, tokenizer, config, batch_size, text_field)
     
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []

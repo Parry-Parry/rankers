@@ -34,7 +34,7 @@ class Cat(PreTrainedModel):
     
     def prepare_outputs(self, logits):
         """Prepare outputs"""
-        return nn.log_softmax(jnp.reshape(logits, (-1, self.config.group_size, 2)), dim=-1)[:, :, 1]
+        return nn.log_softmax(jnp.reshape(logits, (-1, self.config.group_size, 2)), axis=-1)[:, :, 1]
             
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""

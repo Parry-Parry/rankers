@@ -10,7 +10,7 @@ from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from ...train.loss.torch import batched_dot_product
+from ...train.loss import batched_dot_product
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -85,6 +85,7 @@ class Pooler(nn.Module):
     
     def forward(self, hidden_states, d=False):
         return self.dense_d(hidden_states) if d else self.dense_q(hidden_states)
+
 
 class Dot(PreTrainedModel):
     """
