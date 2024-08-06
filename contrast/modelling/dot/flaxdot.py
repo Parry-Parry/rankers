@@ -1,16 +1,15 @@
 from copy import deepcopy
 import os
-import torch
-from torch import nn
 import pyterrier as pt
 if not pt.started():
     pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer
+from transformers import FlaxPreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer
 from typing import Union
 import pandas as pd
 import numpy as np
+import jax
 from more_itertools import chunked
-from ..train.loss import batched_dot_product
+from ...train.loss.flax import batched_dot_product
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -86,27 +85,27 @@ class Pooler(nn.Module):
     def forward(self, hidden_states, d=False):
         return self.dense_d(hidden_states) if d else self.dense_q(hidden_states)
 
-class Dot(PreTrainedModel):
+class Dot(FlaxPreTrainedModel):
     """
     Dot Model for Fine-Tuning 
 
     Parameters
     ----------
-    encoder : PreTrainedModel
+    encoder : FlaxPreTrainedModel
         the encoder model
     config : DotConfig
         the configuration for the model
-    encoder_d : PreTrainedModel
+    encoder_d : FlaxPreTrainedModel
         the document encoder model
     pooler : Pooler
         the pooling layer
     """
     def __init__(
         self,
-        encoder : PreTrainedModel,
+        encoder : FlaxPreTrainedModel,
         tokenizer : PreTrainedTokenizer,
         config : DotConfig,
-        encoder_d : PreTrainedModel = None,
+        encoder_d : FlaxPreTrainedModel = None,
         pooler : Pooler = None
     ):
         super().__init__(config)
@@ -123,19 +122,19 @@ class Dot(PreTrainedModel):
         else: self.pooler = lambda x, y=True : x
 
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
-        batch_size = query_reps.size(0)
-        emb_q = query_reps.reshape(batch_size, 1, -1)
-        emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
+        batch_size = jnp.size(query_reps, 0)
+        emb_q = jnp.reshape(query_reps, (batch_size, 1, -1))
+        emb_d = jnp.reshape(docs_batch_reps, (batch_size, self.config.group_size, -1))
         pred = batched_dot_product(emb_q, emb_d)
-        if labels is not None: labels = labels.reshape(batch_size, self.config.group_size)
+        if labels is not None: labels = jnp.reshape(labels, (batch_size, self.config.group_size))
 
         return pred, labels
     
-    def _cls(self, x : torch.Tensor) -> torch.Tensor:
+    def _cls(self, x : jax.Array) -> jax.Array:
         return self.pooler(x[:, 0])
     
-    def _mean(self, x : torch.Tensor) -> torch.Tensor:
-        return self.pooler(x.mean(dim=1))
+    def _mean(self, x : jax.Array) -> jax.Array:
+        return self.pooler(jnp.mean(x, axis=1))
     
     def _encode_d(self, **text):
         return self.pooling(self.encoder_d(**text).last_hidden_state)
@@ -194,7 +193,7 @@ class Dot(PreTrainedModel):
 
 class DotTransformer(pt.Transformer):
     def __init__(self, 
-                 model : PreTrainedModel, 
+                 model : FlaxPreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
                  config : DotConfig, 
                  batch_size : int, 
@@ -231,7 +230,7 @@ class DotTransformer(pt.Transformer):
     
     @classmethod 
     def from_model(cls, 
-                   model : PreTrainedModel, 
+                   model : FlaxPreTrainedModel, 
                    tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
@@ -241,24 +240,22 @@ class DotTransformer(pt.Transformer):
     
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []
-        with torch.no_grad():
-            for chunk in chunked(texts, batch_size or self.batch_size):
-                inps = self.tokenizer(list(chunk), return_tensors='pt', padding=True, truncation=True)
-                inps = {k: v.to(self.device) for k, v in inps.items()}
-                res = self.model._encode_q(**inps)
-                results.append(res.cpu().numpy())
+
+        for chunk in chunked(texts, batch_size or self.batch_size):
+            inps = self.tokenizer(list(chunk), return_tensors='pt', padding=True, truncation=True)
+            inps = {k: v.to(self.device) for k, v in inps.items()}
+            res = self.model._encode_q(**inps)
+            results.append(res)
         if not results:
             return np.empty(shape=(0, 0))
         return np.concatenate(results, axis=0)
 
     def encode_docs(self, texts, batch_size=None) -> np.ndarray:
         results = []
-        with torch.no_grad():
-            for chunk in chunked(texts, batch_size or self.batch_size):
-                inps = self.tokenizer(list(chunk), return_tensors='pt', padding=True, truncation=True)
-                inps = {k: v.to(self.device) for k, v in inps.items()}
-                res = self.model._encode_d(**inps)
-                results.append(res.cpu().numpy())
+        for chunk in chunked(texts, batch_size or self.batch_size):
+            inps = self.tokenizer(list(chunk), return_tensors='pt', padding=True, truncation=True)
+            res = self.model._encode_d(**inps)
+            results.append(res)
         if not results:
             return np.empty(shape=(0, 0))
         return np.concatenate(results, axis=0)

@@ -1,9 +1,8 @@
 import pyterrier as pt
 if not pt.started():
     pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoTokenizer, AutoConfig, AutoModelForSeq2SeqLM
+from transformers import FlaxPreTrainedModel, PreTrainedTokenizer, AutoTokenizer, AutoConfig, FlaxAutoModelForSeq2SeqLM
 from typing import Union
-import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
@@ -12,7 +11,7 @@ import numpy as np
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
-class Seq2Seq(PreTrainedModel):
+class FlaxSeq2Seq(FlaxPreTrainedModel):
     """Wrapper for ConditionalGenerationCat Model
     
     Parameters
@@ -25,7 +24,7 @@ class Seq2Seq(PreTrainedModel):
     model_architecture = 'Seq2Seq'
     def __init__(
         self,
-        classifier: AutoModelForSeq2SeqLM,
+        classifier: FlaxAutoModelForSeq2SeqLM,
         tokenizer: PreTrainedTokenizer,
         config: AutoConfig,
     ):
@@ -38,8 +37,6 @@ class Seq2Seq(PreTrainedModel):
 
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
-        labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
         pred = self.prepare_outputs(logits)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
@@ -54,21 +51,21 @@ class Seq2Seq(PreTrainedModel):
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.classifier.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
+        return self.classifier.load_state_dict(FlaxAutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
-    def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return Seq2SeqTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
+    def to_pyterrier(self) -> "FlaxSeq2SeqTransformer":
+        return FlaxSeq2SeqTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
         """Load classifier from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
-        classifier = AutoModelForSeq2SeqLM.from_pretrained(model_dir_or_name, num_labels=num_labels)
+        classifier = FlaxAutoModelForSeq2SeqLM.from_pretrained(model_dir_or_name, num_labels=num_labels)
         return cls(classifier, config)
 
-class Seq2SeqTransformer(pt.Transformer):
+class FlaxSeq2SeqTransformer(pt.Transformer):
     def __init__(self, 
-                 model : PreTrainedModel, 
+                 model : FlaxPreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
                  config : AutoConfig, 
                  batch_size : int, 
@@ -96,14 +93,14 @@ class Seq2SeqTransformer(pt.Transformer):
                         text_field : str = 'text', 
                         device : Union[str, torch.device] = None
                         ):
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+        model = FlaxAutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device)
 
     @classmethod 
     def from_model(cls, 
-                   model : PreTrainedModel, 
+                   model : FlaxAutoModelForSeq2SeqLM, 
                    tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
@@ -120,17 +117,16 @@ class Seq2SeqTransformer(pt.Transformer):
             for chunk in chunked(it, self.batch_size):
                 queries, texts = map(list, zip(*chunk))
                 prompts = [self.prompt.format(query=q, text=t) for q, t in zip(queries, texts)]
-                inps = self.tokenizer(prompts, return_tensors='pt', padding=True, truncation=True)
-                inps = {k: v.to(self.device) for k, v in inps.items()}
-                scores.append(self.model(**inps).logits[:, (self.pos_token, self.neg_token)].softmax(dim=-1)[0].cpu().detach().numpy())
+                inps = self.tokenizer(prompts, return_tensors='np', padding=True, truncation=True)
+                scores.append(self.model(**inps).logits[:, (self.pos_token, self.neg_token)].softmax(dim=-1)[0])
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
         return res
 
-class Seq2SeqDuoTransformer(Seq2SeqTransformer):
+class FlaxSeq2SeqDuoTransformer(FlaxSeq2SeqTransformer):
     def __init__(self,
-                    model : PreTrainedModel,
+                    model : FlaxPreTrainedModel,
                     tokenizer : PreTrainedTokenizer,
                     config : AutoConfig,
                     batch_size : int,
@@ -153,9 +149,9 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
             for chunk in chunked(it, self.batch_size):
                 queries, texts = map(list, zip(*chunk))
                 prompts = [self.prompt.format(query=q, text1=t1, text2=t2) for q, t1, t2 in zip(queries, texts, texts) if t1 != t2]
-                inps = self.tokenizer(prompts, return_tensors='pt', padding=True, truncation=True)
+                inps = self.tokenizer(prompts, return_tensors='np', padding=True, truncation=True)
                 inps = {k: v.to(self.device) for k, v in inps.items()}
-                scores.append(self.model(**inps).logits[:, (self.pos_token, self.neg_token)].softmax(dim=-1)[0].cpu().detach().numpy())
+                scores.append(self.model(**inps).logits[:, (self.pos_token, self.neg_token)].softmax(dim=-1)[0])
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
