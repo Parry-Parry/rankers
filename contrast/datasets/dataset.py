@@ -72,7 +72,9 @@ class TrainingDataset(Dataset):
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]] if not self.listwise else []
 
-        if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
+        if self.multi_negatives: 
+            texts.extend([self.docs[str(doc)] for doc in doc_id_b])
+            if len(texts) < self.group_size: texts.extend(random.choices(list(self.docs.values()), k=self.group_size-len(texts)))
         else: texts.append(self.docs[str(doc_id_b)])
 
         if self.labels:
