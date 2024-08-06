@@ -37,7 +37,6 @@ class FlaxContrastTrainer(Trainer):
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
-        preprocess_logits_for_metrics: Optional[Callable[[jnp.array, jnp.array], jnp.array]] = None,
     ):
         if args is None:
             output_dir = "tmp_trainer"
