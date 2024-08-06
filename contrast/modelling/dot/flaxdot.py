@@ -8,6 +8,7 @@ from typing import Union
 import pandas as pd
 import numpy as np
 import jax
+import jax.numpy as jnp
 from more_itertools import chunked
 from ...train.loss.flax import batched_dot_product
 
