@@ -1,18 +1,19 @@
-import torch
-from torch import Tensor
-from torch.nn import functional as F
-from . import BaseLoss
+import optax.losses as L
+import jax
+from jax import jit
+import jax.numpy as jnp
+from . import FlaxBaseLoss
 
-class PointwiseMSELoss(BaseLoss):
+class FlaxPointwiseMSELoss(FlaxBaseLoss):
     """Pointwise MSE loss"""
-
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        flattened_pred = pred.view(-1)
-        flattened_labels = labels.view(-1)
-        return F.mse_loss(flattened_pred, flattened_labels, reduction=self.reduction)
+    @jit
+    def forward(self, pred: jax.Array, labels: jax.Array) -> jax.Array:
+        flattened_pred = jnp.reshape(pred, (-1,))
+        flattened_labels = jnp.reshape(labels, (-1,))
+        return self._reduce(L.squared_error(flattened_pred, flattened_labels))
 
 POINTWISE_LOSSES = {
-    'mse': PointwiseMSELoss,
+    'mse': FlaxPointwiseMSELoss,
 }
 
-__all__ = ['PointwiseMSELoss', 'POINTWISE_LOSSES']
+__all__ = ['FlaxPointwiseMSELoss']
