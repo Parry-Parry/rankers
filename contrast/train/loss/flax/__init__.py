@@ -25,7 +25,7 @@ def reduce(a : jnp.array, reduction : str):
         return a.mean(dim=0).sum()
     raise ValueError(f"Unknown reduction type: {reduction}")
 
-class BaseLoss(object):
+class FlaxBaseLoss(object):
     """
     Base class for Losses
 
@@ -35,7 +35,6 @@ class BaseLoss(object):
         the reduction type
     """
     def __init__(self, reduction : str = 'mean') -> None:
-        super(BaseLoss, self).__init__()
         self.reduction = reduction
     
     def _reduce(self, a : jnp.array):

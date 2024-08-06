@@ -64,3 +64,5 @@ PAIRWISE_LOSSES = {
     'lce': LCELoss,
     'contrastive': ContrastiveLoss,
 }
+
+__all__ = ['MarginMSELoss', 'HingeLoss', 'ClearLoss', 'LCELoss', 'ContrastiveLoss', 'PAIRWISE_LOSSES']

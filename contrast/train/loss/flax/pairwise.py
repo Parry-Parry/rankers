@@ -1,11 +1,11 @@
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-from . import BaseLoss
+from . import FlaxBaseLoss
 
 residual = lambda x : x[:, 0].unsqueeze(1) - x[:, 1:]
 
-class MarginMSELoss(BaseLoss):
+class FlaxMarginMSELoss(FlaxBaseLoss):
     """Margin MSE loss with residual calculation."""
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
@@ -14,7 +14,7 @@ class MarginMSELoss(BaseLoss):
         return F.mse_loss(residual_pred, residual_label, reduction=self.reduction)
 
 
-class HingeLoss(BaseLoss):
+class FlaxHingeLoss(FlaxBaseLoss):
     """Hinge loss with sigmoid activation and residual calculation."""
 
     def __init__(self, margin=1, reduction='mean'):
@@ -27,7 +27,7 @@ class HingeLoss(BaseLoss):
         return self._reduce(F.relu(self.margin - (label_residuals * pred_residuals)))
 
 
-class ClearLoss(BaseLoss):
+class FlaxClearLoss(FlaxBaseLoss):
     """Clear loss with margin and residual calculation."""
 
     def __init__(self, margin=1, reduction='mean'):
@@ -38,14 +38,14 @@ class ClearLoss(BaseLoss):
         margin_b = self.margin - residual(labels)
         return self._reduce(F.relu(margin_b - residual(pred)))
     
-class LCELoss(BaseLoss):
+class FlaxLCELoss(FlaxBaseLoss):
     """LCE loss: Cross Entropy for NCE with localised examples."""
     def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
         labels = labels.argmax(dim=1) if labels is not None else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device)
         return F.cross_entropy(pred, labels, reduction=self.reduction)
 
 
-class ContrastiveLoss(BaseLoss):
+class FlaxContrastiveLoss(FlaxBaseLoss):
     """Contrastive loss with log_softmax and negative log likelihood."""
 
     def __init__(self, reduction='mean', temperature=1.):
@@ -58,9 +58,11 @@ class ContrastiveLoss(BaseLoss):
         return F.nll_loss(softmax_scores, labels, reduction=self.reduction)
 
 PAIRWISE_LOSSES = {
-    'margin_mse': MarginMSELoss,
-    'hinge': HingeLoss,
-    'clear': ClearLoss,
-    'lce': LCELoss,
-    'contrastive': ContrastiveLoss,
+    'margin_mse': FlaxMarginMSELoss,
+    'hinge': FlaxHingeLoss,
+    'clear': FlaxClearLoss,
+    'lce': FlaxLCELoss,
+    'contrastive': FlaxContrastiveLoss,
 }
+
+__all__ = ['FlaxMarginMSELoss', 'FlaxHingeLoss', 'FlaxClearLoss', 'FlaxLCELoss', 'FlaxContrastiveLoss', 'FlaxPAIRWISE_LOSSES']

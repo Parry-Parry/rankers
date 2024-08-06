@@ -38,7 +38,6 @@ class BaseLoss(nn.Module):
         the reduction type
     """
     def __init__(self, reduction : str = 'mean') -> None:
-        super(BaseLoss, self).__init__()
         self.reduction = reduction
     
     def _reduce(self, a : torch.Tensor):

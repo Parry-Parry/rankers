@@ -10,31 +10,20 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    from .torch.listwise import __all__ as listwise_all
-    from .torch.pointwise import __all__ as pointwise_all
-    from .torch.pairwise import __all__ as pairwise_all
-    _import_structure['loss'] = [
-        'torchBaseLoss',
-        'torchLOSSES',
-        *listwise_all,
-        *pairwise_all,
-        *pointwise_all
+    _import_structure['cat'] = [
+        'Cat',
+        'CatTransformer',
     ]
+
 try:
     if not is_flax_available():
         raise OptionalDependencyNotAvailable()
 except OptionalDependencyNotAvailable:
     pass
 else:
-    from .flax.listwise import __all__ as listwise_all
-    from .flax.pointwise import __all__ as pointwise_all
-    from .flax.pairwise import __all__ as pairwise_all
-    _import_structure['Flaxloss'] = [
-        'FlaxBaseLoss',
-        'FlaxLOSSES',
-        *listwise_all,
-        *pairwise_all,
-        *pointwise_all
+    _import_structure['flaxcat'] = [
+        'FlaxCat',
+        'FlaxCatTransformer',
     ]
 
 if TYPE_CHECKING:
@@ -44,20 +33,14 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .torch.listwise import *
-        from .torch.pointwise import *
-        from .torch.pairwise import *
-    
+        from .cat import Cat, CatTransformer
     try:
         if not is_flax_available():
             raise OptionalDependencyNotAvailable()
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .flax import FlaxBaseLoss, FlaxLOSSES
-        from .flax.listwise import *
-        from .flax.pointwise import *
-        from .flax.pairwise import *
+        from .flaxcat import FlaxCat, FlaxCatTransformer
 else:
     import sys 
     sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

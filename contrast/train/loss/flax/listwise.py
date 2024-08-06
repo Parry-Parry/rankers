@@ -2,9 +2,9 @@ import jax
 from jax import random, numpy as jnp
 import flax
 import flax.linen as nn
-from . import BaseLoss
+from . import FlaxBaseLoss
 
-class KL_DivergenceLoss(BaseLoss):
+class FlaxKL_DivergenceLoss(FlaxBaseLoss):
     """KL Divergence loss"""
 
     def __init__(self, reduction='batchmean', temperature=1.):
@@ -17,7 +17,7 @@ class KL_DivergenceLoss(BaseLoss):
         return self.kl_div(F.log_softmax(pred / self.temperature, dim=1), F.softmax(labels / self.temperature, dim=1))
 
 
-class RankNetLoss(BaseLoss):
+class FlaxRankNetLoss(FlaxBaseLoss):
     """RankNet loss
     https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
     """
@@ -42,7 +42,7 @@ class RankNetLoss(BaseLoss):
         return self.bce(pred_diff, targets)
 
 
-class DistillRankNetLoss(BaseLoss):
+class FlaxDistillRankNetLoss(FlaxBaseLoss):
     """DistillRankNet loss
     Very much a WIP from https://arxiv.org/pdf/2402.10769
     DO NOT USE
@@ -68,7 +68,7 @@ class DistillRankNetLoss(BaseLoss):
 
         return self._reduce(final_margin[targets])
 
-class ListNetLoss(BaseLoss):
+class FlaxListNetLoss(FlaxBaseLoss):
     """ListNet loss
     """
 
@@ -84,7 +84,7 @@ class ListNetLoss(BaseLoss):
             labels = F.softmax(labels / self.temperature, dim=1)
         return self._reduce(-torch.sum(labels * F.log_softmax(pred + self.epsilon  / self.temperature, dim=1), dim=-1))
 
-class Poly1SoftmaxLoss(BaseLoss):
+class FlaxPoly1SoftmaxLoss(FlaxBaseLoss):
     """Poly1 softmax loss with automatic softmax handling and reduction."""
 
     def __init__(self, reduction='mean', epsilon : float = 1., temperature=1.):
@@ -101,9 +101,11 @@ class Poly1SoftmaxLoss(BaseLoss):
         return self._reduce(ce + (1 - expansion) * self.epsilon)
 
 LISTWISE_LOSSES = {
-    'kl_div': KL_DivergenceLoss,
-    'ranknet': RankNetLoss,
-    'distill_ranknet': DistillRankNetLoss,
-    'listnet': ListNetLoss,
-    'poly1': Poly1SoftmaxLoss,
+    'kl_div': FlaxKL_DivergenceLoss,
+    'ranknet': FlaxRankNetLoss,
+    'distill_ranknet': FlaxDistillRankNetLoss,
+    'listnet': FlaxListNetLoss,
+    'poly1': FlaxPoly1SoftmaxLoss,
 }
+
+__all__ = ['FlaxKL_DivergenceLoss', 'FlaxRankNetLoss', 'FlaxDistillRankNetLoss', 'FlaxListNetLoss', 'FlaxPoly1SoftmaxLoss']
