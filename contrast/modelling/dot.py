@@ -124,7 +124,7 @@ class Dot(PreTrainedModel):
         }[config.mode]
 
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
-        else: self.pooler = lambda x, y=True : x
+        else: self.pooler = lambda x, y =True : x
 
         if config.inbatch_loss is not None:
             if config.inbatch_loss not in LOSSES:
