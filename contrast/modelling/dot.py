@@ -130,6 +130,8 @@ class Dot(PreTrainedModel):
             if config.inbatch_loss not in LOSSES:
                 raise ValueError(f"Unknown loss: {config.inbatch_loss}")
             self.inbatch_loss_fn = LOSSES[config.inbatch_loss]()
+        else:
+            self.inbatch_loss_fn = None
 
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
         batch_size = query_reps.size(0)
