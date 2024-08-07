@@ -5,22 +5,31 @@ import math
 import time
 import pandas as pd 
 from typing import Optional, Union, Dict, List, Callable, Tuple, Any
+import datasets
 from datasets import Dataset
+from transformers import FlaxPreTrainedModel, PreTrainedTokenizerBase, EvalPrediction, TrainerCallback, TrainerControl, PrinterCallback
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
+from transformers.trainer_callback import CallbackHandler, DefaultFlowCallback, ProgressCallback, ExportableState
+from transformers.utils import logging, has_length, can_return_loss
+from transformers.integrations import get_reporting_integration_callbacks
 from functools import partial
+import warnings
 from jax import jit
+import jax.numpy as jnp
 import optax
 import inspect
-from transformers import FlaxPreTrainedModel, PreTrainedTokenizerBase, default_data_collator, EvalPrediction, TrainerCallback, TrainerControl, TrainerMemoryTracker, PrinterCallback, DEFAULT_PROGRESS_CALLBACK, DEFAULT_CALLBACKS, ParallelMode, get_reporting_integration_callbacks
+
 from .loss import Flax_LOSSES as LOSSES
 from .flaxstate import FlaxTrainerState
 from ..train import ContrastTrainingArguments
-
 logger = logging.getLogger(__name__)
 
 # heavily inspired by https://github.com/hkjeon13/flax-trainer/blob/main/flax_trainer/trainer.py
 
 LOSS_NAME = "loss.np"
+
+DEFAULT_CALLBACKS = [DefaultFlowCallback]
+DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 
 class FlaxContrastTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
@@ -30,7 +39,7 @@ class FlaxContrastTrainer(Trainer):
         args: ContrastTrainingArguments = None,
         loss = None,
         data_collator: Optional["DataCollator"] = None,
-        train_dataset: Optional[Union[Dataset, IterableDataset, "datasets.Dataset"]] = None,
+        train_dataset: Optional[Union[Dataset, "datasets.Dataset"]] = None,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset], "datasets.Dataset"]] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         model_init: Optional[Callable[[], FlaxPreTrainedModel]] = None,
@@ -53,10 +62,6 @@ class FlaxContrastTrainer(Trainer):
         # Seed must be set before instantiating the model when using model
         self.hp_name = None
         self.is_in_train = False
-
-        # memory metrics - must set up as early as possible
-        self._memory_tracker = TrainerMemoryTracker(self.args.skip_memory_metrics)
-        self._memory_tracker.start()
 
         # set the correct log level depending on the node
         log_level = args.get_process_log_level()
@@ -83,45 +88,7 @@ class FlaxContrastTrainer(Trainer):
         else:
             self.is_model_parallel = False
 
-        if getattr(model, "hf_device_map", None) is not None:
-            devices = [device for device in set(model.hf_device_map.values()) if device not in ["cpu", "disk"]]
-            if len(devices) > 1:
-                self.is_model_parallel = True
-            elif len(devices) == 1:
-                self.is_model_parallel = self.args.device != torch.device(devices[0])
-            else:
-                self.is_model_parallel = False
-
-            # warn users
-            if self.is_model_parallel:
-                logger.info(
-                    "You have loaded a model on multiple GPUs. `is_model_parallel` attribute will be force-set"
-                    " to `True` to avoid any unexpected behavior such as device placement mismatching."
-                )
-
-        # one place to sort out whether to place the model on device or not
-        # postpone switching model to cuda when:
-        # 1. MP - since we are trying to fit a much bigger than 1 gpu model
-        # 2. fp16-enabled DeepSpeed loads the model in half the size and it doesn't need .to() anyway,
-        #    and we only use deepspeed for training at the moment
-        # 3. full bf16 or fp16 eval - since the model needs to be cast to the right dtype first
-        # 4. FSDP - same as MP
-        self.place_model_on_device = args.place_model_on_device
-        if (
-            self.is_model_parallel
-            or self.is_deepspeed_enabled
-            or ((args.fp16_full_eval or args.bf16_full_eval) and not args.do_train)
-            or self.is_fsdp_xla_enabled
-            or self.is_fsdp_enabled
-        ):
-            self.place_model_on_device = False
-
-        default_collator = (
-            DataCollatorWithPadding(tokenizer)
-            if tokenizer is not None and isinstance(tokenizer, (PreTrainedTokenizerBase, SequenceFeatureExtractor))
-            else default_data_collator
-        )
-        self.data_collator = data_collator if data_collator is not None else default_collator
+        self.data_collator = data_collator 
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.tokenizer = tokenizer
@@ -173,14 +140,6 @@ class FlaxContrastTrainer(Trainer):
             )
 
         self._signature_columns = None
-
-
-        # Label smoothing
-        if self.args.label_smoothing_factor != 0:
-            self.label_smoother = LabelSmoother(epsilon=self.args.label_smoothing_factor)
-        else:
-            self.label_smoother = None
-
         self.control = TrainerControl()
 
         self.state = FlaxTrainerState(
@@ -197,17 +156,12 @@ class FlaxContrastTrainer(Trainer):
         # returned to 0 every time flos need to be logged
         self.current_flos = 0
         self.hp_search_backend = None
-        default_label_names = find_labels(self.model.__class__)
-        self.label_names = default_label_names if self.args.label_names is None else self.args.label_names
         self.can_return_loss = can_return_loss(self.model.__class__)
         self.control = self.callback_handler.on_init_end(self.args, self.state, self.control)
 
         # Internal variables to help with automatic batch size reduction
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
-
-        # very last
-        self._memory_tracker.stop_and_update_metrics()
 
         if isinstance(loss, str): 
             if loss not in LOSSES: raise ValueError(f"Unknown loss: {loss}")
@@ -221,8 +175,8 @@ class FlaxContrastTrainer(Trainer):
         self.optimizer = optax.adamw(learning_rate=self.args.learning_rate, b1=0.9, b2=0.98, eps=1e-8, weight_decay=0.01)
 
     @partial(jit, static_argnums=0)
-    def compute_loss(self, model, inputs, return_outputs=False):
-        outputs = model(self.loss, **inputs)
+    def compute_loss(self, inputs, return_outputs=False):
+        outputs, _ = self.state.apply_fn(self.state.params, loss, **inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
@@ -245,7 +199,6 @@ class FlaxContrastTrainer(Trainer):
 
         return evaluator.calc_aggregate(result_frame)
     
-    @partial(jit, static_argnums=0)
     def evaluation_loop(
         self,
         dataset: Dataset,
@@ -257,20 +210,8 @@ class FlaxContrastTrainer(Trainer):
 
         Works both with or without labels.
         """
-        args = self.args
 
-        if len(self.accelerator._models) == 0 and model is self.model:
-            start_time = time.time()
-            model = (
-                self.accelerator.prepare(model)
-                if self.is_deepspeed_enabled
-                else self.accelerator.prepare_model(model, evaluation_mode=True)
-            )
-            self.model_preparation_time = round(time.time() - start_time, 4)
-
-            # for the rest of this function `model` is the outside model, whether it was wrapped or not
-            if model is not self.model:
-                self.model_wrapped = model
+        model = self.model
 
         batch_size = self.args.eval_batch_size
 
@@ -296,9 +237,6 @@ class FlaxContrastTrainer(Trainer):
         # handle multipe eval datasets
         override = eval_dataset is not None
         eval_dataset = eval_dataset if override else self.eval_dataset
-
-        # memory metrics - must set up as early as possible
-        self._memory_tracker.start()
 
         start_time = time.time()
 
@@ -327,8 +265,6 @@ class FlaxContrastTrainer(Trainer):
 
         self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, output.metrics)
 
-        self._memory_tracker.stop_and_update_metrics(output.metrics)
-
         return output.metrics
 
     def _load_optimizer_and_scheduler(self, checkpoint):
@@ -337,9 +273,6 @@ class FlaxContrastTrainer(Trainer):
             return
 
         checkpoint_file_exists = (
-            glob.glob(os.path.join(checkpoint, OPTIMIZER_NAME) + "_*")
-            if is_sagemaker_mp_enabled()
-            else (
                 os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME))
                 or os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME_BIN))
                 or (
@@ -357,12 +290,7 @@ class FlaxContrastTrainer(Trainer):
 
                         # Optimizer checkpoint was saved with smp < 1.10
             def opt_load_hook(mod, opt):
-                if IS_SAGEMAKER_MP_POST_1_10:
-                    opt.load_state_dict(
-                        smp.load(os.path.join(checkpoint, OPTIMIZER_NAME), partial=True, back_compat=True)
-                    )
-                else:
-                    opt.load_state_dict(smp.load(os.path.join(checkpoint, OPTIMIZER_NAME), partial=True))
+                opt.load_state_dict(smp.load(os.path.join(checkpoint, OPTIMIZER_NAME), partial=True))
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
         logger.info("Loading model's weight from %s", resume_from_checkpoint)
@@ -409,9 +337,6 @@ class FlaxContrastTrainer(Trainer):
         if resume_from_checkpoint is False:
             resume_from_checkpoint = None
 
-        # memory metrics - must set up as early as possible
-        self._memory_tracker.start()
-
         args = self.args
 
         self.is_in_train = True
@@ -427,7 +352,6 @@ class FlaxContrastTrainer(Trainer):
         if len(kwargs) > 0:
             raise TypeError(f"train() received got unexpected keyword arguments: {', '.join(list(kwargs.keys()))}.")
         # This might change the seed so needs to run first.
-        self._hp_search_setup(trial)
         self._train_batch_size = self.args.train_batch_size
 
         # Model re-init
@@ -449,7 +373,7 @@ class FlaxContrastTrainer(Trainer):
         if resume_from_checkpoint is not None:
             self._load_from_checkpoint(resume_from_checkpoint)
             # In case of repeating the find_executable_batch_size, set `self._train_batch_size` properly
-            state = TrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
+            state = FlaxTrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
             if state.train_batch_size is not None:
                 self._train_batch_size = state.train_batch_size
 
@@ -482,28 +406,10 @@ class FlaxContrastTrainer(Trainer):
     def _inner_training_loop(
         self, batch_size=None, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
     ):
-        self.accelerator.free_memory()
         self._train_batch_size = batch_size
-        if self.args.auto_find_batch_size:
-            if self.state.train_batch_size != self._train_batch_size:
-                from accelerate.utils import release_memory
-
-                (self.model_wrapped,) = release_memory(self.model_wrapped)
-                self.model_wrapped = self.model
-
-                # Check for DeepSpeed *after* the intial pass and modify the config
-                if self.is_deepspeed_enabled:
-                    # Temporarily unset `self.args.train_batch_size`
-                    original_bs = self.args.per_device_train_batch_size
-                    self.args.per_device_train_batch_size = self._train_batch_size // max(1, self.args.n_gpu)
-                    self.propagate_args_to_deepspeed(True)
-                    self.args.per_device_train_batch_size = original_bs
-            self.state.train_batch_size = self._train_batch_size
         logger.debug(f"Currently training with a batch size of: {self._train_batch_size}")
         # Data loader and number of training steps
         train_dataloader = self.get_train_dataloader()
-        if self.is_fsdp_xla_v2_enabled:
-            train_dataloader = tpu_spmd_dataloader(train_dataloader)
 
         # Setting up training control variables:
         # number of training epochs: num_train_epochs
@@ -551,36 +457,20 @@ class FlaxContrastTrainer(Trainer):
                 f" {args.max_steps}"
             )
 
-        if DebugOption.UNDERFLOW_OVERFLOW in self.args.debug:
-            if self.args.n_gpu > 1:
-                # nn.DataParallel(model) replicates the model, creating new variables and module
-                # references registered here no longer work on other gpus, breaking the module
-                raise ValueError(
-                    "Currently --debug underflow_overflow is not supported under DP. Please use DDP"
-                    " (torchrun or torch.distributed.launch (deprecated))."
-                )
-            else:
-                debug_overflow = DebugUnderflowOverflow(self.model)  # noqa
-
-        delay_optimizer_creation = is_sagemaker_mp_enabled() or self.is_fsdp_xla_enabled or self.is_fsdp_enabled
 
         # We need to reset the scheduler, as its parameters may be different on subsequent calls
         if self._created_lr_scheduler:
             self.lr_scheduler = None
             self._created_lr_scheduler = False
 
-        if self.is_deepspeed_enabled:
-            self.optimizer, self.lr_scheduler = deepspeed_init(self, num_training_steps=max_steps)
+       
+        self.create_optimizer_and_scheduler(num_training_steps=max_steps)
 
-        if not delay_optimizer_creation:
-            self.create_optimizer_and_scheduler(num_training_steps=max_steps)
-
-        self.state = TrainerState(
+        self.state = FlaxTrainerState(
             stateful_callbacks=[
                 cb for cb in self.callback_handler.callbacks + [self.control] if isinstance(cb, ExportableState)
             ]
         )
-        self.state.is_hyper_param_search = trial is not None
         self.state.train_batch_size = self._train_batch_size
 
         # Compute absolute values for logging, eval, and save if given as ratio
@@ -611,54 +501,10 @@ class FlaxContrastTrainer(Trainer):
 
         model = self._wrap_model(self.model_wrapped)
 
-        # as the model is wrapped, don't use `accelerator.prepare`
-        # this is for unhandled cases such as
-        # FSDP-XLA, SageMaker MP/DP, DataParallel, IPEX
-        use_accelerator_prepare = True if model is self.model else False
-
-        if delay_optimizer_creation:
-            if use_accelerator_prepare:
-                self._fsdp_qlora_plugin_updates()
-                self.model = self.accelerator.prepare(self.model)
-            self.create_optimizer_and_scheduler(num_training_steps=max_steps)
-
-        # prepare using `accelerator` prepare
-        if use_accelerator_prepare:
-            self.model.train()
-            if hasattr(self.lr_scheduler, "step"):
-                if self.use_apex:
-                    model = self.accelerator.prepare(self.model)
-                else:
-                    model, self.optimizer = self.accelerator.prepare(self.model, self.optimizer)
-            else:
-                # to handle cases wherein we pass "DummyScheduler" such as when it is specified in DeepSpeed config.
-                model, self.optimizer, self.lr_scheduler = self.accelerator.prepare(
-                    self.model, self.optimizer, self.lr_scheduler
-                )
-        elif self.args.optim in [OptimizerNames.LOMO, OptimizerNames.ADALOMO]:
-            # In this case we are in DDP + LOMO, which should be supported
-            self.optimizer = self.accelerator.prepare(self.optimizer)
-
-        if self.is_fsdp_enabled:
-            self.model = self.model_wrapped = model
-
         # for the rest of this function `model` is the outside model, whether it was wrapped or not
         if model is not self.model:
             self.model_wrapped = model
-
-        # backward compatibility
-        if self.is_deepspeed_enabled:
-            self.deepspeed = self.model_wrapped
-
-        # ckpt loading
-        if resume_from_checkpoint is not None:
-            if self.is_deepspeed_enabled:
-                deepspeed_load_checkpoint(
-                    self.model_wrapped, resume_from_checkpoint, load_module_strict=not _is_peft_model(self.model)
-                )
-            elif is_sagemaker_mp_enabled() or self.is_fsdp_enabled:
-                self._load_from_checkpoint(resume_from_checkpoint, self.model_wrapped)
-
+        
         # Check if saved optimizer or scheduler states exist
         self._load_optimizer_and_scheduler(resume_from_checkpoint)
 
@@ -713,15 +559,6 @@ class FlaxContrastTrainer(Trainer):
         self.callback_handler.optimizer = self.optimizer
         self.callback_handler.lr_scheduler = self.lr_scheduler
         self.callback_handler.train_dataloader = train_dataloader
-        if self.hp_name is not None and self._trial is not None:
-            # use self._trial because the SigOpt/Optuna hpo only call `_hp_search_setup(trial)` instead of passing trial
-            # parameter to Train when using DDP.
-            self.state.trial_name = self.hp_name(self._trial)
-        if trial is not None:
-            assignments = trial.assignments if self.hp_search_backend == HPSearchBackend.SIGOPT else trial
-            self.state.trial_params = hp_params(assignments)
-        else:
-            self.state.trial_params = None
         # This should be the same if the state has been saved but in case the training arguments changed, it's safer
         # to set this after the load.
         self.state.max_steps = max_steps
@@ -730,7 +567,7 @@ class FlaxContrastTrainer(Trainer):
         self.state.is_world_process_zero = self.is_world_process_zero()
 
         # tr_loss is a tensor to avoid synchronization of TPUs through .item()
-        tr_loss = torch.tensor(0.0).to(args.device)
+        tr_loss = jnp.array(0.0)
         # _total_loss_scalar is updated everytime .item() has to be called on tr_loss and stores the sum of all losses
         self._total_loss_scalar = 0.0
         self._globalstep_last_logged = self.state.global_step
@@ -812,13 +649,11 @@ class FlaxContrastTrainer(Trainer):
                 if step % args.gradient_accumulation_steps == 0:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
-                with self.accelerator.accumulate(model):
-                    tr_loss_step = self.training_step(model, inputs)
+        
+                tr_loss_step = self.training_step(inputs)
 
                 if (
                     args.logging_nan_inf_filter
-                    and not is_torch_xla_available()
-                    and (torch.isnan(tr_loss_step) or torch.isinf(tr_loss_step))
                 ):
                     # if loss is nan or inf simply add the average of previous logged losses
                     tr_loss += tr_loss / (1 + self.state.global_step - self._globalstep_last_logged)
@@ -848,32 +683,13 @@ class FlaxContrastTrainer(Trainer):
 
                     # Gradient clipping
                     if args.max_grad_norm is not None and args.max_grad_norm > 0:
-                        # deepspeed does its own clipping
+                        _grad_norm = self.accelerator.clip_grad_norm_(
+                            model.parameters(),
+                            args.max_grad_norm,
+                        )
 
-                        if is_sagemaker_mp_enabled() and args.fp16:
-                            _grad_norm = self.optimizer.clip_master_grads(args.max_grad_norm)
-                        elif self.use_apex:
-                            # Revert to normal clipping otherwise, handling Apex or full precision
-                            _grad_norm = nn.utils.clip_grad_norm_(
-                                amp.master_params(self.optimizer),
-                                args.max_grad_norm,
-                            )
-                        else:
-                            _grad_norm = self.accelerator.clip_grad_norm_(
-                                model.parameters(),
-                                args.max_grad_norm,
-                            )
-
-                        if (
-                            is_accelerate_available()
-                            and self.accelerator.distributed_type == DistributedType.DEEPSPEED
-                        ):
-                            grad_norm = model.get_global_grad_norm()
-                            # In some cases the grad norm may not return a float
-                            if hasattr(grad_norm, "item"):
-                                grad_norm = grad_norm.item()
-                        else:
-                            grad_norm = _grad_norm
+                      
+                    grad_norm = _grad_norm
 
                     self.optimizer.step()
 
@@ -882,7 +698,7 @@ class FlaxContrastTrainer(Trainer):
                     optimizer_was_run = not self.accelerator.optimizer_step_was_skipped
                     if optimizer_was_run:
                         # Delay optimizer scheduling until metrics are generated
-                        if not isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        if not isinstance(self.lr_scheduler, optax._src.base.Schedule):
                             self.lr_scheduler.step()
 
                     model.zero_grad()
@@ -898,8 +714,6 @@ class FlaxContrastTrainer(Trainer):
                     # PyTorch/XLA relies on the data loader to insert the mark_step for
                     # each step. Since we are breaking the loop early, we need to manually
                     # insert the mark_step here.
-                    if is_torch_xla_available():
-                        xm.mark_step()
                     break
             if step < 0:
                 logger.warning(
@@ -912,15 +726,6 @@ class FlaxContrastTrainer(Trainer):
             self.control = self.callback_handler.on_epoch_end(args, self.state, self.control)
             self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
 
-            if DebugOption.TPU_METRICS_DEBUG in self.args.debug:
-                if is_torch_xla_available():
-                    # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-                    xm.master_print(met.metrics_report())
-                else:
-                    logger.warning(
-                        "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
-                        "configured. Check your training configuration if this is unexpected."
-                    )
             if self.control.should_training_stop:
                 break
 
@@ -930,18 +735,10 @@ class FlaxContrastTrainer(Trainer):
 
         logger.info("\n\nTraining completed. Do not forget to share your model on huggingface.co/models =)\n\n")
         if args.load_best_model_at_end and self.state.best_model_checkpoint is not None:
-            # Wait for everyone to get here so we are sure the model has been saved by process 0.
-            if is_torch_xla_available():
-                xm.rendezvous("load_best_model_at_end")
-            elif args.parallel_mode == ParallelMode.DISTRIBUTED:
-                dist.barrier()
-            elif is_sagemaker_mp_enabled():
-                smp.barrier()
-
             self._load_best_model()
 
         # add remaining tr_loss
-        self._total_loss_scalar += tr_loss.item()
+        self._total_loss_scalar += tr_loss
         effective_global_step = max(self.state.global_step, 0.001)  # Avoid ZeroDivisionError
         train_loss = self._total_loss_scalar / effective_global_step
 
@@ -957,8 +754,6 @@ class FlaxContrastTrainer(Trainer):
         metrics["train_loss"] = train_loss
 
         self.is_in_train = False
-
-        self._memory_tracker.stop_and_update_metrics(metrics)
 
         self.log(metrics)
 
@@ -977,15 +772,10 @@ class FlaxContrastTrainer(Trainer):
         # Wait for the checkpoint to be uploaded.
         self._finish_current_push()
 
-        # After training we make sure to retrieve back the original forward pass method
-        # for the embedding layer by removing the forward post hook.
-        if self.neftune_noise_alpha is not None:
-            self._deactivate_neftune(self.model)
-
         return TrainOutput(self.state.global_step, train_loss, metrics)
     
 
-    def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
+    def training_step(self, inputs: Dict[str, Union[jax.Array, Any]]) -> jax.Array:
         """
         Perform a training step on a batch of inputs.
 
@@ -1003,20 +793,18 @@ class FlaxContrastTrainer(Trainer):
         Return:
             `torch.Tensor`: The tensor with training loss on this batch.
         """
-        model.train()
         inputs = self._prepare_inputs(inputs)
 
         with self.compute_loss_context_manager():
-            loss = self.compute_loss(model, inputs)
+            loss = self.compute_loss(inputs)
 
         del inputs
 
         kwargs = {}
 
         if self.args.n_gpu > 1:
-            loss = loss.mean()  # mean() to average on multi-gpu parallel training
+            loss = jnp.mean(loss)  # mean() to average on multi-gpu parallel training
 
         # TODO: Backward pass NEEDED
 
-        return loss.detach() / self.args.gradient_accumulation_steps
-        
+        return loss / self.args.gradient_accumulation_steps
