@@ -143,7 +143,6 @@ class Dot(PreTrainedModel):
         else:
             inbatch_pred = None
 
-
         if labels is not None: labels = labels.reshape(batch_size, self.config.group_size)
 
         return pred, labels, inbatch_pred
