@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 from transformers import Trainer
 import math 
@@ -387,7 +388,7 @@ class FlaxContrastTrainer(Trainer):
             try:
                 # Disable progress bars when uploading models during checkpoints to avoid polluting stdout
                 hf_hub_utils.disable_progress_bars()
-                return inner_training_loop(
+                return self._inner_training_loop(
                     args=args,
                     resume_from_checkpoint=resume_from_checkpoint,
                     trial=trial,
@@ -396,7 +397,7 @@ class FlaxContrastTrainer(Trainer):
             finally:
                 hf_hub_utils.enable_progress_bars()
         else:
-            return inner_training_loop(
+            return self._inner_training_loop(
                 args=args,
                 resume_from_checkpoint=resume_from_checkpoint,
                 trial=trial,
@@ -404,9 +405,8 @@ class FlaxContrastTrainer(Trainer):
             )
 
     def _inner_training_loop(
-        self, batch_size=None, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
+        self, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
     ):
-        self._train_batch_size = batch_size
         logger.debug(f"Currently training with a batch size of: {self._train_batch_size}")
         # Data loader and number of training steps
         train_dataloader = self.get_train_dataloader()
