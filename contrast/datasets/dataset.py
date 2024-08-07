@@ -7,7 +7,7 @@ import ir_datasets as irds
 from .._util import load_json
 from .corpus import Corpus
 
-from contrast._util import initialise_triples, initialise_irds_eval
+from contrast._util import initialise_irds_eval
 
 class TrainingDataset(Dataset):
     def __init__(self, 
