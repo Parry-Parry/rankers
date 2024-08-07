@@ -28,6 +28,11 @@ logger = logging.getLogger(__name__)
 # heavily inspired by https://github.com/hkjeon13/flax-trainer/blob/main/flax_trainer/trainer.py
 
 LOSS_NAME = "loss.np"
+TRAINING_ARGS_NAME = "training_args.pkl"
+TRAINER_STATE_NAME = "trainer_state.pkl"
+OPTIMIZER_NAME = "optimizer.pkl"
+OPTIMIZER_NAME_BIN = "optimizer.bin.pkl"
+SCHEDULER_NAME = "scheduler.pkl"
 
 DEFAULT_CALLBACKS = [DefaultFlowCallback]
 DEFAULT_PROGRESS_CALLBACK = ProgressCallback
@@ -287,11 +292,14 @@ class FlaxContrastTrainer(Trainer):
             )
         )
         if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
-            # Load in optimizer and scheduler states
+            self.optimizer = 
 
-                        # Optimizer checkpoint was saved with smp < 1.10
-            def opt_load_hook(mod, opt):
-                opt.load_state_dict(smp.load(os.path.join(checkpoint, OPTIMIZER_NAME), partial=True))
+    def _load_optimizer(self, checkpoint):
+        # use orbax
+        pass
+
+    def _save_optimizer(self, checkpoint):
+        pass
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
         logger.info("Loading model's weight from %s", resume_from_checkpoint)

@@ -1,5 +1,6 @@
 from copy import deepcopy
 import os
+from contrast.train.loss.torch import cross_dot_product
 import torch
 from torch import nn
 import pyterrier as pt
@@ -36,6 +37,7 @@ class DotConfig(PretrainedConfig):
     def __init__(self, 
                  model_name_or_path : str='bert-base-uncased',
                  mode='cls', 
+                 inbatch_negatives=False,
                  encoder_tied=True,
                  use_pooler=False,
                  pooler_dim_in=768,
@@ -44,6 +46,7 @@ class DotConfig(PretrainedConfig):
                  **kwargs):
         self.model_name_or_path = model_name_or_path
         self.mode = mode
+        self.inbatch_negatives = inbatch_negatives
         self.encoder_tied = encoder_tied
         self.use_pooler = use_pooler
         self.pooler_dim_in = pooler_dim_in
@@ -55,6 +58,7 @@ class DotConfig(PretrainedConfig):
     def from_pretrained(cls, 
                         model_name_or_path : str='bert-base-uncased',
                         mode='cls', 
+                        inbatch_negatives=False,
                         encoder_tied=True,
                         use_pooler=False,
                         pooler_dim_in=768,
@@ -64,6 +68,7 @@ class DotConfig(PretrainedConfig):
         config = super().from_pretrained(model_name_or_path)
         config.model_name_or_path = model_name_or_path
         config.mode = mode
+        config.inbatch_negatives = inbatch_negatives
         config.encoder_tied = encoder_tied
         config.use_pooler = use_pooler
         config.pooler_dim_in = pooler_dim_in
@@ -128,9 +133,15 @@ class Dot(PreTrainedModel):
         emb_q = query_reps.reshape(batch_size, 1, -1)
         emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
         pred = batched_dot_product(emb_q, emb_d)
+
+        if self.config.inbatch_negatives:
+            inbatch_d = emb_d[:, 0, :].reshape(batch_size, 1, -1)
+            inbatch_pred = cross_dot_product(emb_q, inbatch_d)
+        else: inbatch_pred = None
+
         if labels is not None: labels = labels.reshape(batch_size, self.config.group_size)
 
-        return pred, labels
+        return pred, labels, inbatch_pred
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
         return self.pooler(x[:, 0])
@@ -155,9 +166,17 @@ class Dot(PreTrainedModel):
         labels = labels.to(self.encoder_d.device) if labels is not None else None
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
-        pred, labels = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+
+        if inbatch_pred is not None:
+            # log likelihood of the inbatch negatives should all be 0
+            inbatch_labels = torch.eye(inbatch_pred.size(0)).to(inbatch_pred.device)
+            inbatch_loss = loss(inbatch_pred, inbatch_labels)
+        else:
+            inbatch_loss = 0
+
         loss_value = loss(pred, labels) if labels is not None else loss(pred)
-        return (loss_value, pred) 
+        return (loss_value + inbatch_loss, pred) 
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document encoder"""
