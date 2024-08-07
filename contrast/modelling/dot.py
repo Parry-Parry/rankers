@@ -10,7 +10,7 @@ from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from ..train.loss import batched_dot_product
+from ..train.loss import batched_dot_product, cross_dot_product, LOSSES
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -36,6 +36,7 @@ class DotConfig(PretrainedConfig):
     def __init__(self, 
                  model_name_or_path : str='bert-base-uncased',
                  mode='cls', 
+                 inbatch_loss = None,
                  encoder_tied=True,
                  use_pooler=False,
                  pooler_dim_in=768,
@@ -44,6 +45,7 @@ class DotConfig(PretrainedConfig):
                  **kwargs):
         self.model_name_or_path = model_name_or_path
         self.mode = mode
+        self.inbatch_loss = inbatch_loss
         self.encoder_tied = encoder_tied
         self.use_pooler = use_pooler
         self.pooler_dim_in = pooler_dim_in
@@ -55,6 +57,7 @@ class DotConfig(PretrainedConfig):
     def from_pretrained(cls, 
                         model_name_or_path : str='bert-base-uncased',
                         mode='cls', 
+                        inbatch_loss = None,
                         encoder_tied=True,
                         use_pooler=False,
                         pooler_dim_in=768,
@@ -64,6 +67,7 @@ class DotConfig(PretrainedConfig):
         config = super().from_pretrained(model_name_or_path)
         config.model_name_or_path = model_name_or_path
         config.mode = mode
+        config.inbatch_loss = inbatch_loss
         config.encoder_tied = encoder_tied
         config.use_pooler = use_pooler
         config.pooler_dim_in = pooler_dim_in
@@ -122,14 +126,24 @@ class Dot(PreTrainedModel):
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
         else: self.pooler = lambda x, y=True : x
 
+        self.inbatch_loss_fn = LOSSES.get(config.inbatch_loss, None)(group_size=config.group_size) if config.inbatch_loss is not None else None
+
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
         batch_size = query_reps.size(0)
         emb_q = query_reps.reshape(batch_size, 1, -1)
         emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
         pred = batched_dot_product(emb_q, emb_d)
+
+        if self.config.inbatch_loss is not None:
+            inbatch_d = emb_d[:, 0]
+            inbatch_pred = cross_dot_product(emb_q, inbatch_d)
+        else:
+            inbatch_pred = None
+
+
         if labels is not None: labels = labels.reshape(batch_size, self.config.group_size)
 
-        return pred, labels
+        return pred, labels, inbatch_pred
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
         return self.pooler(x[:, 0])
@@ -154,8 +168,10 @@ class Dot(PreTrainedModel):
         labels = labels.to(self.encoder_d.device) if labels is not None else None
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
-        pred, labels = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        inbatch_loss = self.inbatch_loss_fn(inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)) if inbatch_pred is not None else 0.
         loss_value = loss(pred, labels) if labels is not None else loss(pred)
+        loss_value += inbatch_loss
         return (loss_value, pred) 
 
     def save_pretrained(self, model_dir, **kwargs):
