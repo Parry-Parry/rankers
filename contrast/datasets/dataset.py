@@ -53,9 +53,11 @@ class TrainingDataset(Dataset):
                     ir_dataset : str,
                     teacher_file : Optional[str] = None,
                     group_size : int = 2,
+                    collate_fn : Optional[callable] = lambda x : pd.DataFrame(x.docpairs_iter()) 
                     ) -> 'TrainingDataset':
             dataset = irds.load(ir_dataset)
-            training_data = initialise_triples(dataset)
+            assert dataset.has_docpairs(), "Dataset does not have docpairs, check you are not using a test collection"
+            training_data = collate_fn(dataset)
             return cls(training_data, dataset, teacher_file, group_size)
     
     def __len__(self):
