@@ -72,11 +72,6 @@ def get_teacher_scores(model : pt.Transformer,
                 lookup[qid][docno] = score
         return lookup
 
-
-def initialise_triples(dataset : irds.Dataset):
-    triples = pd.DataFrame(dataset.docpairs_iter())
-    return _pivot(triples)
-
 def initialise_irds_eval(dataset : irds.Dataset):
     qrels = pd.DataFrame(dataset.qrels_iter())
     return _qrel_pivot(qrels)
