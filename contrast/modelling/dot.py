@@ -141,7 +141,7 @@ class Dot(PreTrainedModel):
 
         if self.config.inbatch_loss is not None:
             inbatch_d = emb_d[:, 0]
-            inbatch_pred = cross_dot_product(emb_q, inbatch_d)
+            inbatch_pred = cross_dot_product(emb_q.view(batch_size, -1), inbatch_d)
         else:
             inbatch_pred = None
 
@@ -170,10 +170,13 @@ class Dot(PreTrainedModel):
         queries = {k: v.to(self.encoder.device) for k, v in queries.items()} if queries is not None else None
         docs_batch = {k: v.to(self.encoder_d.device) for k, v in docs_batch.items()} if docs_batch is not None else None
         labels = labels.to(self.encoder_d.device) if labels is not None else None
+
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
+
         pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
         inbatch_loss = self.inbatch_loss_fn(inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)) if inbatch_pred is not None else 0.
+        
         loss_value = loss(pred, labels) if labels is not None else loss(pred)
         loss_value += inbatch_loss
         return (loss_value, pred) 
