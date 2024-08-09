@@ -30,9 +30,7 @@ logger = logging.getLogger(__name__)
 LOSS_NAME = "loss.np"
 TRAINING_ARGS_NAME = "training_args.pkl"
 TRAINER_STATE_NAME = "trainer_state.pkl"
-OPTIMIZER_NAME = "optimizer.pkl"
-OPTIMIZER_NAME_BIN = "optimizer.bin.pkl"
-SCHEDULER_NAME = "scheduler.pkl"
+OPTIMIZER_NAME = "optimizer"
 
 DEFAULT_CALLBACKS = [DefaultFlowCallback]
 DEFAULT_PROGRESS_CALLBACK = ProgressCallback
@@ -51,7 +49,7 @@ class FlaxContrastTrainer(Trainer):
         model_init: Optional[Callable[[], FlaxPreTrainedModel]] = None,
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
-        optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
+        optimizers: Tuple[optax._src.base.Optimizer, optax._src.base.Scheduler] = (None, None), # TODO: Double check these base classes
     ):
         if args is None:
             output_dir = "tmp_trainer"
@@ -180,22 +178,22 @@ class FlaxContrastTrainer(Trainer):
     def create_optimizer_and_scheduler(self):
         self.optimizer = optax.adamw(learning_rate=self.args.learning_rate, b1=0.9, b2=0.98, eps=1e-8, weight_decay=0.01)
 
+        if self.args.warmup_steps > 0:
+            pass 
+        elif self.args.warmup_ratio > 0.:
+            pass 
+
     @partial(jit, static_argnums=0)
     def compute_loss(self, inputs, return_outputs=False):
-        outputs, _ = self.state.apply_fn(self.state.params, loss, **inputs)
+        labels = inputs.pop('labels')
+        pred, _ = self.state.apply_fn(**inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
-            self._past = outputs[self.args.past_index]
+            self._past = pred[self.args.past_index]
 
-        if isinstance(outputs, dict) and "loss" not in outputs:
-            raise ValueError(
-                "The model did not return a loss from the inputs, only the following keys: "
-                f"{','.join(outputs.keys())}. For reference, the inputs it received are {','.join(inputs.keys())}."
-            )
-        # We don't use .loss here since the model may return tuples instead of ModelOutput.
-        loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+        loss = self.loss(pred, labels)
 
-        return (loss, outputs) if return_outputs else loss
+        return (loss, pred) if return_outputs else loss
     
     def compute_metrics(self, result_frame : pd.DataFrame):
         from ir_measures import evaluator, RR
@@ -279,20 +277,10 @@ class FlaxContrastTrainer(Trainer):
             return
 
         checkpoint_file_exists = (
-                os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME))
-                or os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME_BIN))
-                or (
-                    os.path.isdir(checkpoint)
-                    and any(
-                        OPTIMIZER_NAME_BIN.split(".")[0] in folder_name
-                        for folder_name in os.listdir(checkpoint)
-                        if os.path.isdir(os.path.join(checkpoint, folder_name))
-                    )
+                os.path.isdir(os.path.join(checkpoint, OPTIMIZER_NAME))
                 )
-            )
-        )
         if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
-            self.optimizer = 
+            pass
 
     def _load_optimizer(self, checkpoint):
         # use orbax
@@ -382,15 +370,8 @@ class FlaxContrastTrainer(Trainer):
         if resume_from_checkpoint is not None:
             self._load_from_checkpoint(resume_from_checkpoint)
             # In case of repeating the find_executable_batch_size, set `self._train_batch_size` properly
-            state = FlaxTrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
-            if state.train_batch_size is not None:
-                self._train_batch_size = state.train_batch_size
-
-        # If model was re-initialized, put it on the right device and update self.model_wrapped
-        if model_reloaded:
-            if self.place_model_on_device:
-                self._move_model_to_device(self.model, args.device)
-            self.model_wrapped = self.model
+            if self.state.train_batch_size is not None:
+                self._train_batch_size = self.state.train_batch_size
 
         if args.push_to_hub:
             try:
@@ -474,10 +455,27 @@ class FlaxContrastTrainer(Trainer):
        
         self.create_optimizer_and_scheduler(num_training_steps=max_steps)
 
+        # Activate gradient checkpointing if needed
+        if args.gradient_checkpointing:
+            if args.gradient_checkpointing_kwargs is None:
+                gradient_checkpointing_kwargs = {}
+            else:
+                gradient_checkpointing_kwargs = args.gradient_checkpointing_kwargs
+
+            self.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
+        
+        # Check if saved optimizer or scheduler states exist
+        self._load_optimizer_and_scheduler(resume_from_checkpoint)
+
         self.state = FlaxTrainerState(
+            apply_fn=self.model.__call__,
+            params=self.model.params,
+            tx=self.optimizer,
+            is_local_process_zero=self.is_local_process_zero(),
+            is_world_process_zero=self.is_world_process_zero(),
             stateful_callbacks=[
                 cb for cb in self.callback_handler.callbacks + [self.control] if isinstance(cb, ExportableState)
-            ]
+            ],
         )
         self.state.train_batch_size = self._train_batch_size
 
@@ -498,23 +496,7 @@ class FlaxContrastTrainer(Trainer):
             else:
                 self.state.save_steps = args.save_steps
 
-        # Activate gradient checkpointing if needed
-        if args.gradient_checkpointing:
-            if args.gradient_checkpointing_kwargs is None:
-                gradient_checkpointing_kwargs = {}
-            else:
-                gradient_checkpointing_kwargs = args.gradient_checkpointing_kwargs
-
-            self.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
-
-        model = self._wrap_model(self.model_wrapped)
-
-        # for the rest of this function `model` is the outside model, whether it was wrapped or not
-        if model is not self.model:
-            self.model_wrapped = model
-        
-        # Check if saved optimizer or scheduler states exist
-        self._load_optimizer_and_scheduler(resume_from_checkpoint)
+        model = self.state.params
 
         # important: at this point:
         # self.model         is the Transformers Model
@@ -543,7 +525,7 @@ class FlaxContrastTrainer(Trainer):
         if resume_from_checkpoint is not None and os.path.isfile(
             os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME)
         ):
-            self.state = TrainerState.load_from_json(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
+            self.state = TrainerState.load(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
             self.compare_trainer_and_checkpoint_args(self.args, self.state)
             self._load_callback_state()
             epochs_trained = int(self.state.global_step // num_update_steps_per_epoch)
@@ -617,27 +599,6 @@ class FlaxContrastTrainer(Trainer):
             step = -1
             for step, inputs in enumerate(epoch_iterator):
                 total_batched_samples += 1
-
-                if self.args.include_num_input_tokens_seen:
-                    main_input_name = getattr(self.model, "main_input_name", "input_ids")
-                    if main_input_name not in inputs:
-                        logger.warning(
-                            "Tried to track the number of tokens seen, however the current model is "
-                            "not configured properly to know what item is the input. To fix this, add "
-                            "a `main_input_name` attribute to the model class you are using."
-                        )
-                    else:
-                        self.state.num_input_tokens_seen += (
-                            torch.sum(
-                                self.accelerator.gather(
-                                    torch.tensor(
-                                        inputs[main_input_name].numel(), device=self.args.device, dtype=torch.int64
-                                    )
-                                )
-                            )
-                            .cpu()
-                            .item()
-                        )
                 if rng_to_sync:
                     self._load_rng_state(resume_from_checkpoint)
                     rng_to_sync = False
@@ -657,20 +618,16 @@ class FlaxContrastTrainer(Trainer):
                 if step % args.gradient_accumulation_steps == 0:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
-        
                 tr_loss_step = self.training_step(inputs)
 
                 if (
                     args.logging_nan_inf_filter
                 ):
                     # if loss is nan or inf simply add the average of previous logged losses
-                    tr_loss += tr_loss / (1 + self.state.global_step - self._globalstep_last_logged)
+                    tr_loss = tr_loss.at[0].add(tr_loss / (1 + self.state.global_step - self._globalstep_last_logged))
                 else:
-                    if tr_loss.device != tr_loss_step.device:
-                        raise ValueError(
-                            f"Calculated loss must be on the original device: {tr_loss.device} but device in use is {tr_loss_step.device}"
-                        )
-                    tr_loss += tr_loss_step
+
+                    tr_loss = tr_loss.at[0].add(float(tr_loss_step))
 
                 self.current_flos += float(self.floating_point_ops(inputs))
 
@@ -691,15 +648,15 @@ class FlaxContrastTrainer(Trainer):
 
                     # Gradient clipping
                     if args.max_grad_norm is not None and args.max_grad_norm > 0:
-                        _grad_norm = self.accelerator.clip_grad_norm_(
-                            model.parameters(),
-                            args.max_grad_norm,
-                        )
-
+                        # TODO: Implement grad norm
+                        _grad_norm = None
                       
                     grad_norm = _grad_norm
 
-                    self.optimizer.step()
+                    tr_loss_step, grad = jax.value_and_grad(self.loss)(self.state.params)
+                    self.state = new_state = self.state.apply_gradients(grads=pmean(grad, "batch"))
+
+                    
 
                     self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
 
@@ -707,9 +664,8 @@ class FlaxContrastTrainer(Trainer):
                     if optimizer_was_run:
                         # Delay optimizer scheduling until metrics are generated
                         if not isinstance(self.lr_scheduler, optax._src.base.Schedule):
-                            self.lr_scheduler.step()
+                            self.lr_scheduler(self.state.step)
 
-                    model.zero_grad()
                     self.state.global_step += 1
                     self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
                     self.control = self.callback_handler.on_step_end(args, self.state, self.control)

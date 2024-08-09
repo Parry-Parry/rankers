@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 from collections.abc import Callable
-
+import pickle
 import optax
 
 import jax
@@ -123,16 +123,3 @@ class FlaxTrainerState(TrainState):
                 else:
                     stateful_callbacks[name] = callback.state()
             self.stateful_callbacks = stateful_callbacks
-
-    def save_to_json(self, json_path: str):
-        """Save the content of this instance in JSON format inside `json_path`."""
-        json_string = json.dumps(dataclasses.asdict(self), indent=2, sort_keys=True) + "\n"
-        with open(json_path, "w", encoding="utf-8") as f:
-            f.write(json_string)
-
-    @classmethod
-    def load_from_json(cls, json_path: str):
-        """Create an instance from the content of `json_path`."""
-        with open(json_path, "r", encoding="utf-8") as f:
-            text = f.read()
-        return cls(**json.loads(text))
