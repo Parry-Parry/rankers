@@ -175,15 +175,11 @@ class FlaxContrastTrainer(Trainer):
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
-    def create_optimizer_and_scheduler(self):
+    def create_optimizer_and_scheduler(self, num_training_steps=None):
         self.optimizer = optax.adamw(learning_rate=self.args.learning_rate, b1=0.9, b2=0.98, eps=1e-8, weight_decay=0.01)
+        self.lr_scheduler = optax.cosine_decay_schedule(init_value=self.args.learning_rate, decay_steps=num_training_steps, alpha=0.0) if num_training_steps is not None else None
 
-        if self.args.warmup_steps > 0:
-            pass 
-        elif self.args.warmup_ratio > 0.:
-            pass 
-
-    @partial(jit, static_argnums=0)
+    @partial(jit, static_argnums=(0,2))
     def compute_loss(self, inputs, return_outputs=False):
         labels = inputs.pop('labels')
         pred, _ = self.state.apply_fn(**inputs)
@@ -271,28 +267,17 @@ class FlaxContrastTrainer(Trainer):
 
         return output.metrics
 
-    def _load_optimizer_and_scheduler(self, checkpoint):
-        """If optimizer and scheduler states exist, load them."""
+    def _load_state(self, checkpoint=None):
         if checkpoint is None:
             return
+        state, optimizer, scheduler = orbax.load(checkpoint)
+        self.state = state
+        self.model.load_state_dict(state.params)
+        self.optimizer = optimizer
+        self.lr_scheduler = scheduler
 
-        checkpoint_file_exists = (
-                os.path.isdir(os.path.join(checkpoint, OPTIMIZER_NAME))
-                )
-        if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
-            pass
-
-    def _load_optimizer(self, checkpoint):
-        # use orbax
+    def _save_state(self, checkpoint):
         pass
-
-    def _save_optimizer(self, checkpoint):
-        pass
-
-    def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
-        logger.info("Loading model's weight from %s", resume_from_checkpoint)
-        if model: return model.load_state_dict(resume_from_checkpoint)
-        else: self.model.load_state_dict(resume_from_checkpoint)
     
     def get_num_trainable_parameters(self):
         """
@@ -368,7 +353,7 @@ class FlaxContrastTrainer(Trainer):
                 raise ValueError(f"No valid checkpoint found in output directory ({args.output_dir})")
 
         if resume_from_checkpoint is not None:
-            self._load_from_checkpoint(resume_from_checkpoint)
+            self._load_state(resume_from_checkpoint)
             # In case of repeating the find_executable_batch_size, set `self._train_batch_size` properly
             if self.state.train_batch_size is not None:
                 self._train_batch_size = self.state.train_batch_size
@@ -465,7 +450,7 @@ class FlaxContrastTrainer(Trainer):
             self.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
         
         # Check if saved optimizer or scheduler states exist
-        self._load_optimizer_and_scheduler(resume_from_checkpoint)
+        self._load_state(resume_from_checkpoint)
 
         self.state = FlaxTrainerState(
             apply_fn=self.model.__call__,
@@ -527,7 +512,6 @@ class FlaxContrastTrainer(Trainer):
         ):
             self.state = TrainerState.load(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
             self.compare_trainer_and_checkpoint_args(self.args, self.state)
-            self._load_callback_state()
             epochs_trained = int(self.state.global_step // num_update_steps_per_epoch)
             if not args.ignore_data_skip:
                 steps_trained_in_current_epoch = self.state.global_step % (num_update_steps_per_epoch)
@@ -561,7 +545,6 @@ class FlaxContrastTrainer(Trainer):
         # _total_loss_scalar is updated everytime .item() has to be called on tr_loss and stores the sum of all losses
         self._total_loss_scalar = 0.0
         self._globalstep_last_logged = self.state.global_step
-        model.zero_grad()
         grad_norm: Optional[float] = None
         self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
 
@@ -588,28 +571,21 @@ class FlaxContrastTrainer(Trainer):
             if epoch == epochs_trained and resume_from_checkpoint is not None and steps_trained_in_current_epoch == 0:
                 self._load_rng_state(resume_from_checkpoint)
 
-            rng_to_sync = False
             steps_skipped = 0
             if steps_trained_in_current_epoch > 0:
                 epoch_iterator = skip_first_batches(epoch_iterator, steps_trained_in_current_epoch)
                 steps_skipped = steps_trained_in_current_epoch
                 steps_trained_in_current_epoch = 0
-                rng_to_sync = True
 
             step = -1
             for step, inputs in enumerate(epoch_iterator):
                 total_batched_samples += 1
-                if rng_to_sync:
-                    self._load_rng_state(resume_from_checkpoint)
-                    rng_to_sync = False
 
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
                     if steps_trained_progress_bar is not None:
                         steps_trained_progress_bar.update(1)
-                    if steps_trained_in_current_epoch == 0:
-                        self._load_rng_state(resume_from_checkpoint)
                     continue
                 elif steps_trained_progress_bar is not None:
                     steps_trained_progress_bar.close()
@@ -654,9 +630,7 @@ class FlaxContrastTrainer(Trainer):
                     grad_norm = _grad_norm
 
                     tr_loss_step, grad = jax.value_and_grad(self.loss)(self.state.params)
-                    self.state = new_state = self.state.apply_gradients(grads=pmean(grad, "batch"))
-
-                    
+                    self.state = self.state.apply_gradients(grads=pmean(grad, "batch"))
 
                     self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
 
@@ -771,4 +745,4 @@ class FlaxContrastTrainer(Trainer):
 
         # TODO: Backward pass NEEDED
 
-        return loss / self.args.gradient_accumulation_steps
+        return loss.at[0].divide(self.args.gradient_accumulation_steps)
