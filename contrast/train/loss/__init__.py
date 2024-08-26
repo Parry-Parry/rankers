@@ -127,7 +127,7 @@ def batched_dot_product(a: Tensor, b: Tensor):
     Parameters
     ----------
     a: torch.Tensor
-        size: batch_size x 1 x vector_dim
+        size: batch_size x vector_dim
     b: torch.Tensor
         size: batch_size x group_size x vector_dim
     Returns
@@ -137,7 +137,7 @@ def batched_dot_product(a: Tensor, b: Tensor):
     """
     if len(b.shape) == 2:
         return torch.matmul(a, b.transpose(0, 1))
-    return torch.bmm(a,torch.permute(b,[0,2,1])).squeeze(1)
+    return torch.matmul(a.unsqueeze(1), b.transpose(2, 1)).squeeze(1)
 
 def num_non_zero(a: Tensor):
     """
