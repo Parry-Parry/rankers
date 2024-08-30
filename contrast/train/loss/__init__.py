@@ -137,7 +137,13 @@ def batched_dot_product(a: Tensor, b: Tensor):
     """
     if len(b.shape) == 2:
         return torch.matmul(a, b.transpose(0, 1))
-    return torch.matmul(a.unsqueeze(1), b.transpose(2, 1)).squeeze(1)
+
+    # Ensure `a` is of shape (batch_size, 1, vector_dim)
+    if len(a.shape) == 2:
+        a = a.unsqueeze(1)
+    
+    # Compute batched dot product, result shape: (batch_size, 1, group_size)
+    return torch.bmm(b, a.transpose(1, 2)).squeeze(1)
 
 def num_non_zero(a: Tensor):
     """
