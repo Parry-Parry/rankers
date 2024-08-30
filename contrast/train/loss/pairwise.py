@@ -45,6 +45,8 @@ class LCELoss(BaseLoss):
             labels = labels.argmax(dim=1)
         else:
             labels = torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(-1, 1)
+        print(pred.size())
+        print(labels.size())
         return F.cross_entropy(pred, labels, reduction=self.reduction)
 
 
