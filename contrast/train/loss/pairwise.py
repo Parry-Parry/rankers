@@ -41,7 +41,10 @@ class ClearLoss(BaseLoss):
 class LCELoss(BaseLoss):
     """LCE loss: Cross Entropy for NCE with localised examples."""
     def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
-        labels = labels.argmax(dim=1) if labels is not None else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device)
+        if labels is not None:
+            labels = labels.argmax(dim=1)
+        else:
+            labels = torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(-1, 1)
         return F.cross_entropy(pred, labels, reduction=self.reduction)
 
 
@@ -54,7 +57,7 @@ class ContrastiveLoss(BaseLoss):
 
     def forward(self, pred: Tensor, labels : Tensor = None) -> Tensor:
         softmax_scores = F.log_softmax(pred / self.temperature, dim=1)
-        labels = labels.argmax(dim=1) if labels is not None else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device)
+        labels = labels.argmax(dim=1) if labels is not None else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(-1, 1)
         return F.nll_loss(softmax_scores, labels, reduction=self.reduction)
 
 PAIRWISE_LOSSES = {
