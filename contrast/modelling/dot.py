@@ -239,10 +239,10 @@ class DotTransformer(pt.Transformer):
 
     @classmethod
     def from_pretrained(cls, 
-                        model_name_or_path : str, 
-                        batch_size : int = 64, 
-                        pooling : str = 'cls', 
-                        text_field : str = 'text', 
+                        model_name_or_path : str,
+                        batch_size : int = 64,
+                        pooling : str = 'cls',
+                        text_field : str = 'text',
                         device : Union[str, torch.device] = None):
         config = DotConfig.from_pretrained(model_name_or_path)
         config.mode = pooling
@@ -258,7 +258,7 @@ class DotTransformer(pt.Transformer):
                    tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
-                   ): 
+                   ):
         config = model.config
         return cls(model, tokenizer, config, batch_size, text_field, model.device)
     
