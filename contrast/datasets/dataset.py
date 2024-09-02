@@ -37,13 +37,13 @@ class TrainingDataset(Dataset):
         if self.teacher_file: self.teacher = load_json(self.teacher_file)
 
         self.labels = True if self.teacher_file else False
-        self.multi_negatives = True if type(self.training_data['doc_id_b'].iloc[0]) == list else False
+        self.multi_negatives = True if (type(self.training_data['doc_id_b'].iloc[0]) == list) else False
 
         if not self.listwise:
             if self.group_size > 2 and self.multi_negatives:
                 self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.sample(x, self.group_size-1))
             elif self.group_size == 2 and self.multi_negatives:
-                self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.choice(x))
+                self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.choice(x) if len(x) > 1 else x[0])
                 self.multi_negatives = False
             elif self.group_size > 2 and not self.multi_negatives:
                 raise ValueError("Group size > 2 not supported for single negative samples")
