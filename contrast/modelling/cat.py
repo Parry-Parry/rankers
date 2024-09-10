@@ -120,9 +120,8 @@ class CatTransformer(pt.Transformer):
                 inps = {k: v.to(self.model.device) for k, v in inps.items()}
                 scores.append(F.log_softmax(self.model(**inps).logits, dim=-1)[:, 1].cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))
-        pt.model.add_ranks(res)
-        res = res.sort_values(['qid', 'rank'])
-        return res
+        res = res.sort_values(['qid', 'score'], ascending=[True, False])
+        return pt.model.add_ranks(res)
 
 class PairTransformer(pt.Transformer):
     def __init__(self, 
@@ -176,6 +175,6 @@ class PairTransformer(pt.Transformer):
                 inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(self.model(**inps).logits.cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))
-        pt.model.add_ranks(res)
-        res = res.sort_values(['qid', 'rank'])
-        return res
+        res = inp.assign(score=np.concatenate(scores))
+        res = res.sort_values(['qid', 'score'], ascending=[True, False])
+        return pt.model.add_ranks(res)
