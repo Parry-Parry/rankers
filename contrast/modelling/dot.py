@@ -111,7 +111,7 @@ class Dot(PreTrainedModel):
         tokenizer : PreTrainedTokenizer,
         config : DotConfig,
         encoder_d : PreTrainedModel = None,
-        pooler : Pooler = None
+        pooler : Pooler = None,
     ):
         super().__init__(config)
         self.encoder = encoder
@@ -223,6 +223,7 @@ class DotTransformer(pt.Transformer):
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
+                 verbose : bool = False
                  ) -> None:
         super().__init__()
         self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -236,6 +237,7 @@ class DotTransformer(pt.Transformer):
             'cls' : lambda x: x[:, 0],
             'none': lambda x: x,
         }[config.mode]
+        self.verbose = verbose
 
     @classmethod
     def from_pretrained(cls, 
@@ -243,14 +245,16 @@ class DotTransformer(pt.Transformer):
                         batch_size : int = 64,
                         pooling : str = 'cls',
                         text_field : str = 'text',
-                        device : Union[str, torch.device] = None):
+                        device : Union[str, torch.device] = None,
+                        verbose : bool = False
+                        ):
         config = DotConfig.from_pretrained(model_name_or_path)
         config.mode = pooling
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
         encoder_d = None if config.encoder_tied else AutoModel.from_pretrained(model_name_or_path + "/encoder_d")
         encoder_q = AutoModel.from_pretrained(model_name_or_path)
         model = Dot(encoder_q, config, encoder_d, pooler)
-        return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field, device)
+        return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field, device, verbose)
     
     @classmethod 
     def from_model(cls, 
@@ -258,9 +262,10 @@ class DotTransformer(pt.Transformer):
                    tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
+                   verbose : bool = False
                    ):
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device)
+        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
     
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []

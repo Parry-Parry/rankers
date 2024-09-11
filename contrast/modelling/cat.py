@@ -91,12 +91,13 @@ class CatTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
-                        device : Union[str, torch.device] = None
+                        device : Union[str, torch.device] = None,
+                        verbose : bool = False
                         ):
         model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
-        return cls(model, tokenizer, config, batch_size, text_field, device)
+        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     @classmethod 
     def from_model(cls, 
@@ -104,9 +105,10 @@ class CatTransformer(pt.Transformer):
                    tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
+                   verbose : bool = False
                    ): 
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device)
+        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
         scores = []
@@ -130,7 +132,8 @@ class PairTransformer(pt.Transformer):
                  config : AutoConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
-                 device : Union[str, torch.device] = None
+                 device : Union[str, torch.device] = None,
+                 verbose : bool = False
                  ) -> None:
         super().__init__()
         self.model = model
@@ -146,21 +149,23 @@ class PairTransformer(pt.Transformer):
                    tokenizer : PreTrainedTokenizer,
                    batch_size : int = 64, 
                    text_field : str = 'text', 
+                   verbose : bool = False
                    ): 
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device)
+        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
     
     @classmethod
     def from_pretrained(cls, 
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
-                        device : Union[str, torch.device] = None
+                        device : Union[str, torch.device] = None,
+                        verbose : bool = False
                         ):
         model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
-        return cls(model, tokenizer, config, batch_size, text_field, device)
+        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
         # TODO: Switch this to a pair-wise scoring
