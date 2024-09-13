@@ -20,10 +20,9 @@ class RankerTrainer(Trainer):
 
     def __init__(self, *args, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(*args, **kwargs)
-        if isinstance(loss, str): 
+        if isinstance(loss_fn, str): 
             if loss_fn not in loss.__all__: raise ValueError(f"Unknown loss: {loss_fn}")
             self.loss = getattr(loss, loss_fn)()
-            print(self.loss)
         else: 
             self.loss = loss_fn
         self.tokenizer = self.data_collator.tokenizer
