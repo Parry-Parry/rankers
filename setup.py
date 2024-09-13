@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="contrast",
+    name="rankers",
     version="0.0.1",
     author="Andrew Parry",
     description="A framework for training and evaluating neural IR models.",
