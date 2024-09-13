@@ -7,5 +7,5 @@ pip install rankers
 ```
 ### Latest (Unstable)
 ```
-pip install -U git+https://github.com/Parry-Parry/Rankers.git
+pip install -U git+https://github.com/Parry-Parry/rankers.git
 ```
