@@ -45,7 +45,9 @@ class TrainingDataset(Dataset):
                 self.multi_negatives = False
             elif self.group_size > 2 and not self.multi_negatives:
                 raise ValueError("Group size > 2 not supported for single negative samples")
-    
+
+        self.training_data = [*self.training_data.itertuples(index=False)]
+
     @classmethod
     def from_irds(cls,
                     ir_dataset : str,
@@ -67,8 +69,8 @@ class TrainingDataset(Dataset):
         except KeyError: return 0.
 
     def __getitem__(self, idx):
-        item = self.training_data.iloc[idx]
-        qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
+        item = self.training_data[idx]
+        qid, doc_id_a, doc_id_b = item.query_id, item.doc_id_a, item.doc_id_b
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]] if not self.listwise else []
 
