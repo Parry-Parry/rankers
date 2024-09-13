@@ -14,3 +14,7 @@ class PointwiseMSELoss(BaseLoss):
 POINTWISE_LOSSES = {
     'mse': PointwiseMSELoss,
 }
+
+__all__ = [
+    'PointwiseMSELoss',
+]   

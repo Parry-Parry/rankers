@@ -155,12 +155,8 @@ def num_non_zero(a: Tensor):
     """
     return (a > 0).float().sum(dim=1).mean()
     
-from .listwise import *
-from .pointwise import *
-from .pairwise import *
+from . import listwise as listwise
+from . import pointwise as pointwise
+from . import pairwise as pairwise
 
-LOSSES = {
-    **POINTWISE_LOSSES,
-    **PAIRWISE_LOSSES,
-    **LISTWISE_LOSSES,
-}
+__all__ = [*listwise.__all__, *pointwise.__all__, *pairwise.__all__]

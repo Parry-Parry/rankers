@@ -171,6 +171,16 @@ class ApproxMRRLoss(BaseLoss):
         return self._reduce(loss)
 
 
+__all__ = [
+    'KL_DivergenceLoss',
+    'RankNetLoss',
+    'DistillRankNetLoss',
+    'ListNetLoss',
+    'Poly1SoftmaxLoss',
+    'ApproxNDCGLoss',
+    'ApproxMRRLoss',
+]
+
 LISTWISE_LOSSES = {
     'kl_div': KL_DivergenceLoss,
     'ranknet': RankNetLoss,
