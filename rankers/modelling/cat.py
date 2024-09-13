@@ -41,6 +41,8 @@ class Cat(PreTrainedModel):
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
         pred = self.prepare_outputs(logits)
+        print(labels.shape)
+        print(pred.shape)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
         return (loss_value, pred)
 
