@@ -10,7 +10,8 @@ from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from ..train.loss import batched_dot_product, cross_dot_product, LOSSES
+from ..train import loss as loss
+from ..train.loss import batched_dot_product, cross_dot_product
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -127,9 +128,9 @@ class Dot(PreTrainedModel):
         else: self.pooler = lambda x, y =True : x
 
         if config.inbatch_loss is not None:
-            if config.inbatch_loss not in LOSSES:
+            if config.inbatch_loss not in loss.__all__:
                 raise ValueError(f"Unknown loss: {config.inbatch_loss}")
-            self.inbatch_loss_fn = LOSSES[config.inbatch_loss]()
+            self.inbatch_loss_fn = getattr(loss, config.inbatch_loss)()
         else:
             self.inbatch_loss_fn = None
 
