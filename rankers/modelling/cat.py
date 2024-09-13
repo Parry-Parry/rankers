@@ -31,18 +31,16 @@ class Cat(PreTrainedModel):
         self.classifier = classifier
         self.tokenizer = tokenizer
     
-    def prepare_outputs(self, logits):
+    def prepare_outputs(self, logits, labels=None):
         """Prepare outputs"""
-        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1]
+        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], labels.view(-1, self.config.group_size, 1) if labels is not None else None
 
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
         sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
         labels = labels.to(self.classifier.device) if labels is not None else None
         logits = self.classifier(**sequences).logits
-        pred = self.prepare_outputs(logits)
-        print(labels.shape)
-        print(pred.shape)
+        pred, labels = self.prepare_outputs(logits, labels)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
         return (loss_value, pred)
 
