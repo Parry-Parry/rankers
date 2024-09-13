@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 LOSS_NAME = "loss.pt"
 
-class ContrastTrainer(Trainer):
+class RankerTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
 
     def __init__(self, *args, loss=None, **kwargs) -> None:
-        super(ContrastTrainer, self).__init__(*args, **kwargs)
+        super(RankerTrainer, self).__init__(*args, **kwargs)
         if isinstance(loss, str): 
             if loss not in LOSSES: raise ValueError(f"Unknown loss: {loss}")
             self.loss = LOSSES[loss]()

@@ -1,8 +1,8 @@
 __version__ = "0.0.2"
 
 from .train import loss as loss
-from .train.trainer import ContrastTrainer
-from .train.arguments import ContrastArguments
+from .train.trainer import RankerTrainer
+from .train.arguments import RankerArguments
 from .datasets import *
 from .modelling import *
 
