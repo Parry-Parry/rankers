@@ -159,4 +159,8 @@ from . import listwise as listwise
 from . import pointwise as pointwise
 from . import pairwise as pairwise
 
+from .listwise import *
+from .pointwise import *
+from .pairwise import *
+
 __all__ = [*listwise.__all__, *pointwise.__all__, *pairwise.__all__]
