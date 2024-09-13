@@ -4,10 +4,8 @@ import pandas as pd
 import torch
 from typing import Optional, Union
 import ir_datasets as irds
-from .._util import load_json
+from .._util import load_json, initialise_irds_eval
 from .corpus import Corpus
-
-from contrast._util import initialise_irds_eval
 
 class TrainingDataset(Dataset):
     def __init__(self, 
