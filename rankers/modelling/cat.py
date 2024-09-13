@@ -33,7 +33,7 @@ class Cat(PreTrainedModel):
     
     def prepare_outputs(self, logits, labels=None):
         """Prepare outputs"""
-        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], labels.view(-1, self.config.group_size, 1) if labels is not None else None
+        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], labels.view(-1, self.config.group_size) if labels is not None else None
 
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
