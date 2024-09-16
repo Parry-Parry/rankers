@@ -1,6 +1,3 @@
-import pyterrier as pt
-if not pt.started():
-    pt.init()
 from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 from transformers.utils import OptionalDependencyNotAvailable
 from typing import Union
