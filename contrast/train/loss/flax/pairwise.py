@@ -68,12 +68,4 @@ class FlaxContrastiveLoss(FlaxBaseLoss):
 
         return self._reduce(-jnp.log(label_probs))
 
-PAIRWISE_LOSSES = {
-    'margin_mse': FlaxMarginMSELoss,
-    'hinge': FlaxHingeLoss,
-    'clear': FlaxClearLoss,
-    'lce': FlaxLCELoss,
-    'contrastive': FlaxContrastiveLoss,
-}
-
 __all__ = ['FlaxMarginMSELoss', 'FlaxHingeLoss', 'FlaxClearLoss', 'FlaxLCELoss', 'FlaxContrastiveLoss', 'FlaxPAIRWISE_LOSSES']

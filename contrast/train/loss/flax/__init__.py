@@ -145,12 +145,12 @@ def num_non_zero(a: jax.Array):
     """
     return jnp.mean(jnp.sum((a > 0), axis=1))
     
-from .listwise import LISTWISE_LOSSES
-from .pointwise import POINTWISE_LOSSES
-from .pairwise import PAIRWISE_LOSSES
+from . import listwise as listwise
+from . import pointwise as pointwise
+from . import pairwise as pairwise
 
-FlaxLOSSES = {
-    **POINTWISE_LOSSES,
-    **PAIRWISE_LOSSES,
-    **LISTWISE_LOSSES,
-}
+from .listwise import *
+from .pointwise import *
+from .pairwise import *
+
+__all__ = [*listwise.__all__, *pointwise.__all__, *pairwise.__all__]

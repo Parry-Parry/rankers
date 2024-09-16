@@ -3,15 +3,21 @@ import os
 from contrast.train.loss.torch import cross_dot_product
 import torch
 from torch import nn
-import pyterrier as pt
-if not pt.started():
-    pt.init()
 from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer
+from transformers.utils import OptionalDependencyNotAvailable
 from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from ...train.loss import batched_dot_product
+from ...train.loss.torch import batched_dot_product
+from ..._optional import is_pyterrier_available
+
+PT_AVAILIBLE = is_pyterrier_available()
+
+if PT_AVAILIBLE:
+    import pyterrier as pt
+    if not pt.started():
+        pt.init()
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -210,6 +216,7 @@ class Dot(PreTrainedModel):
         return cls(encoder, tokenizer, config)
     
     def to_pyterrier(self) -> "DotTransformer":
+        if not PT_AVAILIBLE: raise OptionalDependencyNotAvailable()
         return DotTransformer.from_model(self, self.tokenizer, text_field='text')
 
 class DotTransformer(pt.Transformer):

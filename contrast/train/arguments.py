@@ -1,6 +1,6 @@
 from transformers import TrainingArguments
     
-class ContrastArguments(TrainingArguments):
+class RankerArguments(TrainingArguments):
     def __init__(self, 
                  mode : str = None, 
                  group_size : int = 2,

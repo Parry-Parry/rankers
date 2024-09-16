@@ -1,24 +1,10 @@
 __version__ = "0.0.2"
 
 from .train import loss as loss
-from .train.trainer import ContrastTrainer
-from .train.arguments import ContrastArguments
+from .train.trainer import RankerTrainer
+from .train.arguments import RankerArguments
 from .datasets import *
 from .modelling import *
-
-def is_torch_available():
-    try:
-        import torch
-        return True
-    except ImportError:
-        return False
-
-def is_flax_available():
-    try:
-        import flax
-        return True
-    except ImportError:
-        return False
 
 def seed_everything(seed=42):
     import random

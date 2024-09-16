@@ -30,13 +30,13 @@ class RankNetLoss(BaseLoss):
         i1, i2 = torch.triu_indices(g, g, offset=1)
         pred_diff = pred[:, i1] - pred[:, i2]
         if labels is None:
-            targets = torch.zeros_like(pred_diff)
-            targets[:, 0] = 1.
+            labels = torch.zeros_like(pred_diff)
+            labels[:, 0] = 1.
         else:
             label_diff = labels[:, i1] - labels[:, i2]
-            targets = (label_diff > 0).float()
+            labels = (label_diff > 0).float()
 
-        return self.bce(pred_diff, targets)
+        return self.bce(pred_diff, labels)
 
 
 class DistillRankNetLoss(BaseLoss):
@@ -60,9 +60,9 @@ class DistillRankNetLoss(BaseLoss):
         label_margin = (label_diff -1) * self.increment_margin + self.base_margin
 
         final_margin = pred_diff + label_margin
-        targets = (label_diff > 0).float()
+        labels = (label_diff > 0).float()
 
-        return self._reduce(final_margin[targets])
+        return self._reduce(final_margin[labels])
 
 class ListNetLoss(BaseLoss):
     """ListNet loss
@@ -93,12 +93,100 @@ class Poly1SoftmaxLoss(BaseLoss):
         ce = self.ce(pred / self.temperature, labels_for_softmax)
         return self._reduce(ce + (1 - expansion) * self.epsilon)
 
+def get_approx_ranks(pred: torch.Tensor, temperature: float) -> torch.Tensor:
+    score_diff = pred[:, None] - pred[..., None]
+    normalized_score_diff = torch.sigmoid(score_diff / temperature)
+    # set diagonal to 0
+    normalized_score_diff = normalized_score_diff * (1 - torch.eye(pred.shape[1], device=pred.device))
+    approx_ranks = normalized_score_diff.sum(-1) + 1
+    return approx_ranks
+
+# Taken from https://github.com/webis-de/lightning-ir/blob/main/lightning_ir/loss/loss.py
+
+def get_dcg(
+        ranks: torch.Tensor,
+        labels: torch.Tensor,
+        k: int | None = None,
+        scale_gains: bool = True,
+    ) -> torch.Tensor:
+        log_ranks = torch.log2(1 + ranks)
+        discounts = 1 / log_ranks
+        if scale_gains:
+            gains = 2**labels - 1
+        else:
+            gains = labels
+        dcgs = gains * discounts
+        if k is not None:
+            dcgs = dcgs.masked_fill(ranks > k, 0)
+        return dcgs.sum(dim=-1)
+
+def get_ndcg(
+        ranks: torch.Tensor,
+        labels: torch.Tensor,
+        k: int | None = None,
+        scale_gains: bool = True,
+        optimal_labels: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        labels = labels.clamp(min=0)
+        if optimal_labels is None:
+            optimal_labels = labels
+        optimal_ranks = torch.argsort(torch.argsort(optimal_labels, descending=True))
+        optimal_ranks = optimal_ranks + 1
+        dcg = get_dcg(ranks, labels, k, scale_gains)
+        idcg = get_dcg(optimal_ranks, optimal_labels, k, scale_gains)
+        ndcg = dcg / (idcg.clamp(min=1e-12))
+        return ndcg
+
+class ApproxNDCGLoss(BaseLoss):
+    def __init__(self, reduction: str = 'mean', temperature=1., scale_gains: bool = True) -> None:
+        super().__init__(reduction)
+        self.temperature = temperature
+        self.scale_gains = scale_gains
+    
+    def forward(self, pred: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        labels = self.process_labels(pred, labels)
+        approx_ranks = get_approx_ranks(pred, self.temperature)
+        ndcg = get_ndcg(approx_ranks, labels, k=None, scale_gains=self.scale_gains)
+        loss = 1 - ndcg
+        return self._reduce(loss)
+
+def get_mrr(ranks: torch.Tensor, labels: torch.Tensor, k: int | None = None) -> torch.Tensor:
+        labels = labels.clamp(None, 1)
+        reciprocal_ranks = 1 / ranks
+        mrr = reciprocal_ranks * labels
+        if k is not None:
+            mrr = mrr.masked_fill(ranks > k, 0)
+        mrr = mrr.max(dim=-1)[0]
+        return mrr
+
+class ApproxMRRLoss(BaseLoss):
+    def __init__(self, reduction: str = 'mean', temperature=1.) -> None:
+        super().__init__(reduction)
+        self.temperature = temperature
+    
+    def forward(self, pred: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        approx_ranks = get_approx_ranks(pred, self.temperature)
+        mrr = get_mrr(approx_ranks, labels, k=None)
+        loss = 1 - mrr
+        return self._reduce(loss)
+
+
+__all__ = [
+    'KL_DivergenceLoss',
+    'RankNetLoss',
+    'DistillRankNetLoss',
+    'ListNetLoss',
+    'Poly1SoftmaxLoss',
+    'ApproxNDCGLoss',
+    'ApproxMRRLoss',
+]
+
 LISTWISE_LOSSES = {
     'kl_div': KL_DivergenceLoss,
     'ranknet': RankNetLoss,
     'distill_ranknet': DistillRankNetLoss,
     'listnet': ListNetLoss,
     'poly1': Poly1SoftmaxLoss,
+    'approx_ndcg': ApproxNDCGLoss,
+    'approx_mrr': ApproxMRRLoss,
 }
-
-__all__ = ['KL_DivergenceLoss', 'RankNetLoss', 'DistillRankNetLoss', 'ListNetLoss', 'Poly1SoftmaxLoss', 'LISTWISE_LOSSES']

@@ -1,4 +1,3 @@
-import torch
 from torch import Tensor
 from torch.nn import functional as F
 from . import BaseLoss
@@ -11,8 +10,6 @@ class PointwiseMSELoss(BaseLoss):
         flattened_labels = labels.view(-1)
         return F.mse_loss(flattened_pred, flattened_labels, reduction=self.reduction)
 
-POINTWISE_LOSSES = {
-    'mse': PointwiseMSELoss,
-}
-
-__all__ = ['PointwiseMSELoss', 'POINTWISE_LOSSES']
+__all__ = [
+    'PointwiseMSELoss',
+]   

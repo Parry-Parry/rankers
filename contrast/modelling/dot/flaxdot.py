@@ -1,76 +1,23 @@
 from copy import deepcopy
 import os
-import pyterrier as pt
-if not pt.started():
-    pt.init()
-from transformers import FlaxPreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer
-from typing import Union
+from transformers import FlaxPreTrainedModel, PreTrainedTokenizer, AutoModel, AutoTokenizer, AutoConfig
+from transformers.utils import OptionalDependencyNotAvailable
 import pandas as pd
 import numpy as np
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
 from more_itertools import chunked
-from ...train.loss.flax import batched_dot_product
+from ...train.loss.flax import batched_dot_product, cross_dot_product
+from ..._optional import is_pyterrier_available
+from ..dot import DotConfig
 
-class DotConfig(PretrainedConfig):
-    """Configuration for Dot Model
-    
-    Parameters
-    ----------
-    model_name_or_path : str
-        the model name or path
-    mode : str
-        the pooling mode for the model
-    encoder_tied : bool
-        whether the encoder is tied
-    use_pooler : bool
-        whether to use the pooler
-    pooler_dim_in : int
-        the input dimension for the pooler
-    pooler_dim_out : int
-        the output dimension for the pooler
-    pooler_tied : bool
-        whether the pooler is tied
-    """
-    model_architecture = "Dot"
-    def __init__(self, 
-                 model_name_or_path : str='bert-base-uncased',
-                 mode='cls', 
-                 encoder_tied=True,
-                 use_pooler=False,
-                 pooler_dim_in=768,
-                 pooler_dim_out=768,
-                 pooler_tied=True,
-                 **kwargs):
-        self.model_name_or_path = model_name_or_path
-        self.mode = mode
-        self.encoder_tied = encoder_tied
-        self.use_pooler = use_pooler
-        self.pooler_dim_in = pooler_dim_in
-        self.pooler_dim_out = pooler_dim_out
-        self.pooler_tied = pooler_tied
-        super().__init__(**kwargs)
-    
-    @classmethod
-    def from_pretrained(cls, 
-                        model_name_or_path : str='bert-base-uncased',
-                        mode='cls', 
-                        encoder_tied=True,
-                        use_pooler=False,
-                        pooler_dim_in=768,
-                        pooler_dim_out=768,
-                        pooler_tied=True,
-                          ) -> 'DotConfig':
-        config = super().from_pretrained(model_name_or_path)
-        config.model_name_or_path = model_name_or_path
-        config.mode = mode
-        config.encoder_tied = encoder_tied
-        config.use_pooler = use_pooler
-        config.pooler_dim_in = pooler_dim_in
-        config.pooler_dim_out = pooler_dim_out
-        config.pooler_tied = pooler_tied
-        return config
+PT_AVAILIBLE = is_pyterrier_available()
+
+if PT_AVAILIBLE:
+    import pyterrier as pt
+    if not pt.started():
+        pt.init()
 
 class Pooler(nn.Module):
     def __init__(self, config):
@@ -78,16 +25,10 @@ class Pooler(nn.Module):
         self.dense_q = nn.Dense(config.pooler_dim_out)
         self.dense_d = nn.Dense(config.pooler_dim_out) if not config.pooler_tied else self.dense_q
     
-    @classmethod
-    def from_pretrained(cls, model_name_or_path : str='bert-base-uncased') -> 'Pooler':
-        config = DotConfig.from_pretrained(model_name_or_path)
-        model = cls(config)
-        return model
-    
     def __call__(self, hidden_states, d=False):
         return self.dense_d(hidden_states) if d else self.dense_q(hidden_states)
 
-class Dot(FlaxPreTrainedModel):
+class FlaxDot(FlaxPreTrainedModel):
     """
     Dot Model for Fine-Tuning 
 
@@ -106,7 +47,7 @@ class Dot(FlaxPreTrainedModel):
         self,
         encoder : FlaxPreTrainedModel,
         tokenizer : PreTrainedTokenizer,
-        config : DotConfig,
+        config : AutoConfig,
         encoder_d : FlaxPreTrainedModel = None,
         pooler : Pooler = None
     ):
@@ -128,9 +69,15 @@ class Dot(FlaxPreTrainedModel):
         emb_q = jnp.reshape(query_reps, (batch_size, 1, -1))
         emb_d = jnp.reshape(docs_batch_reps, (batch_size, self.config.group_size, -1))
         pred = batched_dot_product(emb_q, emb_d)
+
+        if self.config.inbatch_negatives:
+            inbatch_d = jnp.reshape(emb_d[:, 0, :], (batch_size, 1, -1))
+            inbatch_pred = cross_dot_product(emb_q, inbatch_d)
+        else: inbatch_pred = None
+
         if labels is not None: labels = jnp.reshape(labels, (batch_size, self.config.group_size))
 
-        return pred, labels
+        return pred, labels, inbatch_pred
     
     def _cls(self, x : jax.Array) -> jax.Array:
         return self.pooler(x[:, 0])
@@ -155,9 +102,17 @@ class Dot(FlaxPreTrainedModel):
         labels = labels.to(self.encoder_d.device) if labels is not None else None
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
-        pred, labels = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
         loss_value = loss(pred, labels) if labels is not None else loss(pred)
-        return (loss_value, pred) 
+
+        if inbatch_pred is not None:
+            # log likelihood of the inbatch negatives should all be 0
+            inbatch_labels = jnp.eye(inbatch_pred.size(0))
+            inbatch_loss = loss(inbatch_pred, inbatch_labels)
+        else:
+            inbatch_loss = 0
+
+        return (loss_value + inbatch_loss, pred) 
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document encoder"""
@@ -190,10 +145,11 @@ class Dot(FlaxPreTrainedModel):
         encoder = AutoModel.from_pretrained(model_dir_or_name)
         return cls(encoder, tokenizer, config)
     
-    def to_pyterrier(self) -> "DotTransformer":
-        return DotTransformer.from_model(self, self.tokenizer, text_field='text')
+    def to_pyterrier(self) -> "FlaxDotTransformer":
+        if not PT_AVAILIBLE: raise OptionalDependencyNotAvailable()
+        return FlaxDotTransformer.from_model(self, self.tokenizer, text_field='text')
 
-class DotTransformer(pt.Transformer):
+class FlaxDotTransformer(pt.Transformer):
     def __init__(self, 
                  model : FlaxPreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -224,7 +180,7 @@ class DotTransformer(pt.Transformer):
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
         encoder_d = None if config.encoder_tied else AutoModel.from_pretrained(model_name_or_path + "/encoder_d")
         encoder_q = AutoModel.from_pretrained(model_name_or_path)
-        model = Dot(encoder_q, config, encoder_d, pooler)
+        model = FlaxDot(encoder_q, config, encoder_d, pooler)
         return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field)
     
     @classmethod 

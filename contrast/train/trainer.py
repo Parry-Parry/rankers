@@ -9,22 +9,22 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
-from .loss import LOSSES
+from . import loss
 
 logger = logging.getLogger(__name__)
 
 LOSS_NAME = "loss.pt"
 
-class ContrastTrainer(Trainer):
+class RankerTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
 
-    def __init__(self, *args, loss=None, **kwargs) -> None:
-        super(ContrastTrainer, self).__init__(*args, **kwargs)
-        if isinstance(loss, str): 
-            if loss not in LOSSES: raise ValueError(f"Unknown loss: {loss}")
-            self.loss = LOSSES[loss]()
+    def __init__(self, *args, loss_fn=None, **kwargs) -> None:
+        super(RankerTrainer, self).__init__(*args, **kwargs)
+        if isinstance(loss_fn, str): 
+            if loss_fn not in loss.__all__: raise ValueError(f"Unknown loss: {loss_fn}")
+            self.loss = getattr(loss, loss_fn)()
         else: 
-            self.loss = loss
+            self.loss = loss_fn
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 

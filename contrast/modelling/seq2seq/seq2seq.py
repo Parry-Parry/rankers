@@ -1,12 +1,18 @@
-import pyterrier as pt
-if not pt.started():
-    pt.init()
 from transformers import PreTrainedModel, PreTrainedTokenizer, AutoTokenizer, AutoConfig, AutoModelForSeq2SeqLM
+from transformers.utils import OptionalDependencyNotAvailable
 from typing import Union
 import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
+from ..._optional import is_pyterrier_available
+
+PT_AVAILIBLE = is_pyterrier_available()
+
+if PT_AVAILIBLE:
+    import pyterrier as pt
+    if not pt.started():
+        pt.init()
 
 
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
@@ -57,6 +63,7 @@ class Seq2Seq(PreTrainedModel):
         return self.classifier.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
     def to_pyterrier(self) -> "Seq2SeqTransformer":
+        if not PT_AVAILIBLE: raise OptionalDependencyNotAvailable()
         return Seq2SeqTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
 
     @classmethod

@@ -15,7 +15,6 @@ else:
     from .torch.pairwise import __all__ as pairwise_all
     _import_structure['loss'] = [
         'torchBaseLoss',
-        'torchLOSSES',
         *listwise_all,
         *pairwise_all,
         *pointwise_all
@@ -31,7 +30,6 @@ else:
     from .flax.pairwise import __all__ as pairwise_all
     _import_structure['Flaxloss'] = [
         'FlaxBaseLoss',
-        'FlaxLOSSES',
         *listwise_all,
         *pairwise_all,
         *pointwise_all
@@ -54,7 +52,7 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .flax import FlaxBaseLoss, FlaxLOSSES
+        from .flax import FlaxBaseLoss
         from .flax.listwise import *
         from .flax.pointwise import *
         from .flax.pairwise import *

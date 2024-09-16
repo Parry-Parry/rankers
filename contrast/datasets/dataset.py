@@ -4,10 +4,8 @@ import pandas as pd
 import torch
 from typing import Optional, Union
 import ir_datasets as irds
-from .._util import load_json
+from .._util import load_json, initialise_irds_eval
 from .corpus import Corpus
-
-from contrast._util import initialise_triples, initialise_irds_eval
 
 class TrainingDataset(Dataset):
     def __init__(self, 
@@ -37,25 +35,29 @@ class TrainingDataset(Dataset):
         if self.teacher_file: self.teacher = load_json(self.teacher_file)
 
         self.labels = True if self.teacher_file else False
-        self.multi_negatives = True if type(self.training_data['doc_id_b'].iloc[0]) == list else False
+        self.multi_negatives = True if (type(self.training_data['doc_id_b'].iloc[0]) == list) else False
 
         if not self.listwise:
             if self.group_size > 2 and self.multi_negatives:
                 self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.sample(x, self.group_size-1))
             elif self.group_size == 2 and self.multi_negatives:
-                self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.choice(x))
+                self.training_data['doc_id_b'] = self.training_data['doc_id_b'].map(lambda x: random.choice(x) if len(x) > 1 else x[0])
                 self.multi_negatives = False
             elif self.group_size > 2 and not self.multi_negatives:
                 raise ValueError("Group size > 2 not supported for single negative samples")
-    
+
+        self.training_data = [*self.training_data.itertuples(index=False)]
+
     @classmethod
     def from_irds(cls,
                     ir_dataset : str,
                     teacher_file : Optional[str] = None,
                     group_size : int = 2,
+                    collate_fn : Optional[callable] = lambda x : pd.DataFrame(x.docpairs_iter()) 
                     ) -> 'TrainingDataset':
             dataset = irds.load(ir_dataset)
-            training_data = initialise_triples(dataset)
+            assert dataset.has_docpairs(), "Dataset does not have docpairs, check you are not using a test collection"
+            training_data = collate_fn(dataset)
             return cls(training_data, dataset, teacher_file, group_size)
     
     def __len__(self):
@@ -67,14 +69,12 @@ class TrainingDataset(Dataset):
         except KeyError: return 0.
 
     def __getitem__(self, idx):
-        item = self.training_data.iloc[idx]
-        qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
+        item = self.training_data[idx]
+        qid, doc_id_a, doc_id_b = item.query_id, item.doc_id_a, item.doc_id_b
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]] if not self.listwise else []
 
-        if self.multi_negatives: 
-            texts.extend([self.docs[str(doc)] for doc in doc_id_b])
-            if len(texts) < self.group_size: texts.extend(random.choices(list(self.docs.values()), k=self.group_size-len(texts)))
+        if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
         else: texts.append(self.docs[str(doc_id_b)])
 
         if self.labels:

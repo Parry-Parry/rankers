@@ -12,8 +12,4 @@ class FlaxPointwiseMSELoss(FlaxBaseLoss):
         flattened_labels = jnp.reshape(labels, (-1,))
         return self._reduce(L.squared_error(flattened_pred, flattened_labels))
 
-POINTWISE_LOSSES = {
-    'mse': FlaxPointwiseMSELoss,
-}
-
 __all__ = ['FlaxPointwiseMSELoss']

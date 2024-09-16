@@ -5,16 +5,16 @@ def is_torch_available():
     except ImportError:
         return False
 
-def is_tira_available():
+def is_pyterrier_available():
     try:
-        import tira
+        import pyterrier as pt
         return True
     except ImportError:
         return False
 
-def is_pyterrier_available():
+def is_tira_available():
     try:
-        import pyterrier as pt
+        import tira
         return True
     except ImportError:
         return False

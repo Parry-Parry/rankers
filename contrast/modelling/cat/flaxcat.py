@@ -1,17 +1,22 @@
-import pyterrier as pt
-if not pt.started():
-    pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
-from typing import Union
+from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import OptionalDependencyNotAvailable
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
 import jax 
 import jax.numpy as jnp
 import jax.nn as nn
+from ..._optional import is_pyterrier_available
+from .cat import CatConfig
 
+PT_AVAILIBLE = is_pyterrier_available()
 
-class Cat(PreTrainedModel):
+if PT_AVAILIBLE:
+    import pyterrier as pt
+    if not pt.started():
+        pt.init()
+
+class FlaxCat(PreTrainedModel):
     """Wrapper for Cat Model
     
     Parameters
@@ -26,7 +31,7 @@ class Cat(PreTrainedModel):
         self,
         classifier: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
-        config: AutoConfig,
+        config: CatConfig,
     ):
         super().__init__(config)
         self.classifier = classifier
@@ -56,24 +61,24 @@ class Cat(PreTrainedModel):
     
 
     def to_pyterrier(self) -> "pt.Transformer":
-        return CatTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
+        if not PT_AVAILIBLE: raise OptionalDependencyNotAvailable()
+        return FlaxCatTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
         """Load classifier from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name)
+        config = CatConfig.from_pretrained(model_dir_or_name)
         classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(classifier, tokenizer, config)
 
-class CatTransformer(pt.Transformer):
+class FlaxCatTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : AutoConfig, 
+                 config : CatConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
-                 device : Union[str, torch.device] = None,
                  verbose : bool = False
                  ) -> None:
         super().__init__()
@@ -82,7 +87,6 @@ class CatTransformer(pt.Transformer):
         self.config = config
         self.batch_size = batch_size
         self.text_field = text_field
-        self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
         self.verbose = verbose
     
     @classmethod
@@ -90,12 +94,11 @@ class CatTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
-                        device : Union[str, torch.device] = None
                         ):
-        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path).cuda().eval()
+        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        config = AutoConfig.from_pretrained(model_name_or_path)
-        return cls(model, tokenizer, config, batch_size, text_field, device)
+        config = CatConfig.from_pretrained(model_name_or_path)
+        return cls(model, tokenizer, config, batch_size, text_field)
 
     @classmethod 
     def from_model(cls, 
@@ -116,60 +119,6 @@ class CatTransformer(pt.Transformer):
             queries, texts = map(list, zip(*chunk))
             inps = self.tokenizer(queries, texts, return_tensors='np', padding=True, truncation=True)
             scores.append(nn.log_softmax(self.model(**inps).logits, axist=-1)[:, 1])
-        res = inp.assign(score=np.concatenate(scores))
-        pt.model.add_ranks(res)
-        res = res.sort_values(['qid', 'rank'])
-        return res
-
-class PairTransformer(pt.Transformer):
-    def __init__(self, 
-                 model : PreTrainedModel, 
-                 tokenizer : PreTrainedTokenizer, 
-                 config : AutoConfig, 
-                 batch_size : int, 
-                 text_field : str = 'text', 
-                 device : Union[str, torch.device] = None
-                 ) -> None:
-        super().__init__()
-        self.model = model
-        self.tokenizer = tokenizer
-        self.config = config
-        self.batch_size = batch_size
-        self.text_field = text_field
-        self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
-    
-    @classmethod 
-    def from_model(cls, 
-                   model : PreTrainedModel, 
-                   tokenizer : PreTrainedTokenizer,
-                   batch_size : int = 64, 
-                   text_field : str = 'text', 
-                   ): 
-        config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device)
-    
-    @classmethod
-    def from_pretrained(cls, 
-                        model_name_or_path : str, 
-                        batch_size : int = 64, 
-                        text_field : str = 'text', 
-                        device : Union[str, torch.device] = None
-                        ):
-        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path)
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        config = AutoConfig.from_pretrained(model_name_or_path)
-        return cls(model, tokenizer, config, batch_size, text_field, device)
-    
-    def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
-        # TODO: Switch this to a pair-wise scoring
-        scores = []
-        it = inp[['query', self.text_field]].itertuples(index=False)
-        if self.verbose:
-            it = pt.tqdm(it, total=len(inp), unit='record', desc='Duo scoring')
-        for chunk in chunked(it, self.batch_size):
-            queries, texts = map(list, zip(*chunk))
-            inps = self.tokenizer(queries, texts, return_tensors='np', padding=True, truncation=True)
-            scores.append(self.model(**inps).logits)
         res = inp.assign(score=np.concatenate(scores))
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])

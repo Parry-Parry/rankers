@@ -70,11 +70,4 @@ class FlaxPoly1SoftmaxLoss(FlaxBaseLoss):
         ce = self.ce(pred / self.temperature, labels_for_softmax)
         return self._reduce(ce + (1 - expansion) * self.epsilon)
 
-LISTWISE_LOSSES = {
-    'kl_div': FlaxKL_DivergenceLoss,
-    'ranknet': FlaxRankNetLoss,
-    'listnet': FlaxListNetLoss,
-    'poly1': FlaxPoly1SoftmaxLoss,
-}
-
 __all__ = ['FlaxKL_DivergenceLoss', 'FlaxRankNetLoss', 'FlaxListNetLoss', 'FlaxPoly1SoftmaxLoss']

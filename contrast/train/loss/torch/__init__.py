@@ -38,6 +38,7 @@ class BaseLoss(nn.Module):
         the reduction type
     """
     def __init__(self, reduction : str = 'mean') -> None:
+        super(BaseLoss, self).__init__()
         self.reduction = reduction
     
     def _reduce(self, a : torch.Tensor):
@@ -126,7 +127,7 @@ def batched_dot_product(a: Tensor, b: Tensor):
     Parameters
     ----------
     a: torch.Tensor
-        size: batch_size x 1 x vector_dim
+        size: batch_size x vector_dim
     b: torch.Tensor
         size: batch_size x group_size x vector_dim
     Returns
@@ -136,7 +137,13 @@ def batched_dot_product(a: Tensor, b: Tensor):
     """
     if len(b.shape) == 2:
         return torch.matmul(a, b.transpose(0, 1))
-    return torch.bmm(a,torch.permute(b,[0,2,1])).squeeze(1)
+
+    # Ensure `a` is of shape (batch_size, 1, vector_dim)
+    if len(a.shape) == 2:
+        a = a.unsqueeze(1)
+    
+    # Compute batched dot product, result shape: (batch_size, 1, group_size)
+    return torch.bmm(b, a.transpose(1, 2)).squeeze()
 
 def num_non_zero(a: Tensor):
     """
@@ -148,12 +155,12 @@ def num_non_zero(a: Tensor):
     """
     return (a > 0).float().sum(dim=1).mean()
     
+from . import listwise as listwise
+from . import pointwise as pointwise
+from . import pairwise as pairwise
+
 from .listwise import *
 from .pointwise import *
 from .pairwise import *
 
-LOSSES = {
-    **POINTWISE_LOSSES,
-    **PAIRWISE_LOSSES,
-    **LISTWISE_LOSSES,
-}
+__all__ = [*listwise.__all__, *pointwise.__all__, *pairwise.__all__]
