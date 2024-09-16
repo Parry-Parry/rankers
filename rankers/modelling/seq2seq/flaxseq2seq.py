@@ -16,7 +16,7 @@ DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
 class FlaxSeq2Seq(FlaxPreTrainedModel):
-    """Wrapper for ConditionalGenerationCat Model
+    """Wrapper for Seq2SeqCat Model
     
     Parameters
     ----------
