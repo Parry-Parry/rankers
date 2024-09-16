@@ -5,6 +5,20 @@ def is_torch_available():
     except ImportError:
         return False
 
+def is_tira_available():
+    try:
+        import tira
+        return True
+    except ImportError:
+        return False
+
+def is_pyterrier_available():
+    try:
+        import pyterrier as pt
+        return True
+    except ImportError:
+        return False
+
 def is_flax_available():
     try:
         import flax
