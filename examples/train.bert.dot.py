@@ -1,11 +1,10 @@
-import contrast
-from contrast import ( 
-                      ContrastArguments, 
-                      ContrastTrainer, 
+from rankers import ( 
+                      RankerArguments, 
+                      RankerTrainer, 
                       seed_everything,
                       )
-from contrast.modelling import Dot
-from contrast.datasets import TrainingDataset, DotDataCollator
+from rankers.modelling import Dot
+from rankers.datasets import TrainingDataset, DotDataCollator
 from transformers import get_constant_schedule_with_warmup
 from torch.optim import AdamW
 import wandb
@@ -30,7 +29,7 @@ def train(
         wandb.init(project=wandb_project,)
     
     model = Dot.from_pretrained(model_name_or_path)
-    args = ContrastArguments(
+    args = RankerArguments(
         output_dir = output_dir,
         per_device_train_batch_size = batch_size,
         gradient_accumulation_steps = grad_accum,
@@ -48,13 +47,13 @@ def train(
 
     opt = AdamW(model.parameters(), lr=lr)
 
-    trainer = ContrastTrainer(
+    trainer = RankerTrainer(
         model=model,
         args=args,
         train_dataset=dataset,
         data_collator=collate_fn,
         optimizers=(opt, get_constant_schedule_with_warmup(opt, warmup_steps)),
-        loss_fn = "contrastive",
+        loss_fn = "ContrastiveLoss",
         )
     
     trainer.train()
