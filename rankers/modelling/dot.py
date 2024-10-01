@@ -122,6 +122,7 @@ class Dot(PreTrainedModel):
         self.pooling = {
             'mean': self._mean,
             'cls' : self._cls,
+            'none': lambda x: x,
         }[config.mode]
 
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
