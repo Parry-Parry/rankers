@@ -145,6 +145,13 @@ def batched_dot_product(a: Tensor, b: Tensor):
     # Compute batched dot product, result shape: (batch_size, 1, group_size)
     return torch.bmm(b, a.transpose(1, 2)).squeeze()
 
+def maxsim(a : Tensor, b : Tensor, a_mask : Tensor, temperature : float = 1.0):
+    scores = torch.einsum('qin,pjn->qipj', a, b)
+    scores, _ = scores.max(-1)
+    scores = scores.sum(1) / a_mask[:, 1:].sum(-1, keepdim=True)
+    scores = scores / temperature
+    return scores
+
 def num_non_zero(a: Tensor):
     """
     Calculating the average number of non-zero columns in each row.
