@@ -106,6 +106,7 @@ class Dot(PreTrainedModel):
     pooler : Pooler
         the pooling layer
     """
+    model_architecture = 'Dot'
     def __init__(
         self,
         encoder : PreTrainedModel,
