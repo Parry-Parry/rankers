@@ -205,10 +205,11 @@ class Dot(PreTrainedModel):
         if os.path.isdir(model_dir_or_name):
             config = DotConfig.from_pretrained(model_dir_or_name, **kwargs)
             encoder = AutoModel.from_pretrained(model_dir_or_name)
+            tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
             encoder_d = None if config.encoder_tied else AutoModel.from_pretrained(model_dir_or_name + "/encoder_d") 
             pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
 
-            return cls(encoder, config, encoder_d, pooler)
+            return cls(encoder, tokenizer, config, encoder_d, pooler)
         config = DotConfig(model_dir_or_name, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         encoder = AutoModel.from_pretrained(model_dir_or_name)
