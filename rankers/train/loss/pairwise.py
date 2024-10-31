@@ -1,10 +1,11 @@
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-from . import BaseLoss
+from . import BaseLoss, register_loss
 
 residual = lambda x : x[:, 0].unsqueeze(1) - x[:, 1:]
 
+@register_loss('margin_mse')
 class MarginMSELoss(BaseLoss):
     """Margin MSE loss with residual calculation."""
 
@@ -13,7 +14,7 @@ class MarginMSELoss(BaseLoss):
         residual_label = labels[:, 0].unsqueeze(1) - labels[:, 1:]
         return F.mse_loss(residual_pred, residual_label, reduction=self.reduction)
 
-
+@register_loss('hinge')
 class HingeLoss(BaseLoss):
     """Hinge loss with sigmoid activation and residual calculation."""
 
@@ -26,7 +27,7 @@ class HingeLoss(BaseLoss):
         label_residuals = torch.sign(residual(F.sigmoid(labels)))
         return self._reduce(F.relu(self.margin - (label_residuals * pred_residuals)))
 
-
+@register_loss('clear')
 class ClearLoss(BaseLoss):
     """Clear loss with margin and residual calculation."""
 
@@ -38,6 +39,7 @@ class ClearLoss(BaseLoss):
         margin_b = self.margin - residual(labels)
         return self._reduce(F.relu(margin_b - residual(pred)))
     
+@register_loss('lce')
 class LCELoss(BaseLoss):
     """LCE loss: Cross Entropy for NCE with localised examples."""
     def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
@@ -47,7 +49,7 @@ class LCELoss(BaseLoss):
             labels = torch.zeros(pred.size(0), dtype=torch.long, device=pred.device)
         return F.cross_entropy(pred, labels, reduction=self.reduction)
 
-
+@register_loss('contrastive')
 class ContrastiveLoss(BaseLoss):
     """Contrastive loss with log_softmax and negative log likelihood."""
 
@@ -67,11 +69,3 @@ __all__ = [
     'LCELoss',
     'ContrastiveLoss',
 ]
-
-PAIRWISE_LOSSES = {
-    'margin_mse': MarginMSELoss,
-    'hinge': HingeLoss,
-    'clear': ClearLoss,
-    'lce': LCELoss,
-    'contrastive': ContrastiveLoss,
-}

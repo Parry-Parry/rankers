@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
-from . import loss
+from .loss import LOSS_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class RankerTrainer(Trainer):
     def __init__(self, *args, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(*args, **kwargs)
         if isinstance(loss_fn, str): 
-            if loss_fn not in loss.__all__: raise ValueError(f"Unknown loss: {loss_fn}")
-            self.loss = getattr(loss, loss_fn)()
+            if loss_fn not in LOSS_REGISTRY.availible: raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}")
+            self.loss = LOSS_REGISTRY.get(loss_fn)
         else: 
             self.loss = loss_fn
         self.tokenizer = self.data_collator.tokenizer

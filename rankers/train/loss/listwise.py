@@ -1,8 +1,9 @@
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-from . import BaseLoss
+from . import BaseLoss, register_loss
 
+@register_loss('kl_div')
 class KL_DivergenceLoss(BaseLoss):
     """KL Divergence loss"""
 
@@ -14,7 +15,7 @@ class KL_DivergenceLoss(BaseLoss):
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         return self.kl_div(F.log_softmax(pred / self.temperature, dim=1), F.softmax(labels / self.temperature, dim=1))
 
-
+@register_loss('ranknet')
 class RankNetLoss(BaseLoss):
     """RankNet loss
     https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
@@ -38,7 +39,7 @@ class RankNetLoss(BaseLoss):
 
         return self.bce(pred_diff, labels)
 
-
+@register_loss('distill_ranknet')
 class DistillRankNetLoss(BaseLoss):
     """DistillRankNet loss
     Very much a WIP from https://arxiv.org/pdf/2402.10769
@@ -64,6 +65,7 @@ class DistillRankNetLoss(BaseLoss):
 
         return self._reduce(final_margin[labels])
 
+@register_loss('listnet')
 class ListNetLoss(BaseLoss):
     """ListNet loss
     """
@@ -78,6 +80,7 @@ class ListNetLoss(BaseLoss):
             labels = F.softmax(labels / self.temperature, dim=1)
         return self._reduce(-torch.sum(labels * F.log_softmax(pred + self.epsilon  / self.temperature, dim=1), dim=-1))
 
+@register_loss('poly1')
 class Poly1SoftmaxLoss(BaseLoss):
     """Poly1 softmax loss with automatic softmax handling and reduction."""
 
@@ -137,6 +140,7 @@ def get_ndcg(
         ndcg = dcg / (idcg.clamp(min=1e-12))
         return ndcg
 
+@register_loss('approx_ndcg')
 class ApproxNDCGLoss(BaseLoss):
     def __init__(self, reduction: str = 'mean', temperature=1., scale_gains: bool = True) -> None:
         super().__init__(reduction)
@@ -159,6 +163,7 @@ def get_mrr(ranks: torch.Tensor, labels: torch.Tensor, k: int | None = None) -> 
         mrr = mrr.max(dim=-1)[0]
         return mrr
 
+@register_loss('approx_mrr')
 class ApproxMRRLoss(BaseLoss):
     def __init__(self, reduction: str = 'mean', temperature=1.) -> None:
         super().__init__(reduction)
@@ -180,13 +185,3 @@ __all__ = [
     'ApproxNDCGLoss',
     'ApproxMRRLoss',
 ]
-
-LISTWISE_LOSSES = {
-    'kl_div': KL_DivergenceLoss,
-    'ranknet': RankNetLoss,
-    'distill_ranknet': DistillRankNetLoss,
-    'listnet': ListNetLoss,
-    'poly1': Poly1SoftmaxLoss,
-    'approx_ndcg': ApproxNDCGLoss,
-    'approx_mrr': ApproxMRRLoss,
-}
