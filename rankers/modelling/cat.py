@@ -9,63 +9,6 @@ from more_itertools import chunked
 import numpy as np
 import torch.nn.functional as F
 
-
-class Cat(PreTrainedModel):
-    """Wrapper for Cat Model
-    
-    Parameters
-    ----------
-    model : PreTrainedModel
-        the underlying HF model
-    config : AutoConfig
-        the configuration for the model
-    """
-    model_architecture = 'Cat'
-    cls_architecture = AutoModelForSequenceClassification
-    def __init__(
-        self,
-        model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizer,
-        config: AutoConfig,
-    ):
-        super().__init__(config)
-        self.model = model
-        self.tokenizer = tokenizer
-    
-    def prepare_outputs(self, logits, labels=None):
-        """Prepare outputs"""
-        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], labels.view(-1, self.config.group_size) if labels is not None else None
-
-    def forward(self, loss, sequences, labels=None):
-        """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
-        labels = labels.to(self.model.device) if labels is not None else None
-        logits = self.model(**sequences).logits
-        pred, labels = self.prepare_outputs(logits, labels)
-        loss_value = loss(pred) if labels is None else loss(pred, labels)
-        return (loss_value, pred)
-
-    def save_pretrained(self, model_dir, **kwargs):
-        """Save model"""
-        self.config.save_pretrained(model_dir)
-        self.model.save_pretrained(model_dir)
-        self.tokenizer.save_pretrained(model_dir)
-    
-    def load_state_dict(self, model_dir):
-        """Load state dict from a directory"""
-        return self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
-
-    def to_pyterrier(self) -> "pt.Transformer":
-        return CatTransformer.from_model(self.model, self.tokenizer, text_field='text')
-
-    @classmethod
-    def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
-        """Load model from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name)
-        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels)
-        tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-        return cls(model, tokenizer, config)
-
 class CatTransformer(pt.Transformer):
     cls_architecture = AutoModelForSequenceClassification
     def __init__(self, 
@@ -184,3 +127,60 @@ class PairTransformer(pt.Transformer):
         res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(['qid', 'score'], ascending=[True, False])
         return pt.model.add_ranks(res)
+
+class Cat(PreTrainedModel):
+    """Wrapper for Cat Model
+    
+    Parameters
+    ----------
+    model : PreTrainedModel
+        the underlying HF model
+    config : AutoConfig
+        the configuration for the model
+    """
+    model_architecture = 'Cat'
+    cls_architecture = AutoModelForSequenceClassification
+    transformer_architecture = CatTransformer
+    def __init__(
+        self,
+        model: PreTrainedModel,
+        tokenizer: PreTrainedTokenizer,
+        config: AutoConfig,
+    ):
+        super().__init__(config)
+        self.model = model
+        self.tokenizer = tokenizer
+    
+    def prepare_outputs(self, logits, labels=None):
+        """Prepare outputs"""
+        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], labels.view(-1, self.config.group_size) if labels is not None else None
+
+    def forward(self, loss, sequences, labels=None):
+        """Compute the loss given (pairs, labels)"""
+        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
+        labels = labels.to(self.model.device) if labels is not None else None
+        logits = self.model(**sequences).logits
+        pred, labels = self.prepare_outputs(logits, labels)
+        loss_value = loss(pred) if labels is None else loss(pred, labels)
+        return (loss_value, pred)
+
+    def save_pretrained(self, model_dir, **kwargs):
+        """Save model"""
+        self.config.save_pretrained(model_dir)
+        self.model.save_pretrained(model_dir)
+        self.tokenizer.save_pretrained(model_dir)
+    
+    def load_state_dict(self, model_dir):
+        """Load state dict from a directory"""
+        return self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
+
+    def to_pyterrier(self) -> "pt.Transformer":
+        return CatTransformer.from_model(self.model, self.tokenizer, text_field='text')
+
+    @classmethod
+    def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
+        """Load model from a directory"""
+        config = AutoConfig.from_pretrained(model_dir_or_name)
+        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
+        return cls(model, tokenizer, config)

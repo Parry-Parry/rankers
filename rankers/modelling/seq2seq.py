@@ -12,61 +12,6 @@ import numpy as np
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
-class Seq2Seq(PreTrainedModel):
-    """Wrapper for ConditionalGenerationCat Model
-    
-    Parameters
-    ----------
-    model : AutoModelForSeq2SeqLM
-        the underlying HF model
-    config : AutoConfig
-        the configuration for the model
-    """
-    model_architecture = 'Seq2Seq'
-    cls_architecture = AutoModelForSeq2SeqLM
-    def __init__(
-        self,
-        model: AutoModelForSeq2SeqLM,
-        tokenizer: PreTrainedTokenizer,
-        config: AutoConfig,
-    ):
-        super().__init__(config)
-        self.model = model
-        self.tokenizer = tokenizer
-
-    def prepare_outputs(self, logits):
-        raise NotImplementedError
-
-    def forward(self, loss, sequences, labels=None):
-        """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
-        labels = labels.to(self.model.device) if labels is not None else None
-        logits = self.model(**sequences).logits
-        pred = self.prepare_outputs(logits)
-        loss_value = loss(pred) if labels is None else loss(pred, labels)
-        return (loss_value, pred)
-
-
-    def save_pretrained(self, model_dir, **kwargs):
-        """Save model"""
-        self.config.save_pretrained(model_dir)
-        self.model.save_pretrained(model_dir)
-        self.tokenizer.save_pretrained(model_dir)
-    
-    def load_state_dict(self, model_dir):
-        """Load state dict from a directory"""
-        return self.model.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
-    
-    def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return Seq2SeqTransformer.from_model(self.model, self.tokenizer, text_field='text')
-
-    @classmethod
-    def from_pretrained(cls, model_dir_or_name : str, num_labels=2, **kwargs):
-        """Load model from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name)
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_dir_or_name, num_labels=num_labels, **kwargs)
-        return cls(model, config)
-
 class Seq2SeqTransformer(pt.Transformer):
     cls_architecture = AutoModelForSeq2SeqLM
     def __init__(self, 
@@ -169,27 +114,41 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
         return res
-    
-class CausalLM(Seq2Seq):
-    """Wrapper for CausalLM Model
+
+class Seq2Seq(PreTrainedModel):
+    """Wrapper for ConditionalGenerationCat Model
     
     Parameters
     ----------
-    model : AutoModelForCausalLM
+    model : AutoModelForSeq2SeqLM
         the underlying HF model
-    tokenizer : PreTrainedTokenizer
-        the tokenizer for the model
     config : AutoConfig
         the configuration for the model
     """
-    model_architecture = 'CausalLM'
-    cls_architecture = AutoModelForCausalLM
-    def __init__(self, model, tokenizer, config):
-        raise NotImplementedError("Incomplete, do not use")
-        super().__init__(model, tokenizer, config)
+    model_architecture = 'Seq2Seq'
+    cls_architecture = AutoModelForSeq2SeqLM
+    def __init__(
+        self,
+        model: AutoModelForSeq2SeqLM,
+        tokenizer: PreTrainedTokenizer,
+        config: AutoConfig,
+    ):
+        super().__init__(config)
+        self.model = model
+        self.tokenizer = tokenizer
 
     def prepare_outputs(self, logits):
         raise NotImplementedError
+
+    def forward(self, loss, sequences, labels=None):
+        """Compute the loss given (pairs, labels)"""
+        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
+        labels = labels.to(self.model.device) if labels is not None else None
+        logits = self.model(**sequences).logits
+        pred = self.prepare_outputs(logits)
+        loss_value = loss(pred) if labels is None else loss(pred, labels)
+        return (loss_value, pred)
+
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save model"""
@@ -199,18 +158,18 @@ class CausalLM(Seq2Seq):
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
+        return self.model.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
     def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return CausalLMTransformer.from_model(self.model, self.tokenizer, text_field='text')
+        return Seq2SeqTransformer.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, **kwargs):
         """Load model from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name, **kwargs)
-        model = cls.from_pretrained(model_dir_or_name, **kwargs)
+        config = AutoConfig.from_pretrained(model_dir_or_name)
+        model = cls.cls_architecture.from_pretrained(model_dir_or_name, **kwargs)
         return cls(model, config)
-
+    
 class CausalLMTransformer(Seq2SeqTransformer):
     cls_architecture = AutoModelForCausalLM
     def __init__(self, 
@@ -268,3 +227,22 @@ class CausalLMTransformer(Seq2SeqTransformer):
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
         return res
+
+class CausalLM(Seq2Seq):
+    """Wrapper for CausalLM Model
+    
+    Parameters
+    ----------
+    model : AutoModelForCausalLM
+        the underlying HF model
+    tokenizer : PreTrainedTokenizer
+        the tokenizer for the model
+    config : AutoConfig
+        the configuration for the model
+    """
+    model_architecture = 'CausalLM'
+    cls_architecture = AutoModelForCausalLM
+    transformer_architecture = CausalLMTransformer
+    def __init__(self, model, tokenizer, config):
+        raise NotImplementedError("Incomplete, do not use")
+        super().__init__(model, tokenizer, config)
