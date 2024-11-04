@@ -175,7 +175,7 @@ class Cat(PreTrainedModel):
         return self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
 
     def to_pyterrier(self) -> "pt.Transformer":
-        return CatTransformer.from_model(self.model, self.tokenizer, text_field='text')
+        return self.transformer_architecture.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
