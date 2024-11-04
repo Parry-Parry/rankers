@@ -21,12 +21,13 @@ class CatTransformer(pt.Transformer):
                  verbose : bool = False
                  ) -> None:
         super().__init__()
-        self.model = model
+        self.model = model.eval()
         self.tokenizer = tokenizer
         self.config = config
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model = self.model.to(self.device)
         self.verbose = verbose
     
     @classmethod
@@ -35,9 +36,10 @@ class CatTransformer(pt.Transformer):
                         batch_size : int = 64, 
                         text_field : str = 'text', 
                         device : Union[str, torch.device] = None,
-                        verbose : bool = False
+                        verbose : bool = False,
+                        **kwargs
                         ):
-        model = cls.cls_architecture.from_pretrained(model_name_or_path).cuda().eval()
+        model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
@@ -105,9 +107,10 @@ class PairTransformer(pt.Transformer):
                         batch_size : int = 64, 
                         text_field : str = 'text', 
                         device : Union[str, torch.device] = None,
-                        verbose : bool = False
+                        verbose : bool = False,
+                        **kwargs
                         ):
-        model = cls.cls_architecture.from_pretrained(model_name_or_path)
+        model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
@@ -178,9 +181,9 @@ class Cat(PreTrainedModel):
         return self.transformer_architecture.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
+    def from_pretrained(cls, model_dir_or_name : str, num_labels=2, **kwargs) -> "Cat":
         """Load model from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
-        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels)
+        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)

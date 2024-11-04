@@ -107,13 +107,14 @@ class DotTransformer(pt.Transformer):
                         pooling : str = 'cls',
                         text_field : str = 'text',
                         device : Union[str, torch.device] = None,
-                        verbose : bool = False
+                        verbose : bool = False,
+                        **kwargs
                         ):
         config = DotConfig.from_pretrained(model_name_or_path)
         config.mode = pooling
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
-        model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_name_or_path + "/model_d")
-        model_q = cls.cls_architecture.from_pretrained(model_name_or_path)
+        model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_name_or_path + "/model_d", **kwargs)
+        model_q = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs)
         model = Dot(model_q, config, model_d, pooler)
         return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field, device, verbose)
     
@@ -126,7 +127,7 @@ class DotTransformer(pt.Transformer):
                    verbose : bool = False
                    ):
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
+        return cls(model.eval(), tokenizer, config, batch_size, text_field, model.device, verbose)
     
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
         results = []
@@ -381,17 +382,17 @@ class Dot(PreTrainedModel):
         if self.config.use_pooler: self.pooler.load_state_dict(self.cls_architecture.from_pretrained(model_dir + "/pooler").state_dict())
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name, **kwargs):
+    def from_pretrained(cls, model_dir_or_name, config = None, **kwargs) -> "Dot":
         """Load model"""
         if os.path.isdir(model_dir_or_name):
-            config = DotConfig.from_pretrained(model_dir_or_name, **kwargs)
-            model = cls.cls_architecture.from_pretrained(model_dir_or_name)
+            config = DotConfig.from_pretrained(model_dir_or_name) if config is None else config
+            model = cls.cls_architecture.from_pretrained(model_dir_or_name, **kwargs)
             tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-            model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_dir_or_name + "/model_d") 
+            model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_dir_or_name + "/model_d", **kwargs) 
             pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
 
             return cls(model, tokenizer, config, model_d, pooler)
-        config = DotConfig(model_dir_or_name, **kwargs)
+        config = DotConfig(model_dir_or_name, **kwargs) if config is None else config
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         model = cls.cls_architecture.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
