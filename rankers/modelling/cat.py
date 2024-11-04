@@ -15,20 +15,20 @@ class Cat(PreTrainedModel):
     
     Parameters
     ----------
-    classifier : PreTrainedModel
-        the classifier model
+    model : PreTrainedModel
+        the underlying HF model
     config : AutoConfig
         the configuration for the model
     """
     model_architecture = 'Cat'
     def __init__(
         self,
-        classifier: PreTrainedModel,
+        model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         config: AutoConfig,
     ):
         super().__init__(config)
-        self.classifier = classifier
+        self.model = model
         self.tokenizer = tokenizer
     
     def prepare_outputs(self, logits, labels=None):
@@ -37,35 +37,34 @@ class Cat(PreTrainedModel):
 
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
-        labels = labels.to(self.classifier.device) if labels is not None else None
-        logits = self.classifier(**sequences).logits
+        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
+        labels = labels.to(self.model.device) if labels is not None else None
+        logits = self.model(**sequences).logits
         pred, labels = self.prepare_outputs(logits, labels)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
         return (loss_value, pred)
 
     def save_pretrained(self, model_dir, **kwargs):
-        """Save classifier"""
+        """Save model"""
         self.config.save_pretrained(model_dir)
-        self.classifier.save_pretrained(model_dir)
+        self.model.save_pretrained(model_dir)
         self.tokenizer.save_pretrained(model_dir)
     
 
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.classifier.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
-    
+        return self.model.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
 
     def to_pyterrier(self) -> "pt.Transformer":
-        return CatTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
+        return CatTransformer.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
-        """Load classifier from a directory"""
+        """Load model from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
-        classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
+        model = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-        return cls(classifier, tokenizer, config)
+        return cls(model, tokenizer, config)
 
 class CatTransformer(pt.Transformer):
     def __init__(self, 

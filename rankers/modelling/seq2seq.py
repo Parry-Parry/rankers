@@ -17,20 +17,20 @@ class Seq2Seq(PreTrainedModel):
     
     Parameters
     ----------
-    classifier : AutoModelForSeq2SeqLM
-        the classifier model
+    model : AutoModelForSeq2SeqLM
+        the underlying HF model
     config : AutoConfig
         the configuration for the model
     """
     model_architecture = 'Seq2Seq'
     def __init__(
         self,
-        classifier: AutoModelForSeq2SeqLM,
+        model: AutoModelForSeq2SeqLM,
         tokenizer: PreTrainedTokenizer,
         config: AutoConfig,
     ):
         super().__init__(config)
-        self.classifier = classifier
+        self.model = model
         self.tokenizer = tokenizer
 
     def prepare_outputs(self, logits):
@@ -38,33 +38,33 @@ class Seq2Seq(PreTrainedModel):
 
     def forward(self, loss, sequences, labels=None):
         """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.classifier.device) for k, v in sequences.items()}
-        labels = labels.to(self.classifier.device) if labels is not None else None
-        logits = self.classifier(**sequences).logits
+        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
+        labels = labels.to(self.model.device) if labels is not None else None
+        logits = self.model(**sequences).logits
         pred = self.prepare_outputs(logits)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
         return (loss_value, pred)
 
 
     def save_pretrained(self, model_dir, **kwargs):
-        """Save classifier"""
+        """Save model"""
         self.config.save_pretrained(model_dir)
-        self.classifier.save_pretrained(model_dir)
+        self.model.save_pretrained(model_dir)
         self.tokenizer.save_pretrained(model_dir)
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.classifier.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
+        return self.model.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
     def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return Seq2SeqTransformer.from_model(self.classifier, self.tokenizer, text_field='text')
+        return Seq2SeqTransformer.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
-        """Load classifier from a directory"""
+        """Load model from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
-        classifier = AutoModelForSeq2SeqLM.from_pretrained(model_dir_or_name, num_labels=num_labels)
-        return cls(classifier, config)
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_dir_or_name, num_labels=num_labels)
+        return cls(model, config)
 
 class Seq2SeqTransformer(pt.Transformer):
     def __init__(self, 
@@ -160,3 +160,17 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
         pt.model.add_ranks(res)
         res = res.sort_values(['qid', 'rank'])
         return res
+    
+class CausalLM(Seq2Seq):
+    """Wrapper for CausalLM Model
+    
+    Parameters
+    ----------
+    model : AutoModelForCausalLM
+        the model model
+    config : AutoConfig
+        the configuration for the model
+    """
+    model_architecture = 'CausalLM'
+    def prepare_outputs(self, logits):
+        return logits
