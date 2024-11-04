@@ -21,6 +21,7 @@ class Cat(PreTrainedModel):
         the configuration for the model
     """
     model_architecture = 'Cat'
+    cls_architecture = AutoModelForSequenceClassification
     def __init__(
         self,
         model: PreTrainedModel,
@@ -50,10 +51,9 @@ class Cat(PreTrainedModel):
         self.model.save_pretrained(model_dir)
         self.tokenizer.save_pretrained(model_dir)
     
-
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.model.load_state_dict(AutoModelForSequenceClassification.from_pretrained(model_dir).state_dict())
+        return self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
 
     def to_pyterrier(self) -> "pt.Transformer":
         return CatTransformer.from_model(self.model, self.tokenizer, text_field='text')
@@ -62,11 +62,12 @@ class Cat(PreTrainedModel):
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
         """Load model from a directory"""
         config = AutoConfig.from_pretrained(model_dir_or_name)
-        model = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
+        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
 
 class CatTransformer(pt.Transformer):
+    cls_architecture = AutoModelForSequenceClassification
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -93,7 +94,7 @@ class CatTransformer(pt.Transformer):
                         device : Union[str, torch.device] = None,
                         verbose : bool = False
                         ):
-        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path).cuda().eval()
+        model = cls.cls_architecture.from_pretrained(model_name_or_path).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
@@ -125,6 +126,7 @@ class CatTransformer(pt.Transformer):
         return pt.model.add_ranks(res)
 
 class PairTransformer(pt.Transformer):
+    cls_architecture = AutoModelForSequenceClassification
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -141,6 +143,7 @@ class PairTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = device if device is not None else 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.verbose = verbose
     
     @classmethod 
     def from_model(cls, 
@@ -161,13 +164,12 @@ class PairTransformer(pt.Transformer):
                         device : Union[str, torch.device] = None,
                         verbose : bool = False
                         ):
-        model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path)
+        model = cls.cls_architecture.from_pretrained(model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
-        # TODO: Switch this to a pair-wise scoring
         scores = []
         it = inp[['query', self.text_field]].itertuples(index=False)
         if self.verbose:

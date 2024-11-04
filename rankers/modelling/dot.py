@@ -106,6 +106,7 @@ class Dot(PreTrainedModel):
         the pooling layer
     """
     model_architecture = 'Dot'
+    cls_architecture = AutoModel
     def __init__(
         self,
         model : PreTrainedModel,
@@ -195,30 +196,31 @@ class Dot(PreTrainedModel):
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         self.config = DotConfig.from_pretrained(model_dir)
-        self.model.load_state_dict(AutoModel.from_pretrained(model_dir).state_dict())
-        if not self.config.model_tied: self.model_d.load_state_dict(AutoModel.from_pretrained(model_dir + "/model_d").state_dict())
-        if self.config.use_pooler: self.pooler.load_state_dict(AutoModel.from_pretrained(model_dir + "/pooler").state_dict())
+        self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
+        if not self.config.model_tied: self.model_d.load_state_dict(self.cls_architecture.from_pretrained(model_dir + "/model_d").state_dict())
+        if self.config.use_pooler: self.pooler.load_state_dict(self.cls_architecture.from_pretrained(model_dir + "/pooler").state_dict())
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name, **kwargs):
         """Load model"""
         if os.path.isdir(model_dir_or_name):
             config = DotConfig.from_pretrained(model_dir_or_name, **kwargs)
-            model = AutoModel.from_pretrained(model_dir_or_name)
+            model = cls.cls_architecture.from_pretrained(model_dir_or_name)
             tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-            model_d = None if config.model_tied else AutoModel.from_pretrained(model_dir_or_name + "/model_d") 
+            model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_dir_or_name + "/model_d") 
             pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
 
             return cls(model, tokenizer, config, model_d, pooler)
         config = DotConfig(model_dir_or_name, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-        model = AutoModel.from_pretrained(model_dir_or_name)
+        model = cls.cls_architecture.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
     
     def to_pyterrier(self) -> "DotTransformer":
         return DotTransformer.from_model(self, self.tokenizer, text_field='text')
 
 class DotTransformer(pt.Transformer):
+    cls_architecture = AutoModel
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -254,8 +256,8 @@ class DotTransformer(pt.Transformer):
         config = DotConfig.from_pretrained(model_name_or_path)
         config.mode = pooling
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
-        model_d = None if config.model_tied else AutoModel.from_pretrained(model_name_or_path + "/model_d")
-        model_q = AutoModel.from_pretrained(model_name_or_path)
+        model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_name_or_path + "/model_d")
+        model_q = cls.cls_architecture.from_pretrained(model_name_or_path)
         model = Dot(model_q, config, model_d, pooler)
         return cls(model, AutoTokenizer.from_pretrained(model_name_or_path), config, batch_size, text_field, device, verbose)
     

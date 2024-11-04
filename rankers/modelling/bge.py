@@ -83,10 +83,11 @@ class BGE(Dot):
         self,
         encoder : PreTrainedModel,
         tokenizer : PreTrainedTokenizer,
-        config : DotConfig,
+        config : BGEConfig,
         encoder_d : PreTrainedModel = None,
         pooler : Pooler = None,
     ):
+        raise NotImplementedError("Incomplete, do not use")
         super().__init__(config)
         self.encoder = encoder
         self.tokenizer = tokenizer
