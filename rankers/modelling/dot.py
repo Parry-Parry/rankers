@@ -105,12 +105,13 @@ class DotTransformer(pt.Transformer):
                         model_name_or_path : str,
                         batch_size : int = 64,
                         pooling : str = 'cls',
+                        config : PretrainedConfig = None,
                         text_field : str = 'text',
                         device : Union[str, torch.device] = None,
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = DotConfig.from_pretrained(model_name_or_path)
+        config = DotConfig.from_pretrained(model_name_or_path) if config is None else config
         config.mode = pooling
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
         model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_name_or_path + "/model_d", **kwargs)

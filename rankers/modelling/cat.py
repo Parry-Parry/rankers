@@ -1,7 +1,7 @@
 import pyterrier as pt
 if not pt.started():
     pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
+from transformers import PreTrainedModel, PreTrainedConfig, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 from typing import Union
 import torch
 import pandas as pd
@@ -14,7 +14,7 @@ class CatTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : AutoConfig, 
+                 config : PreTrainedConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
@@ -35,13 +35,14 @@ class CatTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
+                        config : PreTrainedConfig = None,
                         device : Union[str, torch.device] = None,
                         verbose : bool = False,
                         **kwargs
                         ):
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs)
+        config = AutoConfig.from_pretrained(model_name_or_path) if config is None else config
+        model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     @classmethod 
@@ -75,7 +76,7 @@ class PairTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : AutoConfig, 
+                 config : PreTrainedConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
@@ -106,13 +107,14 @@ class PairTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
+                        config : PreTrainedConfig = None,
                         device : Union[str, torch.device] = None,
                         verbose : bool = False,
                         **kwargs
                         ):
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs).cuda().eval()
+        config = AutoConfig.from_pretrained(model_name_or_path) if config is None else config
+        model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
     
     def transform(self, inp : pd.DataFrame) -> pd.DataFrame:
@@ -181,9 +183,9 @@ class Cat(PreTrainedModel):
         return self.transformer_architecture.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name : str, num_labels=2, **kwargs) -> "Cat":
+    def from_pretrained(cls, model_dir_or_name : str, num_labels=2, config=None, **kwargs) -> "Cat":
         """Load model from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name)
-        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels, **kwargs)
+        config = AutoConfig.from_pretrained(model_dir_or_name) if config is None else config
+        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
