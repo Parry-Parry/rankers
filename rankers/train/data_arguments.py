@@ -11,16 +11,38 @@ class DataArguments:
     training_dataset_file : str = field(
         metadata={"help": "Path to the training dataset"}
     )
+    teacher_file : str = field(
+        default=None,
+        metadata={"help": "Path to the teacher scores"}
+    )
     validation_dataset_file : str = field(
+        default=None,
         metadata={"help": "Path to the validation dataset"}
     )
     test_dataset_file : str = field(
+        default=None,
         metadata={"help": "Path to the test dataset"}
     )
     ir_dataset : str = field(
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
+
+    def __post_init__(self):
+        if self.ir_dataset is not None:
+            assert is_ir_datasets_available(), "Please install ir_datasets to use the ir_dataset argument"
+            try:
+                import ir_datasets
+                self.ir_dataset = ir_datasets.load(self.ir_dataset)
+            except Exception as e:
+                raise ValueError(f"Unable to load ir_dataset: {e}")
+        assert self.training_dataset_file.endswith('jsonl') or self.training_dataset_file.endswith('jsonl.gz'), "Training dataset should be a JSONL file"
+        if self.teacher_file:
+            assert self.teacher_file.endswith('json') or self.teacher_file.endswith('json.gz'), "Teacher file should be a JSON file"
+        if self.validation_dataset_file:
+            assert self.validation_dataset_file.endswith(".gz") or self.validation_dataset_file.endswith(".tsv") or self.validation_dataset_file.endswith(".rez"), "Validation dataset should be a TREC formatted run file"
+        if self.test_dataset_file:
+            assert self.test_dataset_file.endswith(".gz") or self.test_dataset_file.endswith(".tsv") or self.test_dataset_file.endswith(".rez"), "Test dataset should be a TREC formatted run file"
 
     def to_dict(self):
         """
