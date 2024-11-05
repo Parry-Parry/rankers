@@ -1,26 +1,26 @@
-from dataclasses import dataclass, field, fields, asdict
+from dataclasses import dataclass, field, fields
 from typing import Dict, Any
 import json
 from enum import Enum
 import torch
-from transformers import is_torch_available
+from .._util import is_ir_datasets_available
 
 
 @dataclass
-class ModelArguments:
-    model_name_or_path : str = field(
-        metadata={"help": "Huggingface model name or path to model"}
+class DataArguments:
+    training_dataset_file : str = field(
+        metadata={"help": "Path to the training dataset"}
     )
-
-    def __str__(self):
-        self_as_dict = asdict(self)
-
-        self_as_dict = {k: f"<{k.upper()}>" if k.endswith("_token") else v for k, v in self_as_dict.items()}
-
-        attrs_as_str = [f"{k}={v},\n" for k, v in sorted(self_as_dict.items())]
-        return f"{self.__class__.__name__}(\n{''.join(attrs_as_str)})"
-
-    __repr__ = __str__
+    validation_dataset_file : str = field(
+        metadata={"help": "Path to the validation dataset"}
+    )
+    test_dataset_file : str = field(
+        metadata={"help": "Path to the test dataset"}
+    )
+    ir_dataset : str = field(
+        default=None,
+        metadata={"help": "IR Dataset for text lookup"}
+    )
 
     def to_dict(self):
         """
@@ -73,16 +73,5 @@ class DotArguments(ModelArguments):
         default=False,
         metadata={"help": "Whether to tie the weights of the query and document encoder"}
     )
-    in_batch_loss : str = field(
-        default=None,
-        metadata={"help": "Loss function to use for in-batch negatives"}
-    )
-
-    def __post_init__(self):
-        from .loss import LOSS_REGISTRY
-        assert self.pooling in ['cls', 'mean', 'max'], "Pooling must be one of 'cls', 'mean', 'max'"
-        assert self.in_batch_loss is None or self.in_batch_loss in LOSS_REGISTRY.available, f"In-batch loss must be one of {LOSS_REGISTRY.available}"
-
-    
 
 CatArguments = ModelArguments

@@ -1,6 +1,6 @@
 from transformers import TrainingArguments, AcceleratorConfig
 from transformers.utils import is_accelerate_available
-from dataclasses import field, fields
+from dataclasses import field, fields, dataclass
 from enum import Enum
 from .._util import is_ir_measures_available, is_ir_datasets_available
 
@@ -18,6 +18,7 @@ def get_loss(loss_fn : str):
     else:
         return loss_fn
 
+@dataclass
 class RankerArguments(TrainingArguments):
     group_size : int = field(
         default=2,
