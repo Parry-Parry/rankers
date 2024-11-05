@@ -4,7 +4,9 @@ import jax.numpy as jnp
 import jax.nn as nn
 from jax import jit
 from . import FlaxBaseLoss
+from .. import register_loss
 
+@register_loss('kl_divergence')
 class FlaxKL_DivergenceLoss(FlaxBaseLoss):
     """KL Divergence loss"""
 
@@ -16,7 +18,7 @@ class FlaxKL_DivergenceLoss(FlaxBaseLoss):
     def forward(self, pred: jnp.array, labels: jax.Array) -> jax.Array:
         return self._reduce(self.kl_div(nn.log_softmax(pred / self.temperature, axis=1), nn.softmax(labels / self.temperature, axis=1)))
 
-
+@register_loss('ranknet')
 class FlaxRankNetLoss(FlaxBaseLoss):
     """RankNet loss
     https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
@@ -40,7 +42,7 @@ class FlaxRankNetLoss(FlaxBaseLoss):
 
         return self._reduce(self.bce(pred_diff, targets))
 
-
+@register_loss('listnet')
 class FlaxListNetLoss(FlaxBaseLoss):
     """ListNet loss
     """
@@ -55,6 +57,7 @@ class FlaxListNetLoss(FlaxBaseLoss):
             labels = nn.softmax(labels / self.temperature, axis=1)
         return self._reduce(-jnp.sum(labels * nn.log_softmax(pred + self.epsilon  / self.temperature, axis=1), axis=-1))
 
+@register_loss('poly1_softmax')
 class FlaxPoly1SoftmaxLoss(FlaxBaseLoss):
     """Poly1 softmax loss with automatic softmax handling and reduction."""
 

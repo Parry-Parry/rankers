@@ -4,9 +4,11 @@ import jax.nn as nn
 import optax.losses as L
 from jax import jit
 from . import FlaxBaseLoss
+from .. import register_loss
 
 residual = lambda x : jnp.expand_dims(x[:, 0], axis=1) - x[:, 1:]
 
+@register_loss('margin_mse')
 class FlaxMarginMSELoss(FlaxBaseLoss):
     """Margin MSE loss with residual calculation."""
 
@@ -16,7 +18,7 @@ class FlaxMarginMSELoss(FlaxBaseLoss):
         residual_label = residual(labels)
         return self._reduce(L.squared_error(residual_pred, residual_label))
 
-
+@register_loss('hinge')
 class FlaxHingeLoss(FlaxBaseLoss):
     """Hinge loss with sigmoid activation and residual calculation."""
 
@@ -30,7 +32,7 @@ class FlaxHingeLoss(FlaxBaseLoss):
         label_residuals = jnp.sign(residual(nn.sigmoid(labels)))
         return self._reduce(nn.relu(self.margin - (label_residuals * pred_residuals)))
 
-
+@register_loss('clear')
 class FlaxClearLoss(FlaxBaseLoss):
     """Clear loss with margin and residual calculation."""
 
@@ -42,7 +44,8 @@ class FlaxClearLoss(FlaxBaseLoss):
     def forward(self, pred: jax.Array, labels: jax.Array) -> jax.Array:
         margin_b = self.margin - residual(labels)
         return self._reduce(nn.relu(margin_b - residual(pred)))
-    
+
+@register_loss('lce')
 class FlaxLCELoss(FlaxBaseLoss):
     """LCE loss: Cross Entropy for NCE with localised examples."""
 
@@ -51,7 +54,7 @@ class FlaxLCELoss(FlaxBaseLoss):
         labels = jnp.argmax(labels, axis=1) if labels is not None else jnp.zeros(jnp.size(pred, 0))
         return self._reduce(L.softmax_cross_entropy(pred, labels))
 
-
+@register_loss('contrastive')
 class FlaxContrastiveLoss(FlaxBaseLoss):
     """Contrastive loss with log_softmax and negative log likelihood."""
 
@@ -68,4 +71,4 @@ class FlaxContrastiveLoss(FlaxBaseLoss):
 
         return self._reduce(-jnp.log(label_probs))
 
-__all__ = ['FlaxMarginMSELoss', 'FlaxHingeLoss', 'FlaxClearLoss', 'FlaxLCELoss', 'FlaxContrastiveLoss', 'FlaxPAIRWISE_LOSSES']
+__all__ = ['FlaxMarginMSELoss', 'FlaxHingeLoss', 'FlaxClearLoss', 'FlaxLCELoss', 'FlaxContrastiveLoss']
