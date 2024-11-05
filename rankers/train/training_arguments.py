@@ -2,7 +2,7 @@ from transformers import TrainingArguments, AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
 from enum import Enum
-from .. import is_ir_measures_available, is_ir_datasets_available
+from .. import is_ir_measures_available, is_ir_datasets_available, seed_everything
 
 
 def parse_ir_measure(measure : str):
@@ -31,6 +31,7 @@ class RankerTrainingArguments(TrainingArguments):
 
     def __post_init__(self):
         super().__post_init__()
+        seed_everything(self.seed)
         assert self.group_size > 0, "Group size must be greater than 0"
         if len(self.eval_metrics) > 0:
             self.eval_metrics = [parse_ir_measure(metric) for metric in self.eval_metrics]
