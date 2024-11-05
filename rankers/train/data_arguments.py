@@ -3,7 +3,7 @@ from typing import Dict, Any
 import json
 from enum import Enum
 import torch
-from .. import is_ir_datasets_available, is_torch_available
+from .. import is_ir_datasets_available, is_torch_available, is_pyterrier_available
 
 
 @dataclass
@@ -27,6 +27,10 @@ class DataArguments:
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
+    use_positive : bool = field(
+        default=False,
+        metadata={"help": "Use positive samples locatd in 'doc_id_a' column otherwise use solely 'doc_id_b'"}
+    )
 
     def __post_init__(self):
         if self.ir_dataset is not None:
@@ -37,13 +41,28 @@ class DataArguments:
             except Exception as e:
                 raise ValueError(f"Unable to load ir_dataset: {e}")
         assert self.training_dataset_file.endswith('jsonl') or self.training_dataset_file.endswith('jsonl.gz'), "Training dataset should be a JSONL file"
+        self.training_dataset = load_json(self.training_dataset_file)
         if self.teacher_file:
             assert self.teacher_file.endswith('json') or self.teacher_file.endswith('json.gz'), "Teacher file should be a JSON file"
+            self.teacher_data = load_json(self.teacher_file)
         if self.validation_dataset_file:
             assert self.validation_dataset_file.endswith(".gz") or self.validation_dataset_file.endswith(".tsv") or self.validation_dataset_file.endswith(".rez"), "Validation dataset should be a TREC formatted run file"
+            if is_pyterrier_available():
+                import pyterrier as pt
+                self.validation_dataset = pt.io.read_results(self.validation_dataset_file)
+            else:
+                logging.warning("Pyterrier not available, validation dataset will be loaded as a DataFrame")
+                self.validation_dataset = pd.read_csv(self.validation_dataset_file, sep="\t")
         if self.test_dataset_file:
             assert self.test_dataset_file.endswith(".gz") or self.test_dataset_file.endswith(".tsv") or self.test_dataset_file.endswith(".rez"), "Test dataset should be a TREC formatted run file"
+            if is_pyterrier_available():
+                import pyterrier as pt
+                self.test_dataset = pt.io.read_results(self.test_dataset_file)
+            else:
+                logging.warning("Pyterrier not available, test dataset will be loaded as a DataFrame")
+                self.test_dataset = pd.read_csv(self.test_dataset_file, sep="\t")
 
+        
     def to_dict(self):
         """
         Serializes this instance while replace `Enum` by their values (for JSON serialization support). It obfuscates

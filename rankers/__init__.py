@@ -28,6 +28,13 @@ def is_ir_datasets_available():
     except ImportError:
         return False
 
+def is_pyterrier_available():
+    try:
+        import pyterrier
+        return True
+    except ImportError:
+        return False
+
 def seed_everything(seed=42):
     import random
     import numpy as np
