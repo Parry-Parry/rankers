@@ -18,7 +18,6 @@ def get_loss(loss_fn : str):
     else:
         return loss_fn
 
-
 class RankerArguments(TrainingArguments):
     group_size : int = field(
         default=2,
@@ -50,8 +49,6 @@ class RankerArguments(TrainingArguments):
         """
         # filter out fields that are defined as field(init=False)
         d = {field.name: getattr(self, field.name) for field in fields(self) if field.init}
-
-
 
         for k, v in d.items():
             if isinstance(v, Enum):
