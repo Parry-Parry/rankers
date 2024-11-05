@@ -80,7 +80,7 @@ class RankerDotArguments(RankerModelArguments):
 
     def __post_init__(self):
         from .loss import LOSS_REGISTRY
-        assert self.pooling in ['cls', 'mean'], "Pooling must be one of 'cls', 'mean'"
+        assert self.pooling in ['cls', 'mean', 'none', 'late_interaction'], "Pooling must be one of 'cls', 'mean', 'late_interaction' or 'none'"
         assert self.in_batch_loss is None or self.in_batch_loss in LOSS_REGISTRY.available, f"In-batch loss must be one of {LOSS_REGISTRY.available}"
 
     
