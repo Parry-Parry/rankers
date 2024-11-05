@@ -8,7 +8,7 @@ residual = lambda x : x[:, 0].unsqueeze(1) - x[:, 1:]
 @register_loss('margin_mse')
 class MarginMSELoss(BaseLoss):
     """Margin MSE loss with residual calculation."""
-
+    name = "MarginMSE"
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         residual_pred = pred[:, 0].unsqueeze(1) - pred[:, 1:]
         residual_label = labels[:, 0].unsqueeze(1) - labels[:, 1:]
@@ -17,7 +17,7 @@ class MarginMSELoss(BaseLoss):
 @register_loss('hinge')
 class HingeLoss(BaseLoss):
     """Hinge loss with sigmoid activation and residual calculation."""
-
+    name = "Hinge"
     def __init__(self, margin=1, reduction='mean'):
         super().__init__(reduction)
         self.margin = margin
@@ -30,7 +30,7 @@ class HingeLoss(BaseLoss):
 @register_loss('clear')
 class ClearLoss(BaseLoss):
     """Clear loss with margin and residual calculation."""
-
+    name = "CLEAR"
     def __init__(self, margin=1, reduction='mean'):
         super().__init__(reduction)
         self.margin = margin
@@ -42,6 +42,7 @@ class ClearLoss(BaseLoss):
 @register_loss('lce')
 class LCELoss(BaseLoss):
     """LCE loss: Cross Entropy for NCE with localised examples."""
+    name = "LCE"
     def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
         if labels is not None:
             labels = labels.argmax(dim=1)
@@ -52,7 +53,7 @@ class LCELoss(BaseLoss):
 @register_loss('contrastive')
 class ContrastiveLoss(BaseLoss):
     """Contrastive loss with log_softmax and negative log likelihood."""
-
+    name = "Contrastive"
     def __init__(self, reduction='mean', temperature=1.):
         super().__init__(reduction)
         self.temperature = temperature

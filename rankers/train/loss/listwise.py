@@ -6,7 +6,7 @@ from . import BaseLoss, register_loss
 @register_loss('kl_div')
 class KL_DivergenceLoss(BaseLoss):
     """KL Divergence loss"""
-
+    name="KL Divergence"
     def __init__(self, reduction='batchmean', temperature=1.):
         super().__init__(reduction)
         self.temperature = temperature
@@ -17,6 +17,7 @@ class KL_DivergenceLoss(BaseLoss):
 
 @register_loss('ranknet')
 class RankNetLoss(BaseLoss):
+    name = "RankNet"
     """RankNet loss
     https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/MSR-TR-2010-82.pdf
     """
@@ -45,6 +46,7 @@ class DistillRankNetLoss(BaseLoss):
     Very much a WIP from https://arxiv.org/pdf/2402.10769
     DO NOT USE
     """
+    name = "DistillRankNet"
     def __init__(self, reduction='mean', temperature=1., base_margin=300., increment_margin=100.):
         super().__init__(reduction)
         self.temperature = temperature
@@ -69,7 +71,7 @@ class DistillRankNetLoss(BaseLoss):
 class ListNetLoss(BaseLoss):
     """ListNet loss
     """
-
+    name = "ListNet"
     def __init__(self, reduction='mean', temperature=1., epsilon=1e-8):
         super().__init__(reduction)
         self.temperature = temperature
@@ -83,7 +85,7 @@ class ListNetLoss(BaseLoss):
 @register_loss('poly1')
 class Poly1SoftmaxLoss(BaseLoss):
     """Poly1 softmax loss with automatic softmax handling and reduction."""
-
+    name = "Poly1 Softmax"
     def __init__(self, reduction='mean', epsilon : float = 1., temperature=1.):
         super().__init__(reduction)
         self.epsilon = epsilon
@@ -142,6 +144,7 @@ def get_ndcg(
 
 @register_loss('approx_ndcg')
 class ApproxNDCGLoss(BaseLoss):
+    name = "ApproxNDCG"
     def __init__(self, reduction: str = 'mean', temperature=1., scale_gains: bool = True) -> None:
         super().__init__(reduction)
         self.temperature = temperature
@@ -165,6 +168,7 @@ def get_mrr(ranks: torch.Tensor, labels: torch.Tensor, k: int | None = None) -> 
 
 @register_loss('approx_mrr')
 class ApproxMRRLoss(BaseLoss):
+    name = "ApproxMRR"
     def __init__(self, reduction: str = 'mean', temperature=1.) -> None:
         super().__init__(reduction)
         self.temperature = temperature

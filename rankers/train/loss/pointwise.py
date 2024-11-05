@@ -6,7 +6,7 @@ from . import BaseLoss, register_loss
 @register_loss('pointwise_mse')
 class PointwiseMSELoss(BaseLoss):
     """Pointwise MSE loss"""
-
+    name = "PointwiseMSE"
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
         flattened_pred = pred.view(-1)
         flattened_labels = labels.view(-1)
