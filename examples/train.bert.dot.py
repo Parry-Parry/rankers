@@ -5,7 +5,7 @@ from rankers import (
                       RankerTrainer, 
                       )
 from transformers import HfArgumentParser
-from rankers.modelling import Dot
+from rankers.modelling import Dot, DotConfig
 from rankers.datasets import TrainingDataset, DotDataCollator
 from transformers import get_constant_schedule_with_warmup
 from torch.optim import AdamW
@@ -18,7 +18,8 @@ def main():
     if training_args.wandb_project is not None:
         wandb.init(project=training_args.wandb_project,)
     
-    model = Dot.from_pretrained(model_args.model_name_or_path)
+    model_config = DotConfig.from_pretrained(model_args.model_name_or_path, pooling_type=model_args.pooling_type, model_tied=model_args.model_tied, use_pooler=model_args.use_pooler)
+    model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
 
     dataset = TrainingDataset(data_args.training_dataset, ir_dataset=data_args.ir_dataset)
     collate_fn = DotDataCollator(model.encoder.tokenizer)

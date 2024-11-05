@@ -311,10 +311,12 @@ class Dot(PreTrainedModel):
         if model_d: self.model_d = model_d
         else: self.model_d = self.model if config.model_tied else deepcopy(self.model)
         self.pooling = {
-            'mean': self._mean,
-            'cls' : self._cls,
+            'mean': lambda x: x.mean(dim=1),
+            'cls' : lambda x: x[:, 0],
+            'late_interaction': lambda x: x,
             'none': lambda x: x,
-        }[config.mode]
+        }[config.pooling_type]
+        self.pooling_type = config.pooling_type
 
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
         else: self.pooler = lambda x, y =True : x
@@ -328,13 +330,25 @@ class Dot(PreTrainedModel):
 
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
         batch_size = query_reps.size(0)
-        emb_q = query_reps.reshape(batch_size, 1, -1)
-        emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
-        pred = batched_dot_product(emb_q, emb_d)
+
+        if self.pooling_type == 'late_interaction':
+            pred = emb_q @ emb_d.permute(0, 2, 1)
+            pred = pred.max(1).values
+            pred = pred.sum(-1)
+        else:
+            emb_q = query_reps.reshape(batch_size, 1, -1)
+            emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
+            pred = batched_dot_product(emb_q, emb_d)
 
         if self.config.inbatch_loss is not None:
-            inbatch_d = emb_d[:, 0]
-            inbatch_pred = cross_dot_product(emb_q.view(batch_size, -1), inbatch_d)
+            if self.pooling_type == 'late_interaction':
+                inbatch_d = emb_d[:, 0]
+                inbatch_pred = emb_q @ inbatch_d.permute(0, 2, 1)
+                inbatch_pred = inbatch_pred.max(1).values
+                inbatch_pred = inbatch_pred.sum(-1)
+            else:
+                inbatch_d = emb_d[:, 0]
+                inbatch_pred = cross_dot_product(emb_q.view(batch_size, -1), inbatch_d)
         else:
             inbatch_pred = None
 
