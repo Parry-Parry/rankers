@@ -1,12 +1,11 @@
 from rankers import ( 
                       RankerTrainingArguments, 
-                      RankerDotArguments,
+                      RankerModelArguments,
                       RankerDataArguments,
                       RankerTrainer, 
-                      Dot,
-                      DotConfig,
-                      DotDataCollator,
-                      TrainingDataset
+                      Cat,
+                      TrainingDataset,
+                      CatDataCollator,
                       )
 from transformers import HfArgumentParser
 from transformers import get_constant_schedule_with_warmup
@@ -14,17 +13,16 @@ from torch.optim import AdamW
 import wandb
 
 def main():
-    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
+    parser = HfArgumentParser((RankerModelArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     if training_args.wandb_project is not None:
         wandb.init(project=training_args.wandb_project,)
     
-    model_config = DotConfig.from_pretrained(model_args.model_name_or_path, pooling_type=model_args.pooling_type, model_tied=model_args.model_tied, use_pooler=model_args.use_pooler)
-    model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
+    model = Cat.from_pretrained(model_args.model_name_or_path)
 
     dataset = TrainingDataset(data_args.training_dataset, ir_dataset=data_args.ir_dataset)
-    collate_fn = DotDataCollator(model.encoder.tokenizer)
+    collate_fn = CatDataCollator(model.encoder.tokenizer)
 
     opt = AdamW(model.parameters(), lr=training_args.lr)
 
