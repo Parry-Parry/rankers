@@ -131,7 +131,6 @@ class PairTransformer(pt.Transformer):
                 inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(self.model(**inps).logits.cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))
-        res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(['qid', 'score'], ascending=[True, False])
         return pt.model.add_ranks(res)
 
