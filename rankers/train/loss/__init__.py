@@ -1,5 +1,6 @@
 import torch.nn as nn
 import functools
+from ..._optional import is_optax_available
 
 class SingletonMeta(type):
     """
@@ -49,6 +50,15 @@ class LossFunctionRegistry(metaclass=SingletonMeta):
             'mse_sum': functools.partial(nn.MSELoss, reduction='sum'),
             'mse_none': functools.partial(nn.MSELoss, reduction='none'),
         }
+
+        if is_optax_available():
+            import optax.losses as L
+            builtin_losses.update({
+                'flax_kl_divergence': L.kl_divergence,
+                'flax_sigmoid_binary_cross_entropy': L.sigmoid_binary_cross_entropy,
+                'flax_squared_error': L.squared_error,
+                'flax_softmax_cross_entropy': L.softmax_cross_entropy,
+            })
         
         for name, loss_fn in builtin_losses.items():
             self.register(name, loss_fn)
@@ -131,7 +141,6 @@ except OptionalDependencyNotAvailable:
 else:
     _import_structure['loss'] = [
         'BaseLoss',
-        'LOSSES',
     ]
 
 try:
@@ -142,7 +151,6 @@ except OptionalDependencyNotAvailable:
 else:
     _import_structure['flax_loss'] = [
         'FlaxBaseLoss',
-        'FlaxLOSSES',
     ]
 
 if TYPE_CHECKING:
@@ -152,7 +160,7 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .torch import BaseLoss, LOSSES
+        from .torch import BaseLoss
     
     try:
         if not is_flax_available():
@@ -160,7 +168,7 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .flax import FlaxBaseLoss, Flax_LOSSES
+        from .flax import FlaxBaseLoss
 else:
     import sys 
     sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)

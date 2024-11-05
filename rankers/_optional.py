@@ -25,6 +25,13 @@ def is_flax_available():
         return True
     except ImportError:
         return False
+
+def is_optax_available():
+    try:
+        import optax
+        return True
+    except ImportError:
+        return False
     
 def is_orbax_checkpoint_available():
     try:
