@@ -13,6 +13,13 @@ def is_ir_measures_available():
     except ImportError:
         return False
 
+def is_ir_datasets_available():
+    try:
+        import ir_datasets
+        return True
+    except ImportError:
+        return False
+
 def _pivot(frame, negatives = None):
     new = []
     for row in frame.itertuples():
