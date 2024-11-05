@@ -21,7 +21,7 @@ def main():
     
     model = Cat.from_pretrained(model_args.model_name_or_path)
 
-    dataset = TrainingDataset(data_args.training_dataset, ir_dataset=data_args.ir_dataset)
+    dataset = TrainingDataset(data_args.training_data, ir_dataset=data_args.ir_dataset, group_size=data_args.group_size, use_positive=data_args.use_positive)
     collate_fn = CatDataCollator(model.encoder.tokenizer)
 
     opt = AdamW(model.parameters(), lr=training_args.lr)

@@ -45,7 +45,7 @@ class RankerDataArguments:
             except Exception as e:
                 raise ValueError(f"Unable to load ir_dataset: {e}")
         assert self.training_dataset_file.endswith('jsonl') or self.training_dataset_file.endswith('jsonl.gz'), "Training dataset should be a JSONL file"
-        self.training_dataset = load_json(self.training_dataset_file)
+        self.training_data = load_json(self.training_dataset_file)
         if self.teacher_file:
             assert self.teacher_file.endswith('json') or self.teacher_file.endswith('json.gz'), "Teacher file should be a JSON file"
             self.teacher_data = load_json(self.teacher_file)
@@ -53,18 +53,18 @@ class RankerDataArguments:
             assert self.validation_dataset_file.endswith(".gz") or self.validation_dataset_file.endswith(".tsv") or self.validation_dataset_file.endswith(".rez"), "Validation dataset should be a TREC formatted run file"
             if is_pyterrier_available():
                 import pyterrier as pt
-                self.validation_dataset = pt.io.read_results(self.validation_dataset_file)
+                self.validation_data = pt.io.read_results(self.validation_dataset_file)
             else:
                 logging.warning("Pyterrier not available, validation dataset will be loaded as a DataFrame")
-                self.validation_dataset = pd.read_csv(self.validation_dataset_file, sep="\t")
+                self.validation_data= pd.read_csv(self.validation_dataset_file, sep="\t")
         if self.test_dataset_file:
             assert self.test_dataset_file.endswith(".gz") or self.test_dataset_file.endswith(".tsv") or self.test_dataset_file.endswith(".rez"), "Test dataset should be a TREC formatted run file"
             if is_pyterrier_available():
                 import pyterrier as pt
-                self.test_dataset = pt.io.read_results(self.test_dataset_file)
+                self.test_data = pt.io.read_results(self.test_dataset_file)
             else:
                 logging.warning("Pyterrier not available, test dataset will be loaded as a DataFrame")
-                self.test_dataset = pd.read_csv(self.test_dataset_file, sep="\t")
+                self.test_data = pd.read_csv(self.test_dataset_file, sep="\t")
 
         
     def to_dict(self):

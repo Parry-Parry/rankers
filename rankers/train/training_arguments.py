@@ -28,6 +28,10 @@ class RankerTrainingArguments(TrainingArguments):
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
+    wandb_project : str = field(
+        default=None,
+        metadata={"help": "Wandb project name"}
+    )
 
     def __post_init__(self):
         super().__post_init__()
