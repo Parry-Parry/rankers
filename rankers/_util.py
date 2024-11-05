@@ -6,20 +6,6 @@ import ir_datasets as irds
 
 logger = logging.getLogger(__name__)
 
-def is_ir_measures_available():
-    try:
-        import ir_measures
-        return True
-    except ImportError:
-        return False
-
-def is_ir_datasets_available():
-    try:
-        import ir_datasets
-        return True
-    except ImportError:
-        return False
-
 def _pivot(frame, negatives = None):
     new = []
     for row in frame.itertuples():

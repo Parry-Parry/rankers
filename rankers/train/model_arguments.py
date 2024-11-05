@@ -3,7 +3,7 @@ from typing import Dict, Any
 import json
 from enum import Enum
 import torch
-from transformers import is_torch_available
+from .. import is_torch_available
 
 
 @dataclass

@@ -2,7 +2,7 @@ from transformers import TrainingArguments, AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
 from enum import Enum
-from .._util import is_ir_measures_available, is_ir_datasets_available
+from .. import is_ir_measures_available, is_ir_datasets_available
 
 
 def parse_ir_measure(measure : str):
