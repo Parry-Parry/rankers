@@ -2,7 +2,7 @@ __version__ = "0.0.3"
 
 from .train import loss as loss
 from .train.trainer import RankerTrainer
-from .train.arguments import RankerArguments
+from .train.training_arguments import RankerArguments
 from .datasets import *
 from .modelling import *
 

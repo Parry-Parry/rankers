@@ -1,11 +1,17 @@
 from collections import defaultdict
 import logging
-from typing import Optional
+from typing import Optional, Any
 import pandas as pd
-import pyterrier as pt
 import ir_datasets as irds
 
 logger = logging.getLogger(__name__)
+
+def is_ir_measures_available():
+    try:
+        import ir_measures
+        return True
+    except ImportError:
+        return False
 
 def _pivot(frame, negatives = None):
     new = []
@@ -42,7 +48,7 @@ def _qrel_pivot(frame):
             })
     return pd.DataFrame.from_records(new)
 
-def get_teacher_scores(model : pt.Transformer, 
+def get_teacher_scores(model : Any, 
                        corpus : Optional[pd.DataFrame] = None, 
                        ir_dataset : Optional[str] = None, 
                        subset : Optional[int] = None, 
@@ -136,5 +142,3 @@ def save_json(data, file: str):
                 f.write(json.dumps(item) + '\n')
     else:
         raise ValueError(f"Unknown file type for {file}")
-        
-    

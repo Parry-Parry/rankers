@@ -4,6 +4,7 @@ from rankers import (
                       RankerTrainer, 
                       seed_everything,
                       )
+from transformers import HfArgumentParser
 from rankers.modelling import Dot
 from rankers.datasets import TrainingDataset, DotDataCollator
 from transformers import get_constant_schedule_with_warmup
