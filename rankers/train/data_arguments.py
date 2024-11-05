@@ -3,7 +3,7 @@ from typing import Dict, Any
 import json
 from enum import Enum
 import torch
-from .._util import is_ir_datasets_available
+from .. import is_ir_datasets_available, is_torch_available
 
 
 @dataclass
@@ -80,20 +80,3 @@ class DataArguments:
             valid_types.append(torch.Tensor)
 
         return {k: v if type(v) in valid_types else str(v) for k, v in d.items()}
-
-@dataclass
-class DotArguments(ModelArguments):
-    pooling : str = field(
-        default='cls',
-        metadata={"help": "Pooling strategy"}
-    )
-    use_pooler : bool = field(
-        default=False,
-        metadata={"help": "Whether to use the pooler MLP"}
-    )
-    model_tied : bool = field(
-        default=False,
-        metadata={"help": "Whether to tie the weights of the query and document encoder"}
-    )
-
-CatArguments = ModelArguments
