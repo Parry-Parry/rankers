@@ -77,6 +77,7 @@ class DotConfig(PretrainedConfig):
 
 class DotTransformer(pt.Transformer):
     cls_architecture = AutoModel
+    cls_config = DotConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -111,7 +112,7 @@ class DotTransformer(pt.Transformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = DotConfig.from_pretrained(model_name_or_path) if config is None else config
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
         config.mode = pooling
         pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path+"/pooler")
         model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_name_or_path + "/model_d", **kwargs)
@@ -288,6 +289,7 @@ class Dot(PreTrainedModel):
     """
     model_architecture = 'Dot'
     cls_architecture = AutoModel
+    cls_config = DotConfig
     transformer_architecture = DotTransformer
     def __init__(
         self,
@@ -386,14 +388,14 @@ class Dot(PreTrainedModel):
     def from_pretrained(cls, model_dir_or_name, config = None, **kwargs) -> "Dot":
         """Load model"""
         if os.path.isdir(model_dir_or_name):
-            config = DotConfig.from_pretrained(model_dir_or_name) if config is None else config
+            config = cls.cls_config.from_pretrained(model_dir_or_name) if config is None else config
             model = cls.cls_architecture.from_pretrained(model_dir_or_name, **kwargs)
             tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
             model_d = None if config.model_tied else cls.cls_architecture.from_pretrained(model_dir_or_name + "/model_d", **kwargs) 
             pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
 
             return cls(model, tokenizer, config, model_d, pooler)
-        config = DotConfig(model_dir_or_name, **kwargs) if config is None else config
+        config = cls.cls_config(model_dir_or_name, **kwargs) if config is None else config
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         model = cls.cls_architecture.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)

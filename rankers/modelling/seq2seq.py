@@ -1,7 +1,7 @@
 import pyterrier as pt
 if not pt.started():
     pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoTokenizer, AutoConfig, AutoModelForSeq2SeqLM, AutoModelForCausalLM
+from transformers import PreTrainedModel, PreTrainedConfig, PreTrainedTokenizer, AutoTokenizer, AutoConfig, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 from typing import Union
 import torch
 import pandas as pd
@@ -17,7 +17,7 @@ class Seq2SeqTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : AutoConfig, 
+                 config : PreTrainedConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
@@ -85,7 +85,7 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
     def __init__(self,
                     model : PreTrainedModel,
                     tokenizer : PreTrainedTokenizer,
-                    config : AutoConfig,
+                    config : PreTrainedConfig,
                     batch_size : int,
                     text_field : str = 'text',
                     device : Union[str, torch.device] = None,
@@ -127,11 +127,13 @@ class Seq2Seq(PreTrainedModel):
     """
     model_architecture = 'Seq2Seq'
     cls_architecture = AutoModelForSeq2SeqLM
+    cls_config = AutoConfig
+    transformer_architecture = Seq2SeqTransformer
     def __init__(
         self,
         model: AutoModelForSeq2SeqLM,
         tokenizer: PreTrainedTokenizer,
-        config: AutoConfig,
+        config: PreTrainedConfig,
     ):
         super().__init__(config)
         self.model = model
@@ -161,21 +163,25 @@ class Seq2Seq(PreTrainedModel):
         return self.model.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
     
     def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return Seq2SeqTransformer.from_model(self.model, self.tokenizer, text_field='text')
+        return self.transformer_architecture.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name : str, **kwargs):
+    def from_pretrained(cls, 
+                        model_dir_or_name : str, 
+                        config : PreTrainedConfig = None, 
+                        **kwargs):
         """Load model from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name)
+        config = cls.cls_config.from_pretrained(model_dir_or_name)
         model = cls.cls_architecture.from_pretrained(model_dir_or_name, **kwargs)
         return cls(model, config)
     
 class CausalLMTransformer(Seq2SeqTransformer):
     cls_architecture = AutoModelForCausalLM
+    cls_config = AutoConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : AutoConfig, 
+                 config : PreTrainedConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
@@ -190,14 +196,15 @@ class CausalLMTransformer(Seq2SeqTransformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
+                        config : PreTrainedConfig = None,
                         device : Union[str, torch.device] = None,
                         prompt : str = None,
                         verbose : bool = False,
                         **kwargs
                         ):
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
         model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, prompt, verbose=verbose)
 
     @classmethod 

@@ -11,6 +11,7 @@ import torch.nn.functional as F
 
 class CatTransformer(pt.Transformer):
     cls_architecture = AutoModelForSequenceClassification
+    cls_config = AutoConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -40,7 +41,7 @@ class CatTransformer(pt.Transformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = AutoConfig.from_pretrained(model_name_or_path) if config is None else config
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
         model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
@@ -73,6 +74,7 @@ class CatTransformer(pt.Transformer):
 
 class PairTransformer(pt.Transformer):
     cls_architecture = AutoModelForSequenceClassification
+    cls_config = AutoConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -112,7 +114,7 @@ class PairTransformer(pt.Transformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = AutoConfig.from_pretrained(model_name_or_path) if config is None else config
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
         model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
@@ -145,6 +147,7 @@ class Cat(PreTrainedModel):
     """
     model_architecture = 'Cat'
     cls_architecture = AutoModelForSequenceClassification
+    cls_config = AutoConfig
     transformer_architecture = CatTransformer
     def __init__(
         self,
@@ -185,7 +188,7 @@ class Cat(PreTrainedModel):
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2, config=None, **kwargs) -> "Cat":
         """Load model from a directory"""
-        config = AutoConfig.from_pretrained(model_dir_or_name) if config is None else config
+        config = cls.cls_config.from_pretrained(model_dir_or_name) if config is None else config
         model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
