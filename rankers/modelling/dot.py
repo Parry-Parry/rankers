@@ -321,12 +321,8 @@ class Dot(PreTrainedModel):
         if config.use_pooler: self.pooler = Pooler(config) if pooler is None else pooler
         else: self.pooler = lambda x, y =True : x
 
-        if config.inbatch_loss is not None:
-            if config.inbatch_loss not in LOSS_REGISTRY.available:
-                raise ValueError(f"Unknown loss: {config.inbatch_loss}, choices are {LOSS_REGISTRY.available}")
-            self.inbatch_loss_fn = LOSS_REGISTRY.get(config.inbatch_loss)
-        else:
-            self.inbatch_loss_fn = None
+        self.inbatch_loss_fn = config.inbatch_loss
+
 
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
         batch_size = query_reps.size(0)
