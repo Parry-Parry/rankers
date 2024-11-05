@@ -1,69 +1,71 @@
-from . import BaseLoss, register_loss
+import jax 
+import jax.numpy as jnp
+import jax.nn as nn
+import optax.losses as L
+from jax import jit
+from . import FlaxBaseLoss
 
-residual = lambda x : x[:, 0].unsqueeze(1) - x[:, 1:]
+residual = lambda x : jnp.expand_dims(x[:, 0], axis=1) - x[:, 1:]
 
-@register_loss('flax_margin_mse')
-class MarginMSELoss(BaseLoss):
+class FlaxMarginMSELoss(FlaxBaseLoss):
     """Margin MSE loss with residual calculation."""
-    name = "MarginMSE"
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        residual_pred = pred[:, 0].unsqueeze(1) - pred[:, 1:]
-        residual_label = labels[:, 0].unsqueeze(1) - labels[:, 1:]
-        return F.mse_loss(residual_pred, residual_label, reduction=self.reduction)
 
-@register_loss('flax_hinge')
-class HingeLoss(BaseLoss):
+    @jit
+    def forward(self, pred: jax.Array, labels: jax.Array) -> jax.Array:
+        residual_pred = residual(pred)
+        residual_label = residual(labels)
+        return self._reduce(L.squared_error(residual_pred, residual_label))
+
+
+class FlaxHingeLoss(FlaxBaseLoss):
     """Hinge loss with sigmoid activation and residual calculation."""
-    name = "Hinge"
+
     def __init__(self, margin=1, reduction='mean'):
         super().__init__(reduction)
         self.margin = margin
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        pred_residuals = F.relu(residual(F.sigmoid(pred)))
-        label_residuals = torch.sign(residual(F.sigmoid(labels)))
-        return self._reduce(F.relu(self.margin - (label_residuals * pred_residuals)))
+    @jit
+    def forward(self, pred: jax.Array, labels: jax.Array) -> jax.Array:
+        pred_residuals = nn.relu(residual(nn.sigmoid(pred)))
+        label_residuals = jnp.sign(residual(nn.sigmoid(labels)))
+        return self._reduce(nn.relu(self.margin - (label_residuals * pred_residuals)))
 
-@register_loss('flax_clear')
-class ClearLoss(BaseLoss):
+
+class FlaxClearLoss(FlaxBaseLoss):
     """Clear loss with margin and residual calculation."""
-    name = "CLEAR"
+
     def __init__(self, margin=1, reduction='mean'):
         super().__init__(reduction)
         self.margin = margin
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    @jit
+    def forward(self, pred: jax.Array, labels: jax.Array) -> jax.Array:
         margin_b = self.margin - residual(labels)
-        return self._reduce(F.relu(margin_b - residual(pred)))
+        return self._reduce(nn.relu(margin_b - residual(pred)))
     
-@register_loss('flax_lce')
-class LCELoss(BaseLoss):
+class FlaxLCELoss(FlaxBaseLoss):
     """LCE loss: Cross Entropy for NCE with localised examples."""
-    name = "LCE"
-    def forward(self, pred: Tensor, labels: Tensor=None) -> Tensor:
-        if labels is not None:
-            labels = labels.argmax(dim=1)
-        else:
-            labels = torch.zeros(pred.size(0), dtype=torch.long, device=pred.device)
-        return F.cross_entropy(pred, labels, reduction=self.reduction)
 
-@register_loss('flax_contrastive')
-class ContrastiveLoss(BaseLoss):
+    @jit
+    def forward(self, pred: jax.Array, labels: jax.Array=None) -> jax.Array:
+        labels = jnp.argmax(labels, axis=1) if labels is not None else jnp.zeros(jnp.size(pred, 0))
+        return self._reduce(L.softmax_cross_entropy(pred, labels))
+
+
+class FlaxContrastiveLoss(FlaxBaseLoss):
     """Contrastive loss with log_softmax and negative log likelihood."""
-    name = "Contrastive"
-    def __init__(self, reduction='mean', temperature=1.):
+
+    def __init__(self, reduction='sum', temperature=1.):
         super().__init__(reduction)
         self.temperature = temperature
 
-    def forward(self, pred: Tensor, labels : Tensor = None) -> Tensor:
-        softmax_scores = F.log_softmax(pred / self.temperature, dim=1)
-        labels = labels.argmax(dim=1) if labels is not None else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(-1, 1)
-        return F.nll_loss(softmax_scores, labels, reduction=self.reduction)
+    @jit
+    def forward(self, pred: jax.Array, labels : jax.Array = None) -> jax.Array:
+        softmax_scores = nn.log_softmax(pred / self.temperature, axis=1)
+        labels = jnp.argmax(labels, axis=1) if labels is not None else jnp.zeros(jnp.size(pred, 0))
 
-__all__ = [
-    'MarginMSELoss',
-    'HingeLoss',
-    'ClearLoss',
-    'LCELoss',
-    'ContrastiveLoss',
-]
+        label_probs = softmax_scores * labels + (1 - labels) * (1 - softmax_scores)
+
+        return self._reduce(-jnp.log(label_probs))
+
+__all__ = ['FlaxMarginMSELoss', 'FlaxHingeLoss', 'FlaxClearLoss', 'FlaxLCELoss', 'FlaxContrastiveLoss', 'FlaxPAIRWISE_LOSSES']

@@ -1,32 +1,31 @@
 import jax
-from jax import random, numpy as jnp
-import flax
+from jax import numpy as jnp
 
-def reduce(a : jnp.array, reduction : str):
+def reduce(a : jax.Array, reduction : str):
     """
-    Reducing a jnp.array along a given dimension.
+    Reducing a jax.Array along a given dimension.
     Parameters
     ----------
-    a: jnp.array
-        the input jnp.array
+    a: jax.Array
+        the input jax.Array
     reduction: str
         the reduction type
     Returns
     -------
-    jnp.array
-        the reduced jnp.array
+    jax.Array
+        the reduced jax.Array
     """
     if reduction == 'none':
         return a
     if reduction == 'mean':
-        return a.mean()
+        return jnp.mean(a)
     if reduction == 'sum':
-        return a.sum()
+        return jnp.sum(a)
     if reduction == 'batchmean':
-        return a.mean(dim=0).sum()
+        return jnp.sum(jnp.mean(a, axis=0))
     raise ValueError(f"Unknown reduction type: {reduction}")
 
-class BaseLoss(object):
+class FlaxBaseLoss(object):
     """
     Base class for Losses
 
@@ -36,116 +35,120 @@ class BaseLoss(object):
         the reduction type
     """
     def __init__(self, reduction : str = 'mean') -> None:
-        super(BaseLoss, self).__init__()
         self.reduction = reduction
     
-    def _reduce(self, a : jnp.array):
+    def _reduce(self, a : jax.Array):
         return reduce(a, self.reduction)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
 
-def normalize(a: jnp.array, dim: int = -1):
+def normalize(a: jax.Array, axis: int = -1):
     """
-    Normalizing a jnp.array along a given dimension.
+    Normalizing a jax.Array along a given dimension.
     Parameters
     ----------
-    a: jnp.array
-        the input jnp.array
-    dim: int
+    a: jax.Array
+        the input jax.Array
+    axis: int
         the dimension to normalize along
     Returns
     -------
-    jnp.array
-        the normalized jnp.array
+    jax.Array
+        the normalized jax.Array
     """
-    min_values = a.min(dim=dim, keepdim=True)[0]
-    max_values = a.max(dim=dim, keepdim=True)[0]
+    min_values = jnp.min(a, axis=axis, keepdims=True)
+    max_values = jnp.max(a, axis=axis, keepdims=True)
     return (a - min_values) / (max_values - min_values + 1e-10)
 
-def residual(a : jnp.array):
+def residual(a : jax.Array):
     """
     Calculating the residual between a positive sample and multiple negatives.
     Parameters
     ----------
-    a: jnp.array
-        the input jnp.array
+    a: jax.Array
+        the input jax.Array
     Returns
     -------
-    jnp.array
+    jax.Array
         the residuals
     """
-    if a.size(1) == 1: return a
-    if len(a.size()) == 3:
-        assert a.size(2) == 1, "Expected scalar values for residuals."
-        a = a.squeeze(2)
+    if jnp.size(a, 1) == 1: return a
+    if len(jnp.size(a)) == 3:
+        assert jnp.size(a, 2) == 1, "Expected scalar values for residuals."
+        a = jnp.squeeze(a, axis=2)
 
     positive = a[:, 0]
     negative = a[:, 1]
 
     return positive - negative
 
-def dot_product(a: jnp.array, b: jnp.array):
+def dot_product(a: jax.Array, b: jax.Array):
     """
-    Calculating row-wise dot product between two jnp.arrays a and b.
+    Calculating row-wise dot product between two jax.Arrays a and b.
     a and b must have the same dimensionality.
     Parameters
     ----------
-    a: jnp.array
+    a: jax.Array
         size: batch_size x vector_dim
-    b: jnp.array
+    b: jax.Array
         size: batch_size x vector_dim
     Returns
     -------
-    jnp.array: size of (batch_size x 1)
+    jax.Array: size of (batch_size x 1)
         dot product for each pair of vectors
     """
     return (a * b).sum(dim=-1)
 
 
-def cross_dot_product(a: jnp.array, b: jnp.array):
+def cross_dot_product(a: jax.Array, b: jax.Array):
     """
     Calculating the cross doc product between each row in a with every row in b. a and b must have the same number of columns, but can have varied nuber of rows.
     Parameters
     ----------
-    a: jnp.array
+    a: jax.Array
         size: (batch_size_1,  vector_dim)
-    b: jnp.array
+    b: jax.Array
         size: (batch_size_2, vector_dim)
     Returns
     -------
-    jnp.array: of size (batch_size_1, batch_size_2) where the value at (i,j) is dot product of a[i] and b[j].
+    jax.Array: of size (batch_size_1, batch_size_2) where the value at (i,j) is dot product of a[i] and b[j].
     """
     return jnp.matmul(a, b.transpose(0, 1))
 
-def batched_dot_product(a: jnp.array, b: jnp.array):
+def batched_dot_product(a: jax.Array, b: jax.Array):
     """
-    Calculating the dot product between two jnp.arrays a and b.
+    Calculating the dot product between two jax.Arrays a and b.
 
     Parameters
     ----------
-    a: jnp.array
+    a: jax.Array
         size: batch_size x 1 x vector_dim
-    b: jnp.array
+    b: jax.Array
         size: batch_size x group_size x vector_dim
     Returns
     -------
-    jnp.array: size of (batch_size x group_size)
+    jax.Array: size of (batch_size x group_size)
         dot product for each group of vectors
     """
     if len(b.shape) == 2:
+<<<<<<< HEAD
         return jnp.matmul(a, b.transpose(0, 1))
     return jnp.matmul(a,jnp.permute(b,[0,2,1])).squeeze(1)
+=======
+        return jnp.matmul(a, jnp.moveaxis(b, 0, 1))
+    return jnp.squeeze(jnp.matmul(a, jnp.moveaxis(b, 1, -1)), axis=1)
+>>>>>>> 4793ad1e1b9c84eedd56401a37b5411435079091
 
-def num_non_zero(a: jnp.array):
+def num_non_zero(a: jax.Array):
     """
     Calculating the average number of non-zero columns in each row.
     Parameters
     ----------
-    a: jnp.array
-        the input jnp.array
+    a: jax.Array
+        the input jax.Array
     """
-    return (a > 0).float().sum(dim=1).mean()
+    return jnp.mean(jnp.sum((a > 0), axis=1))
     
 from . import listwise as listwise
 from . import pointwise as pointwise
