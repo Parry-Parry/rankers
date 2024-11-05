@@ -7,7 +7,7 @@ from .. import is_torch_available
 
 
 @dataclass
-class ModelArguments:
+class RankerModelArguments:
     model_name_or_path : str = field(
         metadata={"help": "Huggingface model name or path to model"}
     )
@@ -60,7 +60,7 @@ class ModelArguments:
         return {k: v if type(v) in valid_types else str(v) for k, v in d.items()}
 
 @dataclass
-class DotArguments(ModelArguments):
+class RankerDotArguments(RankerModelArguments):
     pooling : str = field(
         default='cls',
         metadata={"help": "Pooling strategy"}
@@ -85,4 +85,4 @@ class DotArguments(ModelArguments):
 
     
 
-CatArguments = ModelArguments
+CatArguments = RankerModelArguments

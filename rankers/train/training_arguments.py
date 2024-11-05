@@ -19,7 +19,7 @@ def get_loss(loss_fn : str):
         return loss_fn
 
 @dataclass
-class RankerArguments(TrainingArguments):
+class RankerTrainingArguments(TrainingArguments):
     group_size : int = field(
         default=2,
         metadata={"help": "Number of documents per query"}

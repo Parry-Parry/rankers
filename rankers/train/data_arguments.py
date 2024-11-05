@@ -11,7 +11,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 @dataclass
-class DataArguments:
+class RankerDataArguments:
     training_dataset_file : str = field(
         metadata={"help": "Path to the training dataset"}
     )

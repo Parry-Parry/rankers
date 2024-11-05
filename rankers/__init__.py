@@ -49,6 +49,8 @@ def seed_everything(seed=42):
 
 from .train import loss as loss
 from .train.trainer import RankerTrainer
-from .train.training_arguments import RankerArguments
+from .train.training_arguments import RankerTrainingArguments
+from .train.data_arguments import RankerDataArguments
+from .train.model_arguments import RankerDotArguments, RankerCatArguments, RankerModelArguments
 from .datasets import *
 from .modelling import *
