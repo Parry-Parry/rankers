@@ -135,6 +135,7 @@ class PairTransformer(pt.Transformer):
         return pt.model.add_ranks(res)
 
 class CatConfig(PretrainedConfig):
+    model_type = 'Cat'
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs) -> 'CatConfig':
         config = super().from_pretrained(model_name_or_path, **kwargs)

@@ -13,6 +13,7 @@ DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
 class Seq2SeqConfig(PreTrainedConfig):
+    model_type = 'Seq2Seq'
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs) -> 'Seq2SeqConfig':
         config = super().from_pretrained(model_name_or_path, **kwargs)
@@ -186,6 +187,7 @@ class Seq2Seq(PreTrainedModel):
         return cls(model, config)
     
 class CausalLMConfig(PreTrainedConfig):
+    model_type = 'CausalLM'
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs) -> 'CausalLMConfig':
         config = super().from_pretrained(model_name_or_path, **kwargs)
@@ -263,7 +265,7 @@ class CausalLM(Seq2Seq):
     config : AutoConfig
         the configuration for the model
     """
-    model_architecture = 'CausalLM'
+    model_type = 'CausalLM'
     architecture_class = AutoModelForCausalLM
     transformer_class = CausalLMTransformer
     config_class = CausalLMConfig
