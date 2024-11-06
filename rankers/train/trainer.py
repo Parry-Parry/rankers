@@ -18,8 +18,8 @@ LOSS_NAME = "loss.pt"
 class RankerTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
 
-    def __init__(self, *args, loss_fn=None, **kwargs) -> None:
-        super(RankerTrainer, self).__init__(*args, **kwargs)
+    def __init__(self, loss_fn=None, **kwargs) -> None:
+        super(RankerTrainer, self).__init__(**kwargs)
         if isinstance(loss_fn, str): 
             if loss_fn not in LOSS_REGISTRY.availible: raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}")
             self.loss = LOSS_REGISTRY.get(loss_fn)
@@ -149,9 +149,7 @@ class RankerTrainer(Trainer):
         )
 
         self.log(output.metrics)
-
         self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, output.metrics)
-
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
         return output.metrics
