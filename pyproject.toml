@@ -1,2 +1,38 @@
-# standard setup
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
+[project]
+name = "rankers"
+version = "0.0.3"
+dependencies = [
+  "torch",
+  "transformers",
+  "datasets",
+  "python-terrier",
+  "pandas",
+  "more_itertools",
+]
+requires-python = ">=3.9"
+authors = [
+  {name = "Andrew Parry", email = "0andrewparry@gmail.com"}
+]
+maintainers = [
+  {name = "Andrew Parry", email = "0andrewparry@gmail.com"}
+]
+description = "A package for training and evaluating neural rankers."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["pytorch", "transformers", "ranking", "information retrieval"]
+classifiers = [
+    "Programming Language :: Python"
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Repository = "https://github.com/Parry-Parry/rankers.git"
