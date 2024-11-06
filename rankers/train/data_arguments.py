@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import json
 from enum import Enum
 import torch
@@ -15,23 +15,23 @@ class RankerDataArguments:
     training_dataset_file : str = field(
         metadata={"help": "Path to the training dataset"}
     )
-    teacher_file : str = field(
+    teacher_file : Optional[str] = field(
         default=None,
         metadata={"help": "Path to the teacher scores"}
     )
-    validation_dataset_file : str = field(
+    validation_dataset_file : Optional[str] = field(
         default=None,
         metadata={"help": "Path to the validation dataset"}
     )
-    test_dataset_file : str = field(
+    test_dataset_file : Optional[str] = field(
         default=None,
         metadata={"help": "Path to the test dataset"}
     )
-    ir_dataset : str = field(
+    ir_dataset : Optional[str] = field(
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
-    use_positive : bool = field(
+    use_positive : Optional[bool] = field(
         default=False,
         metadata={"help": "Use positive samples locatd in 'doc_id_a' column otherwise use solely 'doc_id_b'"}
     )

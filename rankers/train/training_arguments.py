@@ -2,6 +2,7 @@ from transformers import TrainingArguments
 from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
+from typing import Optional
 from enum import Enum
 from .. import is_ir_measures_available, is_ir_datasets_available, seed_everything
 
@@ -21,15 +22,15 @@ def get_loss(loss_fn : str):
 
 @dataclass
 class RankerTrainingArguments(TrainingArguments):
-    group_size : int = field(
+    group_size : Optional[int] = field(
         default=2,
         metadata={"help": "Number of documents per query"}
     )
-    ir_dataset : str = field(
+    ir_dataset : Optional[str] = field(
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
-    wandb_project : str = field(
+    wandb_project : Optional[str] = field(
         default=None,
         metadata={"help": "Wandb project name"}
     )

@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, fields, asdict
 from typing import Dict, Any
 import json
 from enum import Enum
+from typing import Optional
 import torch
 from .. import is_torch_available
 
@@ -61,19 +62,19 @@ class RankerModelArguments:
 
 @dataclass
 class RankerDotArguments(RankerModelArguments):
-    pooling : str = field(
+    pooling : Optional[str] = field(
         default='cls',
         metadata={"help": "Pooling strategy"}
     )
-    use_pooler : bool = field(
+    use_pooler : Optional[bool] = field(
         default=False,
         metadata={"help": "Whether to use the pooler MLP"}
     )
-    model_tied : bool = field(
+    model_tied : Optional[bool] = field(
         default=False,
         metadata={"help": "Whether to tie the weights of the query and document encoder"}
     )
-    in_batch_loss : str = field(
+    in_batch_loss : Optional[str] = field(
         default=None,
         metadata={"help": "Loss function to use for in-batch negatives"}
     )
