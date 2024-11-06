@@ -31,9 +31,9 @@ class TrainingDataset(Dataset):
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
-        if self.teacher_file: self.teacher = load_json(self.teacher_file)
+        if self.teacher_data: self.teacher = load_json(self.teacher_data)
 
-        self.labels = True if self.teacher_file else False
+        self.labels = True if self.teacher_data else False
         self.multi_negatives = True if (type(self.training_dataset['doc_id_b'].iloc[0]) == list) else False
 
         if self.use_positive:
