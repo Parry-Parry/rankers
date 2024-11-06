@@ -27,6 +27,7 @@ class RankerTrainer(Trainer):
             self.loss = loss_fn
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
+        print(self.callback_handler.callbacks)
 
     def compute_loss(self, model, inputs, return_outputs=False):
         outputs = model(self.loss, **inputs)
