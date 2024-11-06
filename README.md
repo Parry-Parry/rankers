@@ -4,10 +4,9 @@ Welcome to the `rankers` repository! This package provides tools and examples fo
 
 ## Features
 
-- **Flexible Model Training**: Use the `RankerTrainer` class to train different ranking models like BERT.
-- **Data Handling**: Supports various data formats and efficient data loading with the `TrainingDataset` and `CatDataCollator`.
+- **Flexible Model Training**: Use the `RankerTrainer` class to train common ranking architectures.
+- **Data Handling**: `ir_datasets` integration and ir-specific data processing in a familiar format.
 - **Transformers Integration**: Built on top of the Hugging Face `transformers` library for easy model loading and training.
-- **Optimization and Scheduling**: Utilize advanced optimizers like `AdamW` and learning rate schedulers.
 - **Experiment Tracking**: Integrated with `wandb` for tracking experiments and hyperparameters.
 
 ## Install 
