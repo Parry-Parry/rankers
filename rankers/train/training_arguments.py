@@ -4,6 +4,7 @@ from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
 from typing import List, Optional
 from enum import Enum
+import os
 from .. import is_ir_measures_available, seed_everything
 
 
@@ -42,6 +43,9 @@ class RankerTrainingArguments(TrainingArguments):
     def __post_init__(self):
         super().__post_init__()
         seed_everything(self.seed)
+
+        if self.wandb_project is not None:
+            os.environ['WANDB_PROJECT'] = self.wandb_project
         assert self.group_size > 0, "Group size must be greater than 0"
         if len(self.eval_metrics) > 0:
             self.eval_metrics = [parse_ir_measure(metric) for metric in self.eval_metrics]
