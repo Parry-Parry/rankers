@@ -25,7 +25,7 @@ class TrainingDataset(Dataset):
         self.__post_init__()
 
     def __post_init__(self):
-
+        assert self.corpus is not None, "Cannot instantiate a text-based dataset without a lookup"
         for column in 'query_id', 'doc_id_a', 'doc_id_b':
             if column not in self.training_dataset.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in triples dataframe")
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
