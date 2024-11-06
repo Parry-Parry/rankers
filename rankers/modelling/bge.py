@@ -1,6 +1,8 @@
 from transformers import PretrainedConfig, PreTrainedModel, PreTrainedTokenizer
 from .dot import Dot, Pooler
+from .._util import not_tested 
 
+@not_tested
 class BGEConfig(PretrainedConfig):
     """Configuration for Dot Model
     
@@ -63,7 +65,9 @@ class BGEConfig(PretrainedConfig):
         config.pooler_dim_out = pooler_dim_out
         config.pooler_tied = pooler_tied
         return config
-
+    
+    
+@not_tested
 class BGE(Dot):
     """
     Dot Model for Fine-Tuning 

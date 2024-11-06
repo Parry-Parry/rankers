@@ -6,6 +6,15 @@ import ir_datasets as irds
 
 logger = logging.getLogger(__name__)
 
+# decorator which raises warning that this class is not fully tested
+def not_tested(cls):
+    class NewCls(cls):
+        def __init__(self, *args, **kwargs):
+            logger.warning(f"{cls.__name__} is not fully tested")
+            super().__init__(*args, **kwargs)
+    return NewCls
+
+
 def _pivot(frame, negatives = None):
     new = []
     for row in frame.itertuples():
