@@ -10,8 +10,8 @@ import numpy as np
 import torch.nn.functional as F
 
 class CatTransformer(pt.Transformer):
-    cls_architecture = AutoModelForSequenceClassification
-    cls_config = AutoConfig
+    architecture_class = AutoModelForSequenceClassification
+    config_class = AutoConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -41,8 +41,8 @@ class CatTransformer(pt.Transformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
+        config = cls.config_class.from_pretrained(model_name_or_path) if config is None else config
+        model = cls.architecture_class.from_pretrained(model_name_or_path, config=config, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
@@ -73,8 +73,8 @@ class CatTransformer(pt.Transformer):
         return pt.model.add_ranks(res)
 
 class PairTransformer(pt.Transformer):
-    cls_architecture = AutoModelForSequenceClassification
-    cls_config = AutoConfig
+    architecture_class = AutoModelForSequenceClassification
+    config_class = AutoConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -114,8 +114,8 @@ class PairTransformer(pt.Transformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs).cuda().eval()
+        config = cls.config_class.from_pretrained(model_name_or_path) if config is None else config
+        model = cls.architecture_class.from_pretrained(model_name_or_path, config=config, **kwargs).cuda().eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
     
@@ -144,10 +144,10 @@ class Cat(PreTrainedModel):
     config : AutoConfig
         the configuration for the model
     """
-    model_architecture = 'Cat'
-    cls_architecture = AutoModelForSequenceClassification
-    cls_config = AutoConfig
-    transformer_architecture = CatTransformer
+    model_type = 'Cat'
+    architecture_class = AutoModelForSequenceClassification
+    config_class = AutoConfig
+    transformer_class = CatTransformer
     def __init__(
         self,
         model: PreTrainedModel,
@@ -179,15 +179,15 @@ class Cat(PreTrainedModel):
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.model.load_state_dict(self.cls_architecture.from_pretrained(model_dir).state_dict())
+        return self.model.load_state_dict(self.architecture_class.from_pretrained(model_dir).state_dict())
 
     def to_pyterrier(self) -> "pt.Transformer":
-        return self.transformer_architecture.from_model(self.model, self.tokenizer, text_field='text')
+        return self.transformer_class.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2, config=None, **kwargs) -> "Cat":
         """Load model from a directory"""
-        config = cls.cls_config.from_pretrained(model_dir_or_name) if config is None else config
-        model = cls.cls_architecture.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config **kwargs)
+        config = cls.config_class.from_pretrained(model_dir_or_name) if config is None else config
+        model = cls.architecture_class.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)

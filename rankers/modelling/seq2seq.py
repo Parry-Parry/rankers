@@ -13,7 +13,7 @@ DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
 class Seq2SeqTransformer(pt.Transformer):
-    cls_architecture = AutoModelForSeq2SeqLM
+    architecture_class = AutoModelForSeq2SeqLM
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -48,7 +48,7 @@ class Seq2SeqTransformer(pt.Transformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
+        model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, prompt, verbose=verbose)
@@ -125,10 +125,10 @@ class Seq2Seq(PreTrainedModel):
     config : AutoConfig
         the configuration for the model
     """
-    model_architecture = 'Seq2Seq'
-    cls_architecture = AutoModelForSeq2SeqLM
-    cls_config = AutoConfig
-    transformer_architecture = Seq2SeqTransformer
+    model_type = 'Seq2Seq'
+    architecture_class = AutoModelForSeq2SeqLM
+    config_class = AutoConfig
+    transformer_class = Seq2SeqTransformer
     def __init__(
         self,
         model: AutoModelForSeq2SeqLM,
@@ -160,10 +160,10 @@ class Seq2Seq(PreTrainedModel):
     
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
-        return self.model.load_state_dict(AutoModelForSeq2SeqLM.from_pretrained(model_dir).state_dict())
+        return self.model.load_state_dict(self.architecture_class.from_pretrained(model_dir).state_dict())
     
     def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return self.transformer_architecture.from_model(self.model, self.tokenizer, text_field='text')
+        return self.transformer_class.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
     def from_pretrained(cls, 
@@ -171,13 +171,13 @@ class Seq2Seq(PreTrainedModel):
                         config : PreTrainedConfig = None, 
                         **kwargs):
         """Load model from a directory"""
-        config = cls.cls_config.from_pretrained(model_dir_or_name)
-        model = cls.cls_architecture.from_pretrained(model_dir_or_name, **kwargs)
+        config = cls.config_class.from_pretrained(model_dir_or_name)
+        model = cls.architecture_class.from_pretrained(model_dir_or_name, **kwargs)
         return cls(model, config)
     
 class CausalLMTransformer(Seq2SeqTransformer):
-    cls_architecture = AutoModelForCausalLM
-    cls_config = AutoConfig
+    architecture_class = AutoModelForCausalLM
+    config_class = AutoConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -202,8 +202,8 @@ class CausalLMTransformer(Seq2SeqTransformer):
                         verbose : bool = False,
                         **kwargs
                         ):
-        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
+        config = cls.config_class.from_pretrained(model_name_or_path) if config is None else config
+        model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, prompt, verbose=verbose)
 
@@ -248,8 +248,8 @@ class CausalLM(Seq2Seq):
         the configuration for the model
     """
     model_architecture = 'CausalLM'
-    cls_architecture = AutoModelForCausalLM
-    transformer_architecture = CausalLMTransformer
+    architecture_class = AutoModelForCausalLM
+    transformer_class = CausalLMTransformer
     def __init__(self, model, tokenizer, config):
         raise NotImplementedError("Incomplete, do not use")
         super().__init__(model, tokenizer, config)
