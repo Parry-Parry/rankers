@@ -15,7 +15,7 @@ def parse_ir_measure(measure : str):
 def get_loss(loss_fn : str):
     from .loss import LOSS_REGISTRY
     if isinstance(loss_fn, str):
-        if loss_fn not in LOSS_REGISTRY.availible: raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}")
+        if loss_fn not in LOSS_REGISTRY.available: raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.available}")
         return LOSS_REGISTRY.get(loss_fn)
     else:
         return loss_fn
