@@ -2,7 +2,7 @@ from transformers import TrainingArguments
 from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
-from typing import List, Optional, Union
+from typing import List, Optional
 from enum import Enum
 from .. import is_ir_measures_available, seed_everything
 
