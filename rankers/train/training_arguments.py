@@ -1,4 +1,5 @@
-from transformers import TrainingArguments, AcceleratorConfig
+from transformers import TrainingArguments
+from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
 from enum import Enum
