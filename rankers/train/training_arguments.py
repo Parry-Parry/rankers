@@ -2,7 +2,7 @@ from transformers import TrainingArguments
 from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
-from typing import Optional
+from typing import List, Optional
 from enum import Enum
 from .. import is_ir_measures_available, is_ir_datasets_available, seed_everything
 
@@ -25,6 +25,10 @@ class RankerTrainingArguments(TrainingArguments):
     group_size : Optional[int] = field(
         default=2,
         metadata={"help": "Number of documents per query"}
+    )
+    eval_metrics : Optional[List[str]] = field(
+        default_factory=lambda: [],
+        metadata={"help": "Evaluation metrics"}
     )
     wandb_project : Optional[str] = field(
         default=None,
