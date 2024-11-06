@@ -3,8 +3,6 @@ import os
 import torch
 from torch import nn
 import pyterrier as pt
-if not pt.started():
-    pt.init()
 from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer, AutoConfig
 from typing import Union
 import pandas as pd

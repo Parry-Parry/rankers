@@ -1,6 +1,4 @@
 import pyterrier as pt
-if not pt.started():
-    pt.init()
 from transformers import PreTrainedModel, PreTrainedConfig, PreTrainedTokenizer, AutoTokenizer, AutoConfig, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 from typing import Union
 import torch
