@@ -85,4 +85,4 @@ class RankerDotArguments(RankerModelArguments):
 
     
 
-CatArguments = RankerModelArguments
+RankerCatArguments = RankerModelArguments
