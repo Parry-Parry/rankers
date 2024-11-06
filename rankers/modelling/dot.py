@@ -5,12 +5,12 @@ from torch import nn
 import pyterrier as pt
 if not pt.started():
     pt.init()
-from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer
+from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer, AutoConfig
 from typing import Union
 import pandas as pd
 import numpy as np
 from more_itertools import chunked
-from ..train.loss import batched_dot_product, cross_dot_product, LOSS_REGISTRY
+from ..train.loss import batched_dot_product, cross_dot_product
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -419,3 +419,6 @@ class Dot(PreTrainedModel):
     
     def to_pyterrier(self) -> "DotTransformer":
         return self.transformer_class.from_model(self, self.tokenizer, text_field='text')
+
+AutoConfig.register("Dot", DotConfig)
+AutoModel.register(DotConfig, Dot)

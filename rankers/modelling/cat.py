@@ -134,6 +134,12 @@ class PairTransformer(pt.Transformer):
         res = res.sort_values(['qid', 'score'], ascending=[True, False])
         return pt.model.add_ranks(res)
 
+class CatConfig(PreTrainedConfig):
+    @classmethod
+    def from_pretrained(cls, model_name_or_path, **kwargs) -> 'CatConfig':
+        config = super().from_pretrained(model_name_or_path, **kwargs)
+        return config
+
 class Cat(PreTrainedModel):
     """Wrapper for Cat Model
     
@@ -146,7 +152,7 @@ class Cat(PreTrainedModel):
     """
     model_type = 'Cat'
     architecture_class = AutoModelForSequenceClassification
-    config_class = AutoConfig
+    config_class = CatConfig
     transformer_class = CatTransformer
     def __init__(
         self,
@@ -191,3 +197,6 @@ class Cat(PreTrainedModel):
         model = cls.architecture_class.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
+
+AutoConfig.register("Cat", CatConfig)
+AutoModelForSequenceClassification.register(CatConfig, Cat)

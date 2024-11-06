@@ -12,8 +12,15 @@ import numpy as np
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
 
+class Seq2SeqConfig(PreTrainedConfig):
+    @classmethod
+    def from_pretrained(cls, model_name_or_path, **kwargs) -> 'Seq2SeqConfig':
+        config = super().from_pretrained(model_name_or_path, **kwargs)
+        return config
+
 class Seq2SeqTransformer(pt.Transformer):
     architecture_class = AutoModelForSeq2SeqLM
+    config_class = Seq2SeqConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -82,6 +89,8 @@ class Seq2SeqTransformer(pt.Transformer):
         return res
 
 class Seq2SeqDuoTransformer(Seq2SeqTransformer):
+    architecture_class = AutoModelForSeq2SeqLM
+    config_class = Seq2SeqConfig
     def __init__(self,
                     model : PreTrainedModel,
                     tokenizer : PreTrainedTokenizer,
@@ -127,7 +136,7 @@ class Seq2Seq(PreTrainedModel):
     """
     model_type = 'Seq2Seq'
     architecture_class = AutoModelForSeq2SeqLM
-    config_class = AutoConfig
+    config_class = Seq2SeqConfig
     transformer_class = Seq2SeqTransformer
     def __init__(
         self,
@@ -175,9 +184,15 @@ class Seq2Seq(PreTrainedModel):
         model = cls.architecture_class.from_pretrained(model_dir_or_name, **kwargs)
         return cls(model, config)
     
+class CausalLMConfig(PreTrainedConfig):
+    @classmethod
+    def from_pretrained(cls, model_name_or_path, **kwargs) -> 'CausalLMConfig':
+        config = super().from_pretrained(model_name_or_path, **kwargs)
+        return config
+
 class CausalLMTransformer(Seq2SeqTransformer):
     architecture_class = AutoModelForCausalLM
-    config_class = AutoConfig
+    config_class = CausalLMConfig
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
@@ -250,6 +265,12 @@ class CausalLM(Seq2Seq):
     model_architecture = 'CausalLM'
     architecture_class = AutoModelForCausalLM
     transformer_class = CausalLMTransformer
+    config_class = CausalLMConfig
     def __init__(self, model, tokenizer, config):
         raise NotImplementedError("Incomplete, do not use")
         super().__init__(model, tokenizer, config)
+
+AutoModelForSeq2SeqLM.register("Seq2Seq", Seq2Seq)
+AutoModelForCausalLM.register("CausalLM", CausalLM)
+AutoConfig.register("Seq2Seq", Seq2SeqConfig)
+AutoConfig.register("CausalLM", CausalLMConfig)
