@@ -60,7 +60,7 @@ class RankerTrainingArguments(TrainingArguments):
                 d[k] = v.value
             if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Enum):
                 d[k] = [x.value for x in v]
-            if isinstance(v, list) and is_ir_measures_available():
+            if isinstance(v, list) and is_ir_measures_available() and len(v) > 0:
                 import ir_measures
                 if type(v[0]) == ir_measures.Measure:
                     d[k] = [x.NAME for x in v]
