@@ -1,5 +1,5 @@
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer
-from transformers import OptionalDependencyNotAvailable
+from transformers import PreTrainedModel, PreTrainedTokenizer, FlaxAutoModelForSequenceClassification, AutoTokenizer, OptionalDependencyNotAvailable
+from transformers import 
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
@@ -26,7 +26,10 @@ class FlaxCat(PreTrainedModel):
     config : AutoConfig
         the configuration for the model
     """
-    model_architecture = 'Cat'
+    model_type = 'FlaxCat'
+    architecture_class = FlaxAutoModelForSequenceClassification
+    config_class = AutoConfig
+    transformer_class = CatTransformer
     def __init__(
         self,
         classifier: PreTrainedModel,
@@ -67,7 +70,7 @@ class FlaxCat(PreTrainedModel):
     @classmethod
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2):
         """Load classifier from a directory"""
-        config = CatConfig.from_pretrained(model_dir_or_name)
+        config = cls.config_class.from_pretrained(model_dir_or_name)
         classifier = AutoModelForSequenceClassification.from_pretrained(model_dir_or_name, num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(classifier, tokenizer, config)
