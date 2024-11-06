@@ -26,10 +26,6 @@ class RankerTrainingArguments(TrainingArguments):
         default=2,
         metadata={"help": "Number of documents per query"}
     )
-    ir_dataset : Optional[str] = field(
-        default=None,
-        metadata={"help": "IR Dataset for text lookup"}
-    )
     wandb_project : Optional[str] = field(
         default=None,
         metadata={"help": "Wandb project name"}
@@ -42,13 +38,6 @@ class RankerTrainingArguments(TrainingArguments):
         if len(self.eval_metrics) > 0:
             self.eval_metrics = [parse_ir_measure(metric) for metric in self.eval_metrics]
         self.loss_fn = get_loss(self.loss_fn)
-        if self.ir_dataset is not None:
-            assert is_ir_datasets_available(), "Please install ir_datasets to use the ir_dataset argument"
-            try:
-                import ir_datasets
-                self.ir_dataset = ir_datasets.load(self.ir_dataset)
-            except Exception as e:
-                raise ValueError(f"Unable to load ir_dataset: {e}")
     
     def to_dict(self):
         """
