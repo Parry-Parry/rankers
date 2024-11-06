@@ -2,9 +2,9 @@ from transformers import TrainingArguments
 from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.utils import is_accelerate_available
 from dataclasses import field, fields, dataclass
-from typing import List, Optional
+from typing import List, Optional, Union
 from enum import Enum
-from .. import is_ir_measures_available, is_ir_datasets_available, seed_everything
+from .. import is_ir_measures_available, seed_everything
 
 
 def parse_ir_measure(measure : str):
@@ -33,6 +33,10 @@ class RankerTrainingArguments(TrainingArguments):
     wandb_project : Optional[str] = field(
         default=None,
         metadata={"help": "Wandb project name"}
+    )
+    loss_fn : Optional[Union[str, callable]] = field(
+        default='lce',
+        metadata={"help": "Loss function to use"}
     )
 
     def __post_init__(self):
