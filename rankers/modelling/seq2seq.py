@@ -176,12 +176,12 @@ class Seq2Seq(PreTrainedModel):
 
     @classmethod
     def from_pretrained(cls, 
-                        model_dir_or_name : str, 
+                        model_name_or_path : str, 
                         config : PreTrainedConfig = None, 
                         **kwargs):
         """Load model from a directory"""
-        config = cls.config_class.from_pretrained(model_dir_or_name)
-        model = cls.architecture_class.from_pretrained(model_dir_or_name, **kwargs)
+        config = cls.config_class.from_pretrained(model_name_or_path)
+        model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
         return cls(model, config)
     
 class CausalLMConfig(PreTrainedConfig):

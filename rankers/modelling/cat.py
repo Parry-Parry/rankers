@@ -190,11 +190,11 @@ class Cat(PreTrainedModel):
         return self.transformer_class.from_model(self.model, self.tokenizer, text_field='text')
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name : str, num_labels=2, config=None, **kwargs) -> "Cat":
+    def from_pretrained(cls, model_name_or_path : str, num_labels=2, config=None, **kwargs) -> "Cat":
         """Load model from a directory"""
-        config = cls.config_class.from_pretrained(model_dir_or_name, num_labels=num_labels) if config is None else config
-        model = cls.architecture_class.from_pretrained(model_dir_or_name, config=config, **kwargs)
-        tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
+        config = cls.config_class.from_pretrained(model_name_or_path, num_labels=num_labels) if config is None else config
+        model = cls.architecture_class.from_pretrained(model_name_or_path, config=config, **kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config)
 
 AutoConfig.register("Cat", CatConfig)

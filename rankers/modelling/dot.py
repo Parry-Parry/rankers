@@ -400,19 +400,19 @@ class Dot(PreTrainedModel):
         if self.config.use_pooler: self.pooler.load_state_dict(self.architecture_class.from_pretrained(model_dir + "/pooler").state_dict())
 
     @classmethod
-    def from_pretrained(cls, model_dir_or_name, config = None, **kwargs) -> "Dot":
+    def from_pretrained(cls, model_name_or_path, config = None, **kwargs) -> "Dot":
         """Load model"""
-        if os.path.isdir(model_dir_or_name):
-            config = cls.config_class.from_pretrained(model_dir_or_name) if config is None else config
-            model = cls.architecture_class.from_pretrained(model_dir_or_name, **kwargs)
-            tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-            model_d = None if config.model_tied else cls.architecture_class.from_pretrained(model_dir_or_name + "/model_d", **kwargs) 
-            pooler = None if not config.use_pooler else Pooler.from_pretrained(model_dir_or_name + "/pooler")
+        if os.path.isdir(model_name_or_path):
+            config = cls.config_class.from_pretrained(model_name_or_path) if config is None else config
+            model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
+            tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+            model_d = None if config.model_tied else cls.architecture_class.from_pretrained(model_name_or_path + "/model_d", **kwargs) 
+            pooler = None if not config.use_pooler else Pooler.from_pretrained(model_name_or_path + "/pooler")
 
             return cls(model, tokenizer, config, model_d, pooler)
-        config = cls.config_class(model_dir_or_name, **kwargs) if config is None else config
-        tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
-        model = cls.architecture_class.from_pretrained(model_dir_or_name)
+        config = cls.config_class(model_name_or_path, **kwargs) if config is None else config
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        model = cls.architecture_class.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config)
     
     def to_pyterrier(self) -> "DotTransformer":
