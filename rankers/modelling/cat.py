@@ -193,7 +193,7 @@ class Cat(PreTrainedModel):
     def from_pretrained(cls, model_dir_or_name : str, num_labels=2, config=None, **kwargs) -> "Cat":
         """Load model from a directory"""
         config = cls.config_class.from_pretrained(model_dir_or_name) if config is None else config
-        model = cls.architecture_class.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config **kwargs)
+        model = cls.architecture_class.from_pretrained(model_dir_or_name, num_labels=num_labels, config=config, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_dir_or_name)
         return cls(model, tokenizer, config)
 
