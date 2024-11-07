@@ -46,8 +46,8 @@ class RankerTrainer(Trainer):
     
     def compute_metrics(self, result_frame : pd.DataFrame):
         from ir_measures import evaluator, RR
-        qrels = self.eval_dataset.qrels
-        metrics = self.args.eval_metrics if self.args.eval_metrics else [RR@10]
+        qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
+        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [RR@10]
         evaluator = evaluator(metrics, qrels)
 
         return evaluator.calc_aggregate(result_frame)
@@ -56,7 +56,7 @@ class RankerTrainer(Trainer):
         self,
         dataset: Dataset,
         description: str,
-        metric_key_prefix: str = "eval",
+        metric_key_prefix: str = "val",
     ) -> EvalLoopOutput:
         """
         Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
@@ -104,7 +104,7 @@ class RankerTrainer(Trainer):
         logger.info(f"  Batch size = {batch_size}")
 
         eval_model = model.to_pyterrier()
-        result_frame = eval_model.transform(dataset.evaluation_data)
+        result_frame = eval_model.transform(dataset.validation_data)
         metrics = self.compute_metrics(result_frame)
 
         num_samples = len(dataset)

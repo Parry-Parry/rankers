@@ -47,30 +47,6 @@ class RankerTrainingArguments(TrainingArguments):
         if self.wandb_project is not None:
             os.environ['WANDB_PROJECT'] = self.wandb_project
         assert self.group_size > 0, "Group size must be greater than 0"
-        if len(self.eval_metrics) > 0:
-            self.eval_metrics = [parse_ir_measure(metric) for metric in self.eval_metrics]
+        
+        self.eval_ir_metrics = [parse_ir_measure(metric) for metric in self.eval_metrics] if len(self.eval_metrics) > 0 else None
         self.loss_fn = get_loss(self.loss_fn)
-    
-    def to_dict(self):
-        """
-        Serializes this instance while replace `Enum` by their values (for JSON serialization support). It obfuscates
-        the token values by removing their value.
-        """
-        # filter out fields that are defined as field(init=False)
-        d = {field.name: getattr(self, field.name) for field in fields(self) if field.init}
-
-        for k, v in d.items():
-            if isinstance(v, Enum):
-                d[k] = v.value
-            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Enum):
-                d[k] = [x.value for x in v]
-            if isinstance(v, list) and is_ir_measures_available() and len(v) > 0:
-                import ir_measures
-                if type(v[0]) == ir_measures.Measure:
-                    d[k] = [x.NAME for x in v]
-            if k.endswith("_token"):
-                d[k] = f"<{k.upper()}>"
-            # Handle the accelerator_config if passed
-            if is_accelerate_available() and isinstance(v, AcceleratorConfig):
-                d[k] = v.to_dict()
-        self._dict_torch_dtype_to_str(d)

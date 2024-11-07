@@ -35,6 +35,10 @@ class RankerDataArguments:
         default=False,
         metadata={"help": "Use positive samples locatd in 'doc_id_a' column otherwise use solely 'doc_id_b'"}
     )
+    eval_ir_dataset : Optional[str] = field(
+        default=None,
+        metadata={"help": "IR Dataset for evaluation"}
+    )
 
     def __post_init__(self):
         if self.ir_dataset is not None:
@@ -44,6 +48,13 @@ class RankerDataArguments:
                 self.ir_dataset = ir_datasets.load(self.ir_dataset)
             except Exception as e:
                 raise ValueError(f"Unable to load ir_dataset: {e}")
+        if self.eval_ir_dataset is not None:
+            assert is_ir_datasets_available(), "Please install ir_datasets to use the eval_ir_dataset argument"
+            try:
+                import ir_datasets
+                self.eval_ir_dataset = ir_datasets.load(self.eval_ir_dataset)
+            except Exception as e:
+                raise ValueError(f"Unable to load eval_ir_dataset: {e}")
         assert self.training_dataset_file.endswith('jsonl') or self.training_dataset_file.endswith('jsonl.gz'), "Training dataset should be a JSONL file"
         self.training_data = pd.read_json(self.training_dataset_file, lines=True, orient='records')
         if self.teacher_file:
