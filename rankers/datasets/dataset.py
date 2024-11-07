@@ -13,7 +13,7 @@ class TrainingDataset(Dataset):
                  corpus : Union[Corpus, irds.Dataset],
                  teacher_data : Optional[dict] = None,
                  group_size : int = 2,
-                 use_positive : bool = False,
+                 use_positive : bool = True,
                  ) -> None:
         super().__init__()
         self.training_dataset = training_dataset
