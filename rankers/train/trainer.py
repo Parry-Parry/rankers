@@ -28,7 +28,12 @@ class RankerTrainer(Trainer):
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, 
+                     model, 
+                     inputs, 
+                     return_outputs=False,
+                     **kwargs, # handle new arguments
+                     ):
         outputs = model(self.loss, **inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
@@ -57,6 +62,7 @@ class RankerTrainer(Trainer):
         dataset: Dataset,
         description: str,
         metric_key_prefix: str = "val",
+        **kwargs, # handle new arguments
     ) -> EvalLoopOutput:
         """
         Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
@@ -117,6 +123,7 @@ class RankerTrainer(Trainer):
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
+        **kwargs, # handle new arguments
     ) -> Dict[str, float]:
         # handle multipe eval datasets
         override = eval_dataset is not None
