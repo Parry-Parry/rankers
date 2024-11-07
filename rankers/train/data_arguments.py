@@ -31,9 +31,9 @@ class RankerDataArguments:
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
-    use_positive : Optional[bool] = field(
+    no_positive : Optional[bool] = field(
         default=False,
-        metadata={"help": "Use positive samples locatd in 'doc_id_a' column otherwise use solely 'doc_id_b'"}
+        metadata={"help": "Dont use positive samples locatd in 'doc_id_a' column instead use solely 'doc_id_b'"}
     )
     eval_ir_dataset : Optional[str] = field(
         default=None,

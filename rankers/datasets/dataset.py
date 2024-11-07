@@ -13,14 +13,14 @@ class TrainingDataset(Dataset):
                  corpus : Union[Corpus, irds.Dataset],
                  teacher_data : Optional[dict] = None,
                  group_size : int = 2,
-                 use_positive : bool = True,
+                 no_positive : bool = False,
                  ) -> None:
         super().__init__()
         self.training_dataset = training_dataset
         self.corpus = corpus
         self.teacher_data = teacher_data
         self.group_size = group_size
-        self.use_positive = use_positive
+        self.no_positive = no_positive
 
         self.__post_init__()
 
@@ -36,7 +36,7 @@ class TrainingDataset(Dataset):
         self.labels = True if self.teacher_data else False
         self.multi_negatives = True if (type(self.training_dataset['doc_id_b'].iloc[0]) == list) else False
 
-        if self.use_positive:
+        if not self.no_positive:
             if self.group_size > 2 and self.multi_negatives:
                 self.training_dataset['doc_id_b'] = self.training_dataset['doc_id_b'].map(lambda x: random.sample(x, self.group_size-1))
             elif self.group_size == 2 and self.multi_negatives:
@@ -70,13 +70,13 @@ class TrainingDataset(Dataset):
         item = self.training_dataset[idx]
         qid, doc_id_a, doc_id_b = item.query_id, item.doc_id_a, item.doc_id_b
         query = self.queries[str(qid)]
-        texts = [self.docs[str(doc_id_a)]] if self.use_positive else []
+        texts = [self.docs[str(doc_id_a)]] if not self.no_positive else []
 
         if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
         else: texts.append(self.docs[str(doc_id_b)])
 
         if self.labels:
-            scores = [self._teacher(str(qid), str(doc_id_a), positive=True)]  if self.use_positive else []
+            scores = [self._teacher(str(qid), str(doc_id_a), positive=True)] if not self.no_positive else []
             if self.multi_negatives: scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
             else: scores.append(self._teacher(str(qid), str(doc_id_b)))
             return (query, texts, scores)
