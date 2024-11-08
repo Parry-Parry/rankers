@@ -46,7 +46,6 @@ class RankerTrainingArguments(TrainingArguments):
 
         if self.wandb_project is not None:
             os.environ['WANDB_PROJECT'] = self.wandb_project
-            self.report_to = 'wandb'
         assert self.group_size > 0, "Group size must be greater than 0"
         
         self.eval_ir_metrics = [parse_ir_measure(metric) for metric in self.eval_metrics] if len(self.eval_metrics) > 0 else None
