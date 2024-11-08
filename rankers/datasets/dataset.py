@@ -17,8 +17,6 @@ class TrainingDataset(Dataset):
                  group_size: int = 2,
                  no_positive: bool = False
                  ) -> None:
-        super().__init__()
-
         assert training_dataset_file.endswith('jsonl'), "Training dataset should be a JSONL file and should not be compressed"
 
         self.training_dataset_file = training_dataset_file
@@ -28,7 +26,7 @@ class TrainingDataset(Dataset):
         self.no_positive = no_positive
 
         self.line_offsets = self._get_line_offsets() 
-
+        super().__init__()
         self.__post_init__()
 
     def _get_line_offsets(self):
