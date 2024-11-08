@@ -4,8 +4,10 @@ import pandas as pd
 import torch
 from typing import Optional, Union
 import ir_datasets as irds
+import json
 from .._util import load_json, initialise_irds_eval
 from .corpus import Corpus
+import gzip
 
 class TrainingDataset(Dataset):
     def __init__(self, 
@@ -14,6 +16,7 @@ class TrainingDataset(Dataset):
                  teacher_data : Optional[dict] = None,
                  group_size : int = 2,
                  no_positive : bool = False,
+                 shuffle_buffer_size : int = 10000
                  ) -> None:
         super().__init__()
         self.training_dataset = training_dataset
@@ -21,31 +24,27 @@ class TrainingDataset(Dataset):
         self.teacher_data = teacher_data
         self.group_size = group_size
         self.no_positive = no_positive
+        self.shuffle_buffer_size = shuffle_buffer_size
 
         self.__post_init__()
 
     def __post_init__(self):
         assert self.corpus is not None, "Cannot instantiate a text-based dataset without a lookup"
-        for column in 'query_id', 'doc_id_a', 'doc_id_b':
-            if column not in self.training_dataset.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in triples dataframe")
+        
+        # Load corpus for lookups
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
-        if self.teacher_data: self.teacher = load_json(self.teacher_data)
+        # Check for optional teacher data and multi-negative configurations
+        if self.teacher_data: 
+            self.teacher = load_json(self.teacher_data)
+            self.labels = True
+        else:
+            self.labels = False
 
-        self.labels = True if self.teacher_data else False
-        self.multi_negatives = True if (type(self.training_dataset['doc_id_b'].iloc[0]) == list) else False
-
-        if not self.no_positive:
-            if self.group_size > 2 and self.multi_negatives:
-                self.training_dataset['doc_id_b'] = self.training_dataset['doc_id_b'].map(lambda x: random.sample(x, self.group_size-1))
-            elif self.group_size == 2 and self.multi_negatives:
-                self.training_dataset['doc_id_b'] = self.training_dataset['doc_id_b'].map(lambda x: random.choice(x) if len(x) > 1 else x[0])
-                self.multi_negatives = False
-            elif self.group_size > 2 and not self.multi_negatives:
-                raise ValueError("Group size > 2 not supported for single negative samples")
-
-        self.training_dataset = [*self.training_dataset.itertuples(index=False)]
+        # Determine if multi-negative samples are present
+        first_entry = next(iter(self.training_dataset), None)
+        self.multi_negatives = isinstance(first_entry['doc_id_b'], list) if first_entry else False
 
     @classmethod
     def from_irds(cls,
@@ -57,9 +56,24 @@ class TrainingDataset(Dataset):
             assert ir_dataset.has_docpairs(), "Dataset does not have docpairs, check you are not using a test collection"
             training_dataset = collate_fn(ir_dataset)
             return cls(training_dataset, ir_dataset, teacher_data, group_size)
+
+    def _data_generator(self):
+        # Open the file in the appropriate mode based on its extension
+        if self.training_dataset_file.endswith('.gz'):
+            open_fn = gzip.open
+            mode = 'rt'
+        else:
+            open_fn = open
+            mode = 'r'
+        
+        with open_fn(self.training_dataset_file, mode, encoding="utf-8") as f:
+            for line in f:
+                yield json.loads(line)
     
     def __len__(self):
-        return len(self.training_dataset)
+        # Streaming makes it tricky to get the length; it could be implemented by counting lines
+        with open(self.training_dataset_file, 'r') as f:
+            return sum(1 for _ in f)
     
     def _teacher(self, qid, doc_id, positive=False):
         assert self.labels, "No teacher file provided"
@@ -67,18 +81,40 @@ class TrainingDataset(Dataset):
         except KeyError: return 0.
 
     def __getitem__(self, idx):
-        item = self.training_dataset[idx]
-        qid, doc_id_a, doc_id_b = item.query_id, item.doc_id_a, item.doc_id_b
+        # Populate the buffer for approximate shuffling, as previously defined
+        buffer = []
+        data_iterator = self._data_generator()  # Reinitialize to reset stream for each access
+
+        try:
+            for _ in range(self.shuffle_buffer_size):
+                buffer.append(next(data_iterator))
+            random.shuffle(buffer)
+        except StopIteration:
+            random.shuffle(buffer)
+
+        item = buffer[idx % len(buffer)]
+
+        # Retrieve IDs and query text
+        qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]] if not self.no_positive else []
 
-        if self.multi_negatives: texts.extend([self.docs[str(doc)] for doc in doc_id_b])
-        else: texts.append(self.docs[str(doc_id_b)])
+        # Handle multi-negative or single-negative cases
+        if self.multi_negatives:
+            # Adjust the number of negatives to match group_size - 1
+            if len(doc_id_b) > (self.group_size - 1):
+                doc_id_b = random.sample(doc_id_b, self.group_size - 1)
+            texts.extend([self.docs[str(doc)] for doc in doc_id_b])
+        else:
+            texts.append(self.docs[str(doc_id_b)])
 
+        # Add teacher scores if labels are available
         if self.labels:
             scores = [self._teacher(str(qid), str(doc_id_a), positive=True)] if not self.no_positive else []
-            if self.multi_negatives: scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
-            else: scores.append(self._teacher(str(qid), str(doc_id_b)))
+            if self.multi_negatives:
+                scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
+            else:
+                scores.append(self._teacher(str(qid), str(doc_id_b)))
             return (query, texts, scores)
         else:
             return (query, texts)
