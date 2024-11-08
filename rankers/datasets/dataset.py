@@ -19,18 +19,15 @@ class TrainingDataset(Dataset):
                  ) -> None:
         super().__init__()
 
-        assert training_dataset_file.endswith('jsonl') or training_dataset_file.endswith('jsonl.gz'), \
-            "Training dataset should be a JSONL file"
+        assert training_dataset_file.endswith('jsonl'), "Training dataset should be a JSONL file and should not be compressed"
 
         self.training_dataset_file = training_dataset_file
-        self.is_compressed = training_dataset_file.endswith('.gz')
         self.corpus = corpus
         self.teacher_data = teacher_data
         self.group_size = group_size
         self.no_positive = no_positive
 
-        # Collect line offsets if the file is uncompressed
-        self.line_offsets = self._get_line_offsets() if not self.is_compressed else None
+        self.line_offsets = self._get_line_offsets() 
 
         self.__post_init__()
 
@@ -48,24 +45,14 @@ class TrainingDataset(Dataset):
 
     def _get_line_by_index(self, idx):
         """Retrieve a line by index, using offsets for uncompressed files."""
-        if not self.is_compressed:
-            with open(self.training_dataset_file, 'r', encoding="utf-8") as f:
-                f.seek(self.line_offsets[idx])
-                return json.loads(f.readline())
-        else:
-            # Sequentially read for the compressed case
-            data_iterator = self._data_generator()
-            for i, line in enumerate(data_iterator):
-                if i == idx:
-                    return line
-            raise IndexError("Index out of range for the dataset.")
+        with open(self.training_dataset_file, 'r', encoding="utf-8") as f:
+            f.seek(self.line_offsets[idx])
+            return json.loads(f.readline())
 
     def _data_generator(self):
         """Generator for reading JSON lines from a compressed or uncompressed file."""
-        open_fn = gzip.open if self.is_compressed else open
-        mode = 'rt' if self.is_compressed else 'r'
 
-        with open_fn(self.training_dataset_file, mode, encoding="utf-8") as f:
+        with open(self.training_dataset_file, 'r', encoding="utf-8") as f:
             for line in f:
                 yield json.loads(line)
 
@@ -90,6 +77,10 @@ class TrainingDataset(Dataset):
     def __len__(self):
         # Length based on line offsets for uncompressed, or generator count for compressed
         return len(self.line_offsets) if self.line_offsets else sum(1 for _ in self._data_generator())
+    
+    def _teacher(self, qid, doc_id):
+        if doc_id not in self.teacher_data[qid]: return 0
+        else: return self.teacher_data[qid][doc_id]
 
     def __getitem__(self, idx):
         # Retrieve the line corresponding to idx
@@ -110,7 +101,7 @@ class TrainingDataset(Dataset):
 
         # Append teacher scores if available
         if self.labels:
-            scores = [self._teacher(str(qid), str(doc_id_a), positive=True)] if not self.no_positive else []
+            scores = [self._teacher(str(qid), str(doc_id_a))] if not self.no_positive else []
             if self.multi_negatives:
                 scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
             else:
