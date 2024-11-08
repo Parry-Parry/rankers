@@ -42,26 +42,6 @@ class TrainingDataset(Dataset):
                 # Parse each line into a JSON object (dictionary)
                 yield json.loads(line)
 
-    This error occurs because first_entry is being accessed as if it were a dictionary, but it seems to be a string instead. This usually happens when an object is read in line-by-line but isn't properly parsed as JSON. Since first_entry should be a parsed JSON object (a dictionary), we need to ensure each line is read and interpreted correctly.
-
-To fix this, let's make sure each line is parsed into JSON in _data_generator. We should also ensure that first_entry is correctly set up as a parsed dictionary in __post_init__.
-
-Here’s how to modify your _data_generator to handle this:
-
-def _data_generator(self):
-    # Open the file in the appropriate mode based on its extension
-    if self.training_dataset_file.endswith('.gz'):
-        open_fn = gzip.open
-        mode = 'rt'
-    else:
-        open_fn = open
-        mode = 'r'
-    
-    with open_fn(self.training_dataset_file, mode, encoding="utf-8") as f:
-        for line in f:
-            # Parse each line into a JSON object (dictionary)
-            yield json.loads(line)
-
     def __post_init__(self):
         assert self.corpus is not None, "Cannot instantiate a text-based dataset without a lookup"
 
