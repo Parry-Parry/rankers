@@ -56,10 +56,8 @@ class RankerDataArguments:
             except Exception as e:
                 raise ValueError(f"Unable to load eval_ir_dataset: {e}")
         assert self.training_dataset_file.endswith('jsonl') or self.training_dataset_file.endswith('jsonl.gz'), "Training dataset should be a JSONL file"
-        self.training_data = pd.read_json(self.training_dataset_file, lines=True, orient='records')
         if self.teacher_file:
             assert self.teacher_file.endswith('json') or self.teacher_file.endswith('json.gz'), "Teacher file should be a JSON file"
-            self.teacher_data = load_json(self.teacher_file)
         if self.validation_dataset_file:
             assert self.validation_dataset_file.endswith(".gz") or self.validation_dataset_file.endswith(".tsv") or self.validation_dataset_file.endswith(".rez"), "Validation dataset should be a TREC formatted run file"
             if is_pyterrier_available():

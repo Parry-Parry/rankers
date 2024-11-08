@@ -11,7 +11,7 @@ import gzip
 
 class TrainingDataset(Dataset):
     def __init__(self, 
-                 training_dataset : pd.DataFrame, 
+                 training_dataset_file : pd.DataFrame, 
                  corpus : Union[Corpus, irds.Dataset],
                  teacher_data : Optional[dict] = None,
                  group_size : int = 2,
@@ -19,7 +19,7 @@ class TrainingDataset(Dataset):
                  shuffle_buffer_size : int = 10000
                  ) -> None:
         super().__init__()
-        self.training_dataset = training_dataset
+        self.training_dataset_file = training_dataset_file
         self.corpus = corpus
         self.teacher_data = teacher_data
         self.group_size = group_size
