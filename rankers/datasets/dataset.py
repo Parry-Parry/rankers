@@ -11,41 +11,68 @@ import gzip
 
 class TrainingDataset(Dataset):
     def __init__(self, 
-                 training_dataset_file : pd.DataFrame, 
-                 corpus : Union[Corpus, irds.Dataset],
-                 teacher_data : Optional[dict] = None,
-                 group_size : int = 2,
-                 no_positive : bool = False,
-                 shuffle_buffer_size : int = 10000
+                 training_dataset_file: str, 
+                 corpus: Union[Corpus, irds.Dataset],
+                 teacher_data: Optional[dict] = None,
+                 group_size: int = 2,
+                 no_positive: bool = False
                  ) -> None:
         super().__init__()
+
+        assert training_dataset_file.endswith('jsonl') or training_dataset_file.endswith('jsonl.gz'), \
+            "Training dataset should be a JSONL file"
+
         self.training_dataset_file = training_dataset_file
+        self.is_compressed = training_dataset_file.endswith('.gz')
         self.corpus = corpus
         self.teacher_data = teacher_data
         self.group_size = group_size
         self.no_positive = no_positive
-        self.shuffle_buffer_size = shuffle_buffer_size
+
+        # Collect line offsets if the file is uncompressed
+        self.line_offsets = self._get_line_offsets() if not self.is_compressed else None
 
         self.__post_init__()
 
-    def _data_generator(self):
-        # Open the file in the appropriate mode based on its extension
-        if self.training_dataset_file.endswith('.gz'):
-            open_fn = gzip.open
-            mode = 'rt'
+    def _get_line_offsets(self):
+        """Store byte offsets for each line in an uncompressed JSONL file."""
+        offsets = []
+        with open(self.training_dataset_file, 'r', encoding="utf-8") as f:
+            while True:
+                offset = f.tell()
+                line = f.readline()
+                if not line:
+                    break
+                offsets.append(offset)
+        return offsets
+
+    def _get_line_by_index(self, idx):
+        """Retrieve a line by index, using offsets for uncompressed files."""
+        if not self.is_compressed:
+            with open(self.training_dataset_file, 'r', encoding="utf-8") as f:
+                f.seek(self.line_offsets[idx])
+                return json.loads(f.readline())
         else:
-            open_fn = open
-            mode = 'r'
-        
+            # Sequentially read for the compressed case
+            data_iterator = self._data_generator()
+            for i, line in enumerate(data_iterator):
+                if i == idx:
+                    return line
+            raise IndexError("Index out of range for the dataset.")
+
+    def _data_generator(self):
+        """Generator for reading JSON lines from a compressed or uncompressed file."""
+        open_fn = gzip.open if self.is_compressed else open
+        mode = 'rt' if self.is_compressed else 'r'
+
         with open_fn(self.training_dataset_file, mode, encoding="utf-8") as f:
             for line in f:
-                # Parse each line into a JSON object (dictionary)
                 yield json.loads(line)
 
     def __post_init__(self):
         assert self.corpus is not None, "Cannot instantiate a text-based dataset without a lookup"
-
-        # Load corpus documents and queries
+        
+        # Initialize documents and queries from corpus
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
@@ -56,67 +83,32 @@ class TrainingDataset(Dataset):
         else:
             self.labels = False
 
-        # Initialize a generator and get the first entry to check if doc_id_b is a list
-        data_iterator = self._data_generator()
-        first_entry = next(data_iterator, None)
-        
-        # Ensure first_entry is a dictionary and check for multi-negative setup
-        if first_entry:
-            self.multi_negatives = isinstance(first_entry['doc_id_b'], list)
-        else:
-            self.multi_negatives = False
+        # Use _get_line_by_index to check multi-negative configuration
+        first_entry = self._get_line_by_index(0)
+        self.multi_negatives = isinstance(first_entry['doc_id_b'], list)
 
-    @classmethod
-    def from_irds(cls,
-                    ir_dataset : irds.Dataset,
-                    teacher_data : Optional[dict] = None,
-                    group_size : int = 2,
-                    collate_fn : Optional[callable] = lambda x : pd.DataFrame(x.docpairs_iter()) 
-                    ) -> 'TrainingDataset':
-            assert ir_dataset.has_docpairs(), "Dataset does not have docpairs, check you are not using a test collection"
-            training_dataset = collate_fn(ir_dataset)
-            return cls(training_dataset, ir_dataset, teacher_data, group_size)
-
-    
     def __len__(self):
-        # Streaming makes it tricky to get the length; it could be implemented by counting lines
-        with open(self.training_dataset_file, 'r') as f:
-            return sum(1 for _ in f)
-    
-    def _teacher(self, qid, doc_id, positive=False):
-        assert self.labels, "No teacher file provided"
-        try: return self.teacher[str(qid)][str(doc_id)] 
-        except KeyError: return 0.
+        # Length based on line offsets for uncompressed, or generator count for compressed
+        return len(self.line_offsets) if self.line_offsets else sum(1 for _ in self._data_generator())
 
     def __getitem__(self, idx):
-        # Populate the buffer for approximate shuffling, as previously defined
-        buffer = []
-        data_iterator = self._data_generator()  # Reinitialize to reset stream for each access
+        # Retrieve the line corresponding to idx
+        item = self._get_line_by_index(idx)
 
-        try:
-            for _ in range(self.shuffle_buffer_size):
-                buffer.append(next(data_iterator))
-            random.shuffle(buffer)
-        except StopIteration:
-            random.shuffle(buffer)
-
-        item = buffer[idx % len(buffer)]
-
-        # Retrieve IDs and query text
+        # Retrieve query and document texts
         qid, doc_id_a, doc_id_b = item['query_id'], item['doc_id_a'], item['doc_id_b']
         query = self.queries[str(qid)]
         texts = [self.docs[str(doc_id_a)]] if not self.no_positive else []
 
-        # Handle multi-negative or single-negative cases
+        # Adjust negatives to fit group_size constraints
         if self.multi_negatives:
-            # Adjust the number of negatives to match group_size - 1
             if len(doc_id_b) > (self.group_size - 1):
                 doc_id_b = random.sample(doc_id_b, self.group_size - 1)
             texts.extend([self.docs[str(doc)] for doc in doc_id_b])
         else:
             texts.append(self.docs[str(doc_id_b)])
 
-        # Add teacher scores if labels are available
+        # Append teacher scores if available
         if self.labels:
             scores = [self._teacher(str(qid), str(doc_id_a), positive=True)] if not self.no_positive else []
             if self.multi_negatives:
@@ -126,6 +118,7 @@ class TrainingDataset(Dataset):
             return (query, texts, scores)
         else:
             return (query, texts)
+
 
 class EvaluationDataset(Dataset):
     def __init__(self, 
