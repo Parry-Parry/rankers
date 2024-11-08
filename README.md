@@ -1,6 +1,6 @@
 # Training Neural Retrievers
 
-Welcome to the `rankers` repository! This package provides tools and examples for training neural retrievers using various ranking models. Our goal is to help you develop state-of-the-art information retrieval systems with ease.
+Welcome to the `rankers` repository! This package provides tooling for training neural retrievers using various ranking models. The package is designed to mimic the underlying interface of `transformers` to get you started quickly.
 
 ## Features
 
