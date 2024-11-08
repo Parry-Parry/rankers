@@ -121,8 +121,6 @@ class EvaluationDataset(Dataset):
         self.__post_init__()
     
     def __post_init__(self):
-
-
         for column in 'qid', 'docno', 'score':
             if column not in self.evaluation_dataset.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in dataframe")
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
