@@ -94,8 +94,8 @@ class TrainingDataset(Dataset):
 
         # Adjust negatives to fit group_size constraints
         if self.multi_negatives:
-            if len(doc_id_b) > (self.group_size - 1):
-                doc_id_b = random.sample(doc_id_b, self.group_size - 1)
+            if len(doc_id_b) > (self.n_neg):
+                doc_id_b = random.sample(doc_id_b, self.n_neg)
             texts.extend([self.docs[str(doc)] for doc in doc_id_b])
         else:
             texts.append(self.docs[str(doc_id_b)])
