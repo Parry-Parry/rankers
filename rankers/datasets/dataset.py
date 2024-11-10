@@ -2,12 +2,11 @@ import random
 from torch.utils.data import Dataset
 import pandas as pd
 import torch
-from typing import Optional, Union
+from typing import Union
 import ir_datasets as irds
 import json
 from .._util import load_json, initialise_irds_eval
 from .corpus import Corpus
-import gzip
 
 class TrainingDataset(Dataset):
     def __init__(self, 
