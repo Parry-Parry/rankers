@@ -26,6 +26,7 @@ class TrainingDataset(Dataset):
         self.group_size = group_size
         self.no_positive = no_positive
         self.lazy_load_text = lazy_load_text
+        self.n_neg = self.group_size -1 if not self.no_positive else self.group_size
 
         self.line_offsets = self._get_line_offsets() 
         super().__init__()
