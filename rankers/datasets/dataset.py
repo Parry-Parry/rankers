@@ -104,7 +104,7 @@ class TrainingDataset(Dataset):
         if self.labels:
             scores = [self._teacher(str(qid), str(doc_id_a))] if not self.no_positive else []
             if self.multi_negatives:
-                scores.extend([self._teacher(qid, str(doc)) for doc in doc_id_b])
+                scores.extend([self._teacher(str(qid), str(doc)) for doc in doc_id_b])
             else:
                 scores.append(self._teacher(str(qid), str(doc_id_b)))
             return (query, texts, scores)
