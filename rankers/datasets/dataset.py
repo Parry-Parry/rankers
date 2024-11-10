@@ -13,7 +13,7 @@ class TrainingDataset(Dataset):
     def __init__(self, 
                  training_dataset_file: str, 
                  corpus: Union[Corpus, irds.Dataset],
-                 teacher_data: Optional[dict] = None,
+                 teacher_file: str = None,
                  group_size: int = 2,
                  no_positive: bool = False,
                  lazy_load_text : bool = True
@@ -22,7 +22,7 @@ class TrainingDataset(Dataset):
 
         self.training_dataset_file = training_dataset_file
         self.corpus = corpus
-        self.teacher_data = teacher_data
+        self.teacher_file = teacher_file
         self.group_size = group_size
         self.no_positive = no_positive
         self.lazy_load_text = lazy_load_text
@@ -65,8 +65,8 @@ class TrainingDataset(Dataset):
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
         # Load teacher data if available
-        if self.teacher_data:
-            self.teacher = load_json(self.teacher_data)
+        if self.teacher_file:
+            self.teacher = load_json(self.teacher_file)
             self.labels = True
         else:
             self.labels = False
@@ -80,8 +80,8 @@ class TrainingDataset(Dataset):
         return len(self.line_offsets) if self.line_offsets else sum(1 for _ in self._data_generator())
     
     def _teacher(self, qid, doc_id):
-        if doc_id not in self.teacher_data[qid]: return 0
-        else: return self.teacher_data[qid][doc_id]
+        if doc_id not in self.teacher[qid]: return 0
+        else: return self.teacher[qid][doc_id]
 
     def __getitem__(self, idx):
         # Retrieve the line corresponding to idx
