@@ -15,7 +15,8 @@ class TrainingDataset(Dataset):
                  corpus: Union[Corpus, irds.Dataset],
                  teacher_data: Optional[dict] = None,
                  group_size: int = 2,
-                 no_positive: bool = False
+                 no_positive: bool = False,
+                 lazy_load_text : bool = True
                  ) -> None:
         assert training_dataset_file.endswith('jsonl'), "Training dataset should be a JSONL file and should not be compressed"
 
@@ -24,6 +25,7 @@ class TrainingDataset(Dataset):
         self.teacher_data = teacher_data
         self.group_size = group_size
         self.no_positive = no_positive
+        self.lazy_load_text = lazy_load_text
 
         self.line_offsets = self._get_line_offsets() 
         super().__init__()
@@ -59,6 +61,10 @@ class TrainingDataset(Dataset):
         
         # Initialize documents and queries from corpus
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
+
+        if self.lazy_load_text:
+            self.docs = 
+
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
         # Load teacher data if available
