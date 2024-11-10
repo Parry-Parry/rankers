@@ -62,9 +62,6 @@ class TrainingDataset(Dataset):
         # Initialize documents and queries from corpus
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
 
-        if self.lazy_load_text:
-            self.docs = 
-
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
         # Load teacher data if available
