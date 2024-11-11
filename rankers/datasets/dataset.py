@@ -76,6 +76,8 @@ class TrainingDataset(Dataset):
         # Use _get_line_by_index to check multi-negative configuration
         first_entry = self._get_line_by_index(0)
         self.multi_negatives = isinstance(first_entry['doc_id_b'], list)
+        total_negs = len(first_entry['doc_id_b']) if self.multi_negatives else 1
+        assert self.n_neg <= total_negs, f"Only found {total_negs} negatives, cannot take {self.n_neg} negatives"
 
     def __len__(self):
         # Length based on line offsets for uncompressed, or generator count for compressed
