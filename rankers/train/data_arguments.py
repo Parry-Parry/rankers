@@ -13,19 +13,19 @@ logging.basicConfig(level=logging.INFO)
 @dataclass
 class RankerDataArguments:
     training_dataset_file : str = field(
-        metadata={"help": "Path to the training dataset"}
+        metadata={"help": "Path to the training dataset in a JSONL format (Must be uncompressed)"}
     )
     teacher_file : Optional[str] = field(
         default=None,
-        metadata={"help": "Path to the teacher scores"}
+        metadata={"help": "Path to the teacher scores in a JSON format"}
     )
     validation_dataset_file : Optional[str] = field(
         default=None,
-        metadata={"help": "Path to the validation dataset"}
+        metadata={"help": "Path to the validation dataset in a TREC format"}
     )
     test_dataset_file : Optional[str] = field(
         default=None,
-        metadata={"help": "Path to the test dataset"}
+        metadata={"help": "Path to the test dataset in a TREC format"}
     )
     ir_dataset : Optional[str] = field(
         default=None,
@@ -34,6 +34,10 @@ class RankerDataArguments:
     no_positive : Optional[bool] = field(
         default=False,
         metadata={"help": "Dont use positive samples locatd in 'doc_id_a' column instead use solely 'doc_id_b'"}
+    )
+    top_k_group : Optional[bool] = field(
+        default=False,
+        metadata={"help": "Sort by score when doing list-wise ranking and take top-k"}
     )
     eval_ir_dataset : Optional[str] = field(
         default=None,
