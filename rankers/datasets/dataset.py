@@ -15,7 +15,8 @@ class TrainingDataset(Dataset):
                  teacher_file: str = None,
                  group_size: int = 2,
                  no_positive: bool = False,
-                 lazy_load_text : bool = True
+                 lazy_load_text : bool = True,
+                 top_k_group : bool = False
                  ) -> None:
         assert training_dataset_file.endswith('jsonl'), "Training dataset should be a JSONL file and should not be compressed"
 
@@ -26,6 +27,7 @@ class TrainingDataset(Dataset):
         self.no_positive = no_positive
         self.lazy_load_text = lazy_load_text
         self.n_neg = self.group_size -1 if not self.no_positive else self.group_size
+        self.top_k_group = top_k_group
 
         self.line_offsets = self._get_line_offsets() 
         super().__init__()
@@ -94,8 +96,6 @@ class TrainingDataset(Dataset):
 
         # Adjust negatives to fit group_size constraints
         if self.multi_negatives:
-            if len(doc_id_b) > (self.n_neg):
-                doc_id_b = random.sample(doc_id_b, self.n_neg)
             texts.extend([self.docs[str(doc)] for doc in doc_id_b])
         else:
             texts.append(self.docs[str(doc_id_b)])
@@ -107,8 +107,14 @@ class TrainingDataset(Dataset):
                 scores.extend([self._teacher(str(qid), str(doc)) for doc in doc_id_b])
             else:
                 scores.append(self._teacher(str(qid), str(doc_id_b)))
-            return (query, texts, scores)
+            if len(texts) > (self.group_size):
+                if self.top_k_group:
+                    texts, scores = zip(*sorted(zip(texts, scores), key=lambda x: x[1], reverse=True))
+                    return (query, texts[:self.group_size], scores[:self.group_size])
+                else:
+                    texts, scores = zip(*random.sample(list(zip(texts, scores)), self.group_size))
         else:
+            if len(texts) > (self.group_size): texts = random.sample(texts, self.group_size)
             return (query, texts)
 
 
