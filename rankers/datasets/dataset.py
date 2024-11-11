@@ -16,7 +16,7 @@ class TrainingDataset(Dataset):
                  group_size: int = 2,
                  no_positive: bool = False,
                  lazy_load_text : bool = True,
-                 top_k_group : bool = False
+                 top_k_group : bool = True
                  ) -> None:
         assert training_dataset_file.endswith('jsonl'), "Training dataset should be a JSONL file and should not be compressed"
 
