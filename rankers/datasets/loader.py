@@ -17,12 +17,14 @@ class DotDataCollator:
         batch_queries = []
         batch_docs = []
         batch_scores = []
-        for (q, dx, *args) in batch:
+        for elt in batch:
+            q = elt[0]
+            dx = elt[1]
             batch_queries.append(q)
             batch_docs.extend(dx)
-            if len(args) == 0:
+            if len(elt) < 3:
                 continue
-            batch_scores.extend(args[0])
+            batch_scores.extend(elt[2])
 
         tokenized_queries = self.tokenizer(
             batch_queries,
@@ -61,12 +63,14 @@ class CatDataCollator:
         batch_queries = []
         batch_docs = []
         batch_scores = []
-        for (q, dx, *args) in batch:
+        for elt in batch:
+            q = elt[0]
+            dx = elt[1]
             batch_queries.extend([q]*len(dx))
             batch_docs.extend(dx)
-            if len(args) == 0:
+            if len(elt) < 3:
                 continue
-            batch_scores.extend(args[0])
+            batch_scores.extend(elt[2])
 
         tokenized_sequences = self.tokenizer(
             batch_queries,
