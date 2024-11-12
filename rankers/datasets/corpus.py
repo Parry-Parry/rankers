@@ -1,4 +1,5 @@
 import pandas as pd
+from types import SimpleNamespace
 
 class Corpus:
     def __init__(self,
@@ -18,6 +19,15 @@ class Corpus:
                 if column not in self.qrels.columns: raise ValueError(f"Format not recognised, Column '{column}' not found in qrels dataframe")
         
             self.qrels = self.qrels[['query_id', 'doc_id', 'relevance']]
+    
+    def doc_store(self):
+        return self 
+    
+    def get(self, doc_id):
+        return SimpleNamespace(text=self.documents[doc_id])
+    
+    def get_many(self, doc_ids):
+        return [SimpleNamespace(self.documents[doc_id]) for doc_id in doc_ids]
     
     def has_documents(self):
         return self.documents is not None
