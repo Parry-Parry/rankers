@@ -106,10 +106,9 @@ class TrainingDataset(Dataset):
                 if self.top_k_group:
                     texts, scores = zip(*sorted(zip(texts, scores), key=lambda x: x[1], reverse=True))
                     return (query, texts[:self.group_size], scores[:self.group_size])
-                else:
-                    breakpoint()
-                    texts, scores = zip(*random.sample(list(zip(texts, scores)), self.group_size))
-                return (query, texts, scores)
+            else:
+                texts, scores = zip(*random.sample(list(zip(texts, scores)), self.group_size))
+            return (query, texts, scores)
         else:
             if len(texts) > (self.group_size): texts = random.sample(texts, self.group_size)
             return (query, texts)
