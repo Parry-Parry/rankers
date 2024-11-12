@@ -9,8 +9,8 @@ from .._util import load_json, initialise_irds_eval
 from .corpus import Corpus
 
 class LazyTextLoader:
-    def __init__(self, docstore : callable) -> None:
-        self.docstore = docstore
+    def __init__(self, corpus : Union[Corpus, irds.Dataset]) -> None:
+        self.docstore = corpus.docs_store()
     
     def __getitem__(self, doc_id):
         if type == list:
