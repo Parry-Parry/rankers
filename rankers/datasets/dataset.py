@@ -115,6 +115,7 @@ class TrainingDataset(Dataset):
                     return (query, texts[:self.group_size], scores[:self.group_size])
                 else:
                     texts, scores = zip(*random.sample(list(zip(texts, scores)), self.group_size))
+                return (query, texts, scores)
         else:
             if len(texts) > (self.group_size): texts = random.sample(texts, self.group_size)
             return (query, texts)
