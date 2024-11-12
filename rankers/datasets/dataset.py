@@ -8,6 +8,15 @@ import json
 from .._util import load_json, initialise_irds_eval
 from .corpus import Corpus
 
+class LazyTextLoader:
+    def __init__(self, docstore : callable) -> None:
+        self.docstore = docstore
+    
+    def __getitem__(self, doc_id):
+        if type == list:
+            return [doc.text for doc in self.docstore.get_many(doc_id)]
+        return self.docstore.get(doc_id).text
+
 class TrainingDataset(Dataset):
     def __init__(self, 
                  training_dataset_file: str, 
@@ -55,7 +64,10 @@ class TrainingDataset(Dataset):
         assert self.corpus is not None, "Cannot instantiate a text-based dataset without a lookup"
         
         # Initialize documents and queries from corpus
-        self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
+        if not self.lazy_load_text:
+            self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
+        else:
+            self.docs = LazyTextLoader(self.corpus)
 
         self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
@@ -91,7 +103,7 @@ class TrainingDataset(Dataset):
 
         # Adjust negatives to fit group_size constraints
         if self.multi_negatives:
-            texts.extend([self.docs[str(doc)] for doc in doc_id_b])
+            texts.extend([self.docs[str(doc)] for doc in doc_id_b] if not self.lazy_load_text else self.docs[doc_id_b])
         else:
             texts.append(self.docs[str(doc_id_b)])
 
