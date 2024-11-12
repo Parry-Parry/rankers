@@ -132,3 +132,5 @@ class PairTransformer(pt.Transformer):
         res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(['qid', 'score'], ascending=[True, False])
         return pt.model.add_ranks(res)
+    
+__all__ = ['CatTransformer', 'PairTransformer']

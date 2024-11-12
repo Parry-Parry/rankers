@@ -194,3 +194,5 @@ class BiScorer(pt.Transformer):
 
     def __repr__(self):
         return f'{repr(self.bi_model)}.scorer()'
+    
+__all__ = ['DotTransformer']
