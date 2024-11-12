@@ -30,6 +30,22 @@ class RankerDataArguments:
         default=None,
         metadata={"help": "IR Dataset for text lookup"}
     )
+    lazy_load_text : Optional[bool] = field(
+        default=True,
+        metadata={"help": "Lazy load text from the corpus"}
+    )
+    precomputed : Optional[bool] = field(
+        default=False,
+        metadata={"help": "DataFrame with existing text fields"}
+    )
+    text_field : Optional[str] = field(
+        default='text',
+        metadata={"help": "Field name for text"}
+    )
+    query_field : Optional[str] = field(
+        default='text',
+        metadata={"help": "Field name for query"}
+    )
     no_positive : Optional[bool] = field(
         default=False,
         metadata={"help": "Dont use positive samples locatd in 'doc_id_a' column instead use solely 'doc_id_b'"}
