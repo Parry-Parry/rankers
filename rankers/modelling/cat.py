@@ -1,10 +1,6 @@
 import pyterrier as pt
 from transformers import PreTrainedModel, PretrainedConfig, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
-from typing import Union
 import torch
-import pandas as pd
-from more_itertools import chunked
-import numpy as np
 import torch.nn.functional as F
 
 class CatConfig(PretrainedConfig):

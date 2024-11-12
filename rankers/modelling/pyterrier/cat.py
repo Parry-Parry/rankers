@@ -1,5 +1,5 @@
 import pyterrier as pt
-from transformers import PreTrainedModel, PreTrainedConfig, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
+from transformers import PreTrainedModel, PretrainedConfig, PreTrainedTokenizer, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 from typing import Union
 import torch
 import pandas as pd
@@ -13,7 +13,7 @@ class CatTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : PreTrainedConfig, 
+                 config : PretrainedConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
@@ -34,7 +34,7 @@ class CatTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
-                        config : PreTrainedConfig = None,
+                        config : PretrainedConfig = None,
                         device : Union[str, torch.device] = None,
                         verbose : bool = False,
                         **kwargs
@@ -76,7 +76,7 @@ class PairTransformer(pt.Transformer):
     def __init__(self, 
                  model : PreTrainedModel, 
                  tokenizer : PreTrainedTokenizer, 
-                 config : PreTrainedConfig, 
+                 config : PretrainedConfig, 
                  batch_size : int, 
                  text_field : str = 'text', 
                  device : Union[str, torch.device] = None,
@@ -107,7 +107,7 @@ class PairTransformer(pt.Transformer):
                         model_name_or_path : str, 
                         batch_size : int = 64, 
                         text_field : str = 'text', 
-                        config : PreTrainedConfig = None,
+                        config : PretrainedConfig = None,
                         device : Union[str, torch.device] = None,
                         verbose : bool = False,
                         **kwargs

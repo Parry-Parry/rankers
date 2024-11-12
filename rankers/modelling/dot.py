@@ -4,10 +4,6 @@ import torch
 from torch import nn
 import pyterrier as pt
 from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer, AutoConfig
-from typing import Union
-import pandas as pd
-import numpy as np
-from more_itertools import chunked
 from ..train.loss import batched_dot_product, cross_dot_product
 
 class DotConfig(PretrainedConfig):
