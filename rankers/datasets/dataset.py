@@ -51,13 +51,6 @@ class TrainingDataset(Dataset):
             f.seek(self.line_offsets[idx])
             return json.loads(f.readline())
 
-    def _data_generator(self):
-        """Generator for reading JSON lines from a compressed or uncompressed file."""
-
-        with open(self.training_dataset_file, 'r', encoding="utf-8") as f:
-            for line in f:
-                yield json.loads(line)
-
     def __post_init__(self):
         assert self.corpus is not None, "Cannot instantiate a text-based dataset without a lookup"
         
@@ -114,6 +107,7 @@ class TrainingDataset(Dataset):
                     texts, scores = zip(*sorted(zip(texts, scores), key=lambda x: x[1], reverse=True))
                     return (query, texts[:self.group_size], scores[:self.group_size])
                 else:
+                    breakpoint()
                     texts, scores = zip(*random.sample(list(zip(texts, scores)), self.group_size))
                 return (query, texts, scores)
         else:
