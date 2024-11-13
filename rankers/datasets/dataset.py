@@ -102,51 +102,42 @@ class TrainingDataset(Dataset):
         else: return self.teacher[query_id][doc_id]
 
     def _precomputed_get(self, data):
-        query, query_id, doc_id_a, doc_id_b = data[self.query_field], data['query_id'], data['doc_id_a'], data[f"{self.text_field}_a"], data[f"{self.text_field}_b"]
-
-        texts = [doc_id_a] if not self.no_positive else []
-        if self.multi_negatives:
-            texts.extend(doc_id_b)
-        else:
-            texts.append(doc_id_b)
-        
-        return (query, query_id, doc_id_a, doc_id_b, texts)
+        query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_text = data['query_id'], data[self.query_field], data['doc_id_a'], data[f"{self.text_field}_a"], data['doc_id_b'], data[f"{self.text_field}_b"]
+        return (query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_text)
 
     def _standard_get(self, data):
         query_id, doc_id_a, doc_id_b = data['query_id'], data['doc_id_a'], data['doc_id_b']
         query = self.queries[str(query_id)]
-        texts = [self.docs[str(doc_id_a)]] if not self.no_positive else []
+        doc_id_a_text = [self.docs[str(doc_id_a)]] if not self.no_positive else []
 
         if self.multi_negatives:
-            texts.extend([self.docs[str(doc)] for doc in doc_id_b] if not self.lazy_load_text else self.docs[doc_id_b])
+            doc_id_b_text = [self.docs[str(doc)] for doc in doc_id_b] if not self.lazy_load_text else [self.docs[doc_id_b]]
         else:
-            texts.append(self.docs[str(doc_id_b)])
+            doc_id_b_text = [self.docs[str(doc_id_b)]] if not self.lazy_load_text else [self.docs[doc_id_b]]
 
-        return (query, query_id, doc_id_a, doc_id_b, texts)
+        return (query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_text)
 
     def __getitem__(self, idx):
         # Retrieve the line corresponding to idx
         item = self._get_line_by_index(idx)
 
-        query, query_id, doc_id_a, doc_id_b, texts = self._get(item)
+        query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_texts = self._get(item)
 
         # Append teacher scores if available
         if self.labels:
-            scores = [self._teacher(str(query_id), str(doc_id_a))] if not self.no_positive else []
-            if self.multi_negatives:
-                scores.extend([self._teacher(str(query_id), str(doc)) for doc in doc_id_b])
-            else:
-                scores.append(self._teacher(str(query_id), str(doc_id_b)))
-            if len(texts) > (self.group_size):
+            doc_id_a_scores = [self._teacher(str(query_id), str(doc_id_a))] if not self.no_positive else []
+            doc_id_b_scores = [self._teacher(str(query_id), str(doc)) for doc in doc_id_b] if self.multi_negatives else [self._teacher(str(query_id), str(doc_id_b))]
+            
+            if len(doc_id_b_text) > (self.n_neg):
                 if self.top_k_group:
-                    texts, scores = zip(*sorted(zip(texts, scores), key=lambda x: x[1], reverse=True))
-                    return (query, texts[:self.group_size], scores[:self.group_size])
-            else:
-                texts, scores = zip(*random.sample(list(zip(texts, scores)), self.group_size))
+                    texts, scores = zip(*sorted(zip(doc_id_a_text + doc_id_b_texts, doc_id_a_scores + doc_id_b_scores), key=lambda x: x[1], reverse=True))
+                    texts, scores = texts[:self.group_size], scores[:self.group_size]
+                else:
+                    texts, scores = zip(*random.sample(list(zip(doc_id_a_text + doc_id_b_texts, doc_id_a_scores + doc_id_b_scores)), self.group_size))
             return (query, texts, scores)
         else:
-            if len(texts) > (self.group_size): texts = random.sample(texts, self.group_size)
-            return (query, texts)
+            if len(doc_id_b_text) > (self.n_neg): doc_id_b_text = random.sample(doc_id_b_text, self.group_size)
+            return (query, doc_id_a_text + doc_id_b_text)
 
 
 class EvaluationDataset(Dataset):
