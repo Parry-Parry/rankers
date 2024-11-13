@@ -1,7 +1,5 @@
 from transformers import TrainingArguments
-from transformers.trainer_pt_utils import AcceleratorConfig
-from transformers.utils import is_accelerate_available
-from dataclasses import field, fields, dataclass
+from dataclasses import field, dataclass
 from typing import List, Optional
 from enum import Enum
 import os
@@ -38,6 +36,22 @@ class RankerTrainingArguments(TrainingArguments):
     loss_fn : Optional[str] = field(
         default='lce',
         metadata={"help": "Loss function to use"}
+    )
+    regularization : Optional[str] = field(
+        default=None,
+        metadata={"help": "Regularization to use"}
+    )
+    q_regularization_weight : Optional[float] = field(
+        default=0.08,
+        metadata={"help": "Regularization weight for queries"}
+    )
+    d_regularization_weight : Optional[float] = field(
+        default=0.1,
+        metadata={"help": "Regularization weight for documents"}
+    )
+    regularization_warmup_steps : Optional[int] = field(
+        default=1000,
+        metadata={"help": "Number of steps before regularization starts"}
     )
 
     def __post_init__(self):

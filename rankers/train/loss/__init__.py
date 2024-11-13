@@ -138,6 +138,63 @@ class BaseLoss(nn.Module):
     def forward(self, *args, **kwargs):
         raise NotImplementedError
 
+class RegWrapper(object):
+        def __init__(self, obj : BaseLoss, q_weight=0.08, d_weight=0.1, t=0, T=1000):
+            self.obj = obj
+            self.q_weight = q_weight
+            self.d_weight = d_weight
+            self.name = obj.name
+            self.t = t
+            self.T = T
+        
+        def step_q(self):
+            if self.t >= self.T:
+                pass
+            else:
+                self.t += 1
+                self.q_weight = self.q_weight * (self.t / self.T) ** 2
+        
+        def step_d(self):
+            if self.t >= self.T:
+                pass
+            else:
+                self.t += 1
+                self.d_weight = self.d_weight * (self.t / self.T) ** 2
+
+        @staticmethod
+        def reg(reg, weight=0):
+            raise NotImplementedError
+
+        def __call__(self, pred, labels=None, queries=None, documents=None, **kwargs):
+            q_reg = self.reg(queries, self.q_weight) if queries is not None else 0
+            d_reg = self.reg(documents, self.d_weight) if documents is not None else 0
+            outputs = self.obj(pred, labels, **kwargs)
+            loss_val = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+            loss_val += q_reg + d_reg
+            if isinstance(outputs, dict):
+                outputs["loss"] = loss_val
+            else:
+                outputs = (loss_val, *outputs[1:])
+            return outputs
+
+def FLOPS_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
+    class FLOPSWrapper(RegWrapper):
+        @staticmethod
+        def reg(reps, weight=0):
+            return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
+    return FLOPSWrapper(object, q_weight, d_weight, t, T)
+
+def L1_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
+    q_weight = q_weight
+    d_weight = d_weight
+
+    class L1Wrapper(RegWrapper):
+        @staticmethod
+        def reg(reps, weight=0):
+            return torch.abs(reps).sum(dim=1).mean() * weight  
+    return L1Wrapper(object, q_weight, d_weight, t, T)
+
+
 def reduce(a : torch.Tensor, reduction : str):
     """
     Reducing a tensor along a given dimension.
