@@ -6,7 +6,7 @@ from . import BaseLoss, register_loss
 @register_loss('kl_div')
 class KL_DivergenceLoss(BaseLoss):
     """KL Divergence loss"""
-    name="KL Divergence"
+    name="KL_Divergence"
     def __init__(self, reduction='batchmean', temperature=1.):
         super().__init__(reduction)
         self.temperature = temperature
@@ -85,7 +85,7 @@ class ListNetLoss(BaseLoss):
 @register_loss('poly1')
 class Poly1SoftmaxLoss(BaseLoss):
     """Poly1 softmax loss with automatic softmax handling and reduction."""
-    name = "Poly1 Softmax"
+    name = "Poly1_Softmax"
     def __init__(self, reduction='mean', epsilon : float = 1., temperature=1.):
         super().__init__(reduction)
         self.epsilon = epsilon
