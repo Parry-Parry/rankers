@@ -1,5 +1,6 @@
+from rankers.modelling.dot import Pooler
 import torch
-from transformers import AutoModel, AutoConfig
+from transformers import AutoModel, AutoConfig, AutoModel, PreTrainedModel, PreTrainedTokenizer
 from .dot import DotConfig, Dot
 
 class SparseConfig(DotConfig):
@@ -15,8 +16,11 @@ class Sparse(Dot):
     model_type = "Sparse"
     transformer_class = None
 
-    def to_pyterrier(self) -> "SparseTransformer":
-        return self.transformer_class.from_model(self, self.tokenizer, text_field='text')
+    def __init__(self, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, config: DotConfig, model_d: PreTrainedModel = None, pooler: Pooler = None):
+        super().__init__(model, tokenizer, config, model_d, pooler)
+
+        from .pyterrier.sparse import SparseTransformer
+        self.transformer_class = SparseTransformer
 
 AutoConfig.register("Sparse", SparseConfig)
 AutoModel.register(SparseConfig, Sparse)
