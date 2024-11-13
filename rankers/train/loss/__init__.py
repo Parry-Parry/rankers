@@ -185,9 +185,6 @@ def FLOPS_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
     return FLOPSWrapper(object, q_weight, d_weight, t, T)
 
 def L1_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-    q_weight = q_weight
-    d_weight = d_weight
-
     class L1Wrapper(RegWrapper):
         @staticmethod
         def reg(reps, weight=0):
