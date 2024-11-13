@@ -24,7 +24,7 @@ class TrainingDataset(Dataset):
                  teacher_file: str = None,
                  group_size: int = 2,
                  no_positive: bool = False,
-                 lazy_load_text : bool = True,
+                 lazy_load_text : bool = False,
                  top_k_group : bool = False,
                  precomputed: bool = False,
                  text_field: str = 'text',

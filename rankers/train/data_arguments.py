@@ -31,7 +31,7 @@ class RankerDataArguments:
         metadata={"help": "IR Dataset for text lookup"}
     )
     lazy_load_text : Optional[bool] = field(
-        default=True,
+        default=False,
         metadata={"help": "Lazy load text from the corpus"}
     )
     precomputed : Optional[bool] = field(
