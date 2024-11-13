@@ -121,7 +121,7 @@ class TrainingDataset(Dataset):
         # Retrieve the line corresponding to idx
         item = self._get_line_by_index(idx)
 
-        query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_texts = self._get(item)
+        query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_text = self._get(item)
 
         # Append teacher scores if available
         if self.labels:
@@ -130,10 +130,10 @@ class TrainingDataset(Dataset):
             
             if len(doc_id_b_text) > (self.n_neg):
                 if self.top_k_group:
-                    texts, scores = zip(*sorted(zip(doc_id_a_text + doc_id_b_texts, doc_id_a_scores + doc_id_b_scores), key=lambda x: x[1], reverse=True))
+                    texts, scores = zip(*sorted(zip(doc_id_a_text + doc_id_b_text, doc_id_a_scores + doc_id_b_scores), key=lambda x: x[1], reverse=True))
                     texts, scores = texts[:self.group_size], scores[:self.group_size]
                 else:
-                    texts, scores = zip(*random.sample(list(zip(doc_id_a_text + doc_id_b_texts, doc_id_a_scores + doc_id_b_scores)), self.group_size))
+                    texts, scores = zip(*random.sample(list(zip(doc_id_a_text + doc_id_b_text, doc_id_a_scores + doc_id_b_scores)), self.group_size))
             return (query, texts, scores)
         else:
             if len(doc_id_b_text) > (self.n_neg): doc_id_b_text = random.sample(doc_id_b_text, self.group_size)
