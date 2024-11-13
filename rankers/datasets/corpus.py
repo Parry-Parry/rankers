@@ -27,7 +27,7 @@ class Corpus:
         return SimpleNamespace(text=self.documents[doc_id])
     
     def get_many(self, doc_ids):
-        return [SimpleNamespace(self.documents[doc_id]) for doc_id in doc_ids]
+        return [SimpleNamespace(text=self.documents[doc_id]) for doc_id in doc_ids]
     
     def has_documents(self):
         return self.documents is not None
