@@ -39,7 +39,7 @@ class FlaxCat(PreTrainedModel):
         self.classifier = classifier
         self.tokenizer = tokenizer
 
-        from ...pyterrier.flax.cat import FlaxCatTransformer
+        from ...pyterrier.cat.flaxcat import FlaxCatTransformer
         self.transformer_class = FlaxCatTransformer
     
     def prepare_outputs(self, logits):
