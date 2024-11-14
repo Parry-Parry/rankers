@@ -51,17 +51,17 @@ class Sparse(Dot):
     def __init__(self, model: PreTrainedModel, tokenizer: PreTrainedTokenizer, config: DotConfig, model_d: PreTrainedModel = None, pooler: Pooler = None):
         super().__init__(model, tokenizer, config, model_d, pooler)
 
-        self.query_processing = splade_max if config.query_processing == 'splade_max' else lambda x : x.logits
-        self.doc_processing = splade_max if config.doc_processing == 'splade_max' else lambda x : x.logits
+        self.query_processing = splade_max if config.query_processing == 'splade_max' else lambda x, y : x.logits
+        self.doc_processing = splade_max if config.doc_processing == 'splade_max' else lambda x, y : x.logits
 
         from .pyterrier.sparse import SparseTransformer
         self.transformer_class = SparseTransformer
     
     def _encode_d(self, **text):
-        return self.doc_processing(self.model_d(**text))
+        return self.doc_processing(self.model_d(**text), text['attention_mask'])
     
     def _encode_q(self, **text):
-        return self.query_processing(self.model(**text))
+        return self.query_processing(self.model(**text), text['attention_mask'])
         
     def forward(self, 
                 loss = None, 
