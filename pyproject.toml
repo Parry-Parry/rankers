@@ -9,7 +9,7 @@ dependencies = [
   "torch",
   "transformers",
   "datasets",
-  "python-terrier",
+  "ir-measures"
   "pandas",
   "more_itertools",
 ]

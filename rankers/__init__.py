@@ -1,40 +1,5 @@
 __version__ = "0.0.5"
 
-def is_torch_available():
-    try:
-        import torch
-        return True
-    except ImportError:
-        return False
-
-def is_flax_available():
-    try:
-        import flax
-        return True
-    except ImportError:
-        return False
-
-def is_ir_measures_available():
-    try:
-        import ir_measures
-        return True
-    except ImportError:
-        return False
-
-def is_ir_datasets_available():
-    try:
-        import ir_datasets
-        return True
-    except ImportError:
-        return False
-
-def is_pyterrier_available():
-    try:
-        import pyterrier
-        return True
-    except ImportError:
-        return False
-
 def seed_everything(seed=42):
     import random
     import numpy as np
