@@ -18,14 +18,13 @@ Taken from https://github.com/thongnt99/learned-sparse-retrieval/blob/main/Spars
 """
 
 class SparseTransformer(pt.Transformer):
-    def __init__(self, model_name_or_path, device=None, batch_size=32, text_field='text', fp16=False, topk=None):
-        self.model_name_or_path = model_name_or_path
+    def __init__(self, model, tokenizer, device=None, batch_size=32, text_field='text', fp16=False, topk=None):
         if device is None:
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model = model.to(device).eval()
+        self.tokenizer = tokenizer
         self.fp16 = fp16
         self.device = device
-        self.model = Sparse.from_pretrained(model_name_or_path).eval().to(device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         all_token_ids = list(range(self.tokenizer.get_vocab_size()))
         self.all_tokens = np.array(self.tokenizer.convert_ids_to_tokens(all_token_ids))
         self.batch_size = batch_size
@@ -33,8 +32,27 @@ class SparseTransformer(pt.Transformer):
         self.topk = topk
 
     @classmethod
-    def from_pretrained(cls, model_name_or_path, device=None, batch_size=32, text_field='text', fp16=False, topk=None):
-        return cls(model_name_or_path, device, batch_size, text_field, fp16, topk)
+    def from_pretrained(cls, 
+                        model_name_or_path, 
+                        device=None, 
+                        batch_size=32, 
+                        text_field='text', 
+                        fp16=False, 
+                        topk=None):
+        model = Sparse.from_pretrained(model_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        return cls(model, tokenizer, device, batch_size, text_field, fp16, topk)
+    
+    @classmethod 
+    def from_model(cls, 
+                   model, 
+                   tokenizer,
+                   device=None, 
+                   batch_size=32, 
+                   text_field='text', 
+                   fp16=False, 
+                   topk=None):
+        return cls(model, tokenizer, device, batch_size, text_field, fp16, topk)
 
     def encode_queries(self, texts, out_fmt='dict', topk=None):
         outputs = []
