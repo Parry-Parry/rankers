@@ -137,7 +137,7 @@ class TrainingDataset(Dataset):
                 return (query, texts, scores)
             return (query, doc_id_a_text + doc_id_b_text, doc_id_a_scores + doc_id_b_scores)
         else:
-            if len(doc_id_b_text) > (self.n_neg): doc_id_b_text = random.sample(doc_id_b_text, self.group_size)
+            if len(doc_id_b_text) > (self.n_neg): doc_id_b_text = random.sample(doc_id_b_text, self.n_neg)
             return (query, doc_id_a_text + doc_id_b_text)
 
 
