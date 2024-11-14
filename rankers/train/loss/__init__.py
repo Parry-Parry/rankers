@@ -160,6 +160,14 @@ class RegWrapper(object):
             else:
                 self.t += 1
                 self.d_weight = self.d_weight * (self.t / self.T) ** 2
+        
+        def step(self):
+            if self.t >= self.T:
+                pass
+            else:
+                self.t += 1
+                self.q_weight = self.q_weight * (self.t / self.T) ** 2
+                self.d_weight = self.d_weight * (self.t / self.T) ** 2
 
         @staticmethod
         def reg(reg, weight=0):
