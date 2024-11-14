@@ -27,12 +27,12 @@ class RankerTrainer(Trainer):
             self.loss = loss_fn
 
         self.regularize_loss = False
-        if self.config.regularization is not None:
+        if self.args.regularization is not None:
             from .loss import FLOPS_regularization, L1_regularization
-            reg_func = L1_regularization if self.config.regularization == 'l1' else FLOPS_regularization
-            self.loss = reg_func(self.loss, self.config.q_regularization_weight, self.config.d_regularization_weight, 0, self.config.regularization_warmup_steps)
+            reg_func = L1_regularization if self.args.regularization == 'l1' else FLOPS_regularization
+            self.loss = reg_func(self.loss, self.args.q_regularization_weight, self.args.d_regularization_weight, 0, self.args.regularization_warmup_steps)
             self.regularize_loss = True
-            
+
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
