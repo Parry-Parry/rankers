@@ -5,7 +5,8 @@ import torch
 import pandas as pd
 from more_itertools import chunked
 import numpy as np
-from .._util import not_tested
+from ..._util import not_tested
+from ..base import Ranker
 
 DEFAULT_MONO_PROMPT = r'query: {query} document: {text} relevant:'
 DEFAULT_DUO_PROMPT = r'query: {query} positive: {text} negative: {text} relevant:'
@@ -124,7 +125,7 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
         res = res.sort_values(['qid', 'rank'])
         return res
 @not_tested
-class Seq2Seq(PreTrainedModel):
+class Seq2Seq(Ranker):
     """Wrapper for ConditionalGenerationCat Model
     
     Parameters
@@ -138,51 +139,6 @@ class Seq2Seq(PreTrainedModel):
     architecture_class = AutoModelForSeq2SeqLM
     config_class = Seq2SeqConfig
     transformer_class = Seq2SeqTransformer
-    def __init__(
-        self,
-        model: AutoModelForSeq2SeqLM,
-        tokenizer: PreTrainedTokenizer,
-        config: PreTrainedConfig,
-    ):
-        super().__init__(config)
-        self.model = model
-        self.tokenizer = tokenizer
-
-    def prepare_outputs(self, logits):
-        raise NotImplementedError
-
-    def forward(self, loss, sequences, labels=None):
-        """Compute the loss given (pairs, labels)"""
-        sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
-        labels = labels.to(self.model.device) if labels is not None else None
-        logits = self.model(**sequences).logits
-        pred = self.prepare_outputs(logits)
-        loss_value = loss(pred) if labels is None else loss(pred, labels)
-        return (loss_value, pred)
-
-
-    def save_pretrained(self, model_dir, **kwargs):
-        """Save model"""
-        self.config.save_pretrained(model_dir)
-        self.model.save_pretrained(model_dir)
-        self.tokenizer.save_pretrained(model_dir)
-    
-    def load_state_dict(self, model_dir):
-        """Load state dict from a directory"""
-        return self.model.load_state_dict(self.architecture_class.from_pretrained(model_dir).state_dict())
-    
-    def to_pyterrier(self) -> "Seq2SeqTransformer":
-        return self.transformer_class.from_model(self.model, self.tokenizer, text_field='text')
-
-    @classmethod
-    def from_pretrained(cls, 
-                        model_name_or_path : str, 
-                        config : PreTrainedConfig = None, 
-                        **kwargs):
-        """Load model from a directory"""
-        config = cls.config_class.from_pretrained(model_name_or_path)
-        model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
-        return cls(model, config)
     
 class CausalLMConfig(PreTrainedConfig):
     model_type = 'CausalLM'

@@ -5,6 +5,7 @@ from torch import nn
 import pyterrier as pt
 from transformers import PreTrainedModel, PreTrainedTokenizer, PretrainedConfig, AutoModel, AutoTokenizer, AutoConfig
 from ...train.loss import batched_dot_product, cross_dot_product
+from ..base import Ranker
 
 class DotConfig(PretrainedConfig):
     """Configuration for Dot Model
@@ -84,7 +85,7 @@ class Pooler(nn.Module):
     def forward(self, hidden_states, d=False):
         return self.dense_d(hidden_states) if d else self.dense_q(hidden_states)
 
-class Dot(PreTrainedModel):
+class Dot(Ranker):
     """
     Dot Model for Fine-Tuning 
 
@@ -111,7 +112,7 @@ class Dot(PreTrainedModel):
         model_d : PreTrainedModel = None,
         pooler : Pooler = None,
     ):
-        super().__init__(config)
+        super().__init__(model, tokenizer, config)
         self.model = model
         self.tokenizer = tokenizer
         if model_d: self.model_d = model_d
@@ -224,9 +225,7 @@ class Dot(PreTrainedModel):
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         model = cls.architecture_class.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config)
-    
-    def to_pyterrier(self) -> "DotTransformer":
-        return self.transformer_class.from_model(self, self.tokenizer, text_field='text')
+
 
 AutoConfig.register("Dot", DotConfig)
 AutoModel.register(DotConfig, Dot)
