@@ -1,6 +1,6 @@
 from transformers import PretrainedConfig, PreTrainedModel, PreTrainedTokenizer
-from .dot import Dot, Pooler
-from .._util import not_tested 
+from ..dot.dot import Dot, Pooler
+from ..._util import not_tested 
 
 @not_tested
 class BGEConfig(PretrainedConfig):

@@ -37,13 +37,5 @@ class Cat(Ranker):
         """Prepare outputs"""
         return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], labels.view(-1, self.config.group_size) if labels is not None else None
 
-    @classmethod
-    def from_pretrained(cls, model_name_or_path : str, num_labels=2, config=None, **kwargs) -> "Cat":
-        """Load model from a directory"""
-        config = cls.config_class.from_pretrained(model_name_or_path, num_labels=num_labels) if config is None else config
-        model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        return cls(model, tokenizer, config)
-
 AutoConfig.register("Cat", CatConfig)
-AutoModelForSequenceClassification.register(CatConfig, Cat) s
+AutoModelForSequenceClassification.register(CatConfig, Cat) 
