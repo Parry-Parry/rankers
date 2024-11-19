@@ -118,7 +118,7 @@ class Dot(PreTrainedModel):
         else: self.model_d = self.model if config.model_tied else deepcopy(self.model)
         self.pooling = {
             'mean': lambda x: x.mean(dim=1),
-            'cls' : lambda x: x[:, 0],
+            'cls' : lambda x: x[:, 0, :],
             'late_interaction': lambda x: x,
             'none': lambda x: x,
         }[config.pooling_type]
@@ -162,7 +162,7 @@ class Dot(PreTrainedModel):
         return pred, labels, inbatch_pred
     
     def _cls(self, x : torch.Tensor) -> torch.Tensor:
-        return self.pooler(x[:, 0])
+        return self.pooler(x[:, 0, :])
     
     def _mean(self, x : torch.Tensor) -> torch.Tensor:
         return self.pooler(x.mean(dim=1))
@@ -185,7 +185,7 @@ class Dot(PreTrainedModel):
 
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
-
+        breakpoint()
         pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
         inbatch_loss = self.inbatch_loss_fn(inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)) if inbatch_pred is not None else 0.
         
