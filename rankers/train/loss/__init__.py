@@ -314,7 +314,7 @@ def batched_dot_product(a: Tensor, b: Tensor):
     """
     if len(b.shape) == 2:
         return torch.matmul(a, b.transpose(0, 1))
-
+    breakpoint()
     # Ensure `a` is of shape (batch_size, 1, vector_dim)
     if len(a.shape) == 2:
         a = a.unsqueeze(1)
