@@ -185,7 +185,6 @@ class Dot(PreTrainedModel):
 
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
-        breakpoint()
         pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
         inbatch_loss = self.inbatch_loss_fn(inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)) if inbatch_pred is not None else 0.
         
