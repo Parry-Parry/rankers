@@ -15,8 +15,8 @@ class MarginMSELoss(BaseLoss):
     name = "MarginMSE"
 
     def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
-        residual_pred = pred[:, 0].unsqueeze(1) - pred[:, 1:]
-        residual_label = labels[:, 0].unsqueeze(1) - labels[:, 1:]
+        residual_pred = residual(pred)
+        residual_label = residual(labels)
         return F.mse_loss(residual_pred, residual_label, reduction=self.reduction)
 
 
