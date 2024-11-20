@@ -10,7 +10,7 @@ import pandas as pd
 import pyterrier as pt
 from transformers import AutoTokenizer
 from pyterrier.model import add_ranks
-from ..sparse.sparse import Sparse
+from ...modelling import Sparse
 
 """
 Taken from https://github.com/thongnt99/learned-sparse-retrieval/blob/main/SparseTransformer/transformer.py

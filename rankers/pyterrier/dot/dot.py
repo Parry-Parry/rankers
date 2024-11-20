@@ -1,5 +1,6 @@
 from transformers import PretrainedConfig, PreTrainedModel, PreTrainedTokenizer, AutoModel, AutoTokenizer
-from ...modelling.dot.dot import Dot, Pooler, DotConfig
+from ...modelling import Dot, DotConfig
+from ...modelling.dot.dot import Pooler
 from typing import Union
 import torch
 import pandas as pd
