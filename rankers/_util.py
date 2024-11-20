@@ -6,87 +6,83 @@ import ir_datasets as irds
 
 logger = logging.getLogger(__name__)
 
+
 # decorator which raises warning that this class is not fully tested
 def not_tested(cls):
     class NewCls(cls):
         def __init__(self, *args, **kwargs):
             logger.warning(f"{cls.__name__} is not fully tested")
             super().__init__(*args, **kwargs)
+
     return NewCls
 
 
-def _pivot(frame, negatives = None):
+def _pivot(frame, negatives=None):
     new = []
     for row in frame.itertuples():
-        new.append(
-            {
-                "qid": row.query_id,
-                "docno": row.doc_id_a,
-                "pos": 1
-            })
+        new.append({"qid": row.query_id, "docno": row.doc_id_a, "pos": 1})
         if negatives:
             for doc in negatives[row.query_id]:
-                new.append(
-                    {
-                        "qid": row.query_id,
-                        "docno": doc
-                    })
+                new.append({"qid": row.query_id, "docno": doc})
         else:
-            new.append(
-                {
-                    "qid": row.query_id,
-                    "docno": row.doc_id_b
-                })
+            new.append({"qid": row.query_id, "docno": row.doc_id_b})
     return pd.DataFrame.from_records(new)
+
 
 def _qrel_pivot(frame):
     new = []
     for row in frame.itertuples():
-        new.append(
-            {
-                "qid": row.query_id,
-                "docno": row.doc_id,
-                "score": row.relevance
-            })
+        new.append({"qid": row.query_id, "docno": row.doc_id, "score": row.relevance})
     return pd.DataFrame.from_records(new)
 
-def get_teacher_scores(model : Any, 
-                       corpus : Optional[pd.DataFrame] = None, 
-                       ir_dataset : Optional[str] = None, 
-                       subset : Optional[int] = None, 
-                       negatives : Optional[dict] = None,
-                       seed : int = 42):
-        assert corpus is not None or ir_dataset is not None, "Either corpus or ir_dataset must be provided"
-        if corpus:
-            for column in ["query", "text"]: assert column in corpus.columns, f"{column} not found in corpus"
-        if ir_dataset:
-            dataset = irds.load(ir_dataset)
-            docs = pd.DataFrame(dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
-            queries = pd.DataFrame(dataset.queries_iter()).set_index("query_id")["text"].to_dict()
-            corpus = pd.DataFrame(dataset.docpairs_iter())
-            if negatives:
-                corpus = corpus[['query_id', 'doc_id_a']]
-            corpus = _pivot(corpus, negatives)
-            corpus['text'] = corpus['docno'].map(docs)
-            corpus['query'] = corpus['qid'].map(queries)
-            if subset:
-                corpus = corpus.sample(n=subset, random_state=seed)
 
-        logger.warning("Retrieving scores, this may take a while...")
-        scores = model.transform(corpus)
-        lookup = defaultdict(dict)
-        for qid, group in scores.groupby('qid'):
-            for docno, score in zip(group['docno'], group['score']):
-                lookup[qid][docno] = score
-        return lookup
+def get_teacher_scores(
+    model: Any,
+    corpus: Optional[pd.DataFrame] = None,
+    ir_dataset: Optional[str] = None,
+    subset: Optional[int] = None,
+    negatives: Optional[dict] = None,
+    seed: int = 42,
+):
+    assert (
+        corpus is not None or ir_dataset is not None
+    ), "Either corpus or ir_dataset must be provided"
+    if corpus:
+        for column in ["query", "text"]:
+            assert column in corpus.columns, f"{column} not found in corpus"
+    if ir_dataset:
+        dataset = irds.load(ir_dataset)
+        docs = pd.DataFrame(dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
+        queries = (
+            pd.DataFrame(dataset.queries_iter()).set_index("query_id")["text"].to_dict()
+        )
+        corpus = pd.DataFrame(dataset.docpairs_iter())
+        if negatives:
+            corpus = corpus[["query_id", "doc_id_a"]]
+        corpus = _pivot(corpus, negatives)
+        corpus["text"] = corpus["docno"].map(docs)
+        corpus["query"] = corpus["qid"].map(queries)
+        if subset:
+            corpus = corpus.sample(n=subset, random_state=seed)
 
-def initialise_irds_eval(dataset : irds.Dataset):
+    logger.warning("Retrieving scores, this may take a while...")
+    scores = model.transform(corpus)
+    lookup = defaultdict(dict)
+    for qid, group in scores.groupby("qid"):
+        for docno, score in zip(group["docno"], group["score"]):
+            lookup[qid][docno] = score
+    return lookup
+
+
+def initialise_irds_eval(dataset: irds.Dataset):
     qrels = pd.DataFrame(dataset.qrels_iter())
     return _qrel_pivot(qrels)
+
 
 def load_json(file: str):
     import json
     import gzip
+
     """
     Load a JSON or JSONL (optionally compressed with gzip) file.
 
@@ -101,23 +97,25 @@ def load_json(file: str):
     ValueError: If the file extension is not recognized.
     """
     if file.endswith(".json"):
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             return json.load(f)
     elif file.endswith(".jsonl"):
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             return [json.loads(line) for line in f]
     elif file.endswith(".json.gz"):
-        with gzip.open(file, 'rt') as f:
+        with gzip.open(file, "rt") as f:
             return json.load(f)
     elif file.endswith(".jsonl.gz"):
-        with gzip.open(file, 'rt') as f:
+        with gzip.open(file, "rt") as f:
             return [json.loads(line) for line in f]
     else:
         raise ValueError(f"Unknown file type for {file}")
 
+
 def save_json(data, file: str):
     import json
     import gzip
+
     """
     Save data to a JSON or JSONL file (optionally compressed with gzip).
 
@@ -129,18 +127,18 @@ def save_json(data, file: str):
     ValueError: If the file extension is not recognized.
     """
     if file.endswith(".json"):
-        with open(file, 'w') as f:
+        with open(file, "w") as f:
             json.dump(data, f)
     elif file.endswith(".jsonl"):
-        with open(file, 'w') as f:
+        with open(file, "w") as f:
             for item in data:
-                f.write(json.dumps(item) + '\n')
+                f.write(json.dumps(item) + "\n")
     elif file.endswith(".json.gz"):
-        with gzip.open(file, 'wt') as f:
+        with gzip.open(file, "wt") as f:
             json.dump(data, f)
     elif file.endswith(".jsonl.gz"):
-        with gzip.open(file, 'wt') as f:
+        with gzip.open(file, "wt") as f:
             for item in data:
-                f.write(json.dumps(item) + '\n')
+                f.write(json.dumps(item) + "\n")
     else:
         raise ValueError(f"Unknown file type for {file}")

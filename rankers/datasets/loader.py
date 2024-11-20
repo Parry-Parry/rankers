@@ -1,13 +1,15 @@
 from typing import Any
 import torch
 
+
 class DotDataCollator:
-    def __init__(self, 
-                 tokenizer, 
-                 special_mask=False,
-                 q_max_length=30,
-                 d_max_length=200,
-                 ) -> None:
+    def __init__(
+        self,
+        tokenizer,
+        special_mask=False,
+        q_max_length=30,
+        d_max_length=200,
+    ) -> None:
         self.tokenizer = tokenizer
         self.q_max_length = q_max_length
         self.d_max_length = d_max_length
@@ -40,21 +42,23 @@ class DotDataCollator:
             truncation=True,
             max_length=self.d_max_length,
             return_tensors="pt",
-            return_special_tokens_mask=self.special_mask
+            return_special_tokens_mask=self.special_mask,
         )
- 
+
         return {
             "queries": dict(tokenized_queries),
             "docs_batch": dict(tokenized_docs),
             "labels": torch.tensor(batch_scores) if len(batch_scores) > 0 else None,
         }
-    
+
+
 class CatDataCollator:
-    def __init__(self, 
-                 tokenizer,
-                 q_max_length=30,
-                 d_max_length=200,
-                 ) -> None:
+    def __init__(
+        self,
+        tokenizer,
+        q_max_length=30,
+        d_max_length=200,
+    ) -> None:
         self.tokenizer = tokenizer
         self.q_max_length = q_max_length
         self.d_max_length = d_max_length
@@ -66,7 +70,7 @@ class CatDataCollator:
         for elt in batch:
             q = elt[0]
             dx = elt[1]
-            batch_queries.extend([q]*len(dx))
+            batch_queries.extend([q] * len(dx))
             batch_docs.extend(dx)
             if len(elt) < 3:
                 continue
@@ -76,7 +80,7 @@ class CatDataCollator:
             batch_queries,
             batch_docs,
             padding=True,
-            truncation='only_second',
+            truncation="only_second",
             max_length=self.q_max_length + self.d_max_length,
             return_tensors="pt",
         )
@@ -85,25 +89,25 @@ class CatDataCollator:
             "labels": torch.tensor(batch_scores) if len(batch_scores) > 0 else None,
         }
 
+
 def _make_pos_pairs(texts) -> list:
     output = []
     pos = texts[0]
     for i in range(1, len(texts)):
         output.append([pos, texts[i]])
     return output
-    
+
+
 class PairDataCollator:
-    def __init__(self, 
-                 tokenizer, 
-                 max_length=512) -> None:
+    def __init__(self, tokenizer, max_length=512) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
-    
+
     def __call__(self, batch) -> dict:
         batch_queries = []
         batch_docs = []
         batch_scores = []
-        for (q, dx, *args) in batch:
+        for q, dx, *args in batch:
             batch_queries.append(q)
             batch_document_pairs = _make_pos_pairs(dx)
             batch_docs.append(batch_document_pairs)
@@ -111,9 +115,13 @@ class PairDataCollator:
                 continue
             batch_score_pairs = _make_pos_pairs(args[0])
             batch_scores.extend(batch_score_pairs)
-            
+
         # tokenize each pair with each query
-        sequences = [f"[CLS] {query} [SEP] {pair[0]} [SEP] {pair[1]}" for query, pairs in zip(batch_queries, batch_docs) for pair in pairs]
+        sequences = [
+            f"[CLS] {query} [SEP] {pair[0]} [SEP] {pair[1]}"
+            for query, pairs in zip(batch_queries, batch_docs)
+            for pair in pairs
+        ]
 
         tokenized_sequences = self.tokenizer(
             sequences,
@@ -123,18 +131,22 @@ class PairDataCollator:
             return_tensors="pt",
             add_special_tokens=True,
         )
-                
+
         return {
             "sequences": dict(tokenized_sequences),
-            "labels": torch.tensor(batch_scores).squeeze() if len(batch_scores) > 0 else None,
+            "labels": (
+                torch.tensor(batch_scores).squeeze() if len(batch_scores) > 0 else None
+            ),
         }
 
+
 class PromptDataCollator:
-    def __init__(self, 
-                 tokenizer,
-                 prompt : Any,
-                 max_length=512,
-                 ) -> None:
+    def __init__(
+        self,
+        tokenizer,
+        prompt: Any,
+        max_length=512,
+    ) -> None:
         self.tokenizer = tokenizer
         self.prompt = prompt
         self.max_length = max_length
@@ -143,14 +155,16 @@ class PromptDataCollator:
         batch_queries = []
         batch_docs = []
         batch_scores = []
-        for (q, dx, *args) in batch:
-            batch_queries.extend([q]*len(dx))
+        for q, dx, *args in batch:
+            batch_queries.extend([q] * len(dx))
             batch_docs.extend(dx)
             if len(args) == 0:
                 continue
             batch_scores.extend(args[0])
-        
-        sequences = [self.prompt(query=q, doc=d) for q, d in zip(batch_queries, batch_docs)]
+
+        sequences = [
+            self.prompt(query=q, doc=d) for q, d in zip(batch_queries, batch_docs)
+        ]
 
         tokenized_sequences = self.tokenizer(
             sequences,
@@ -164,21 +178,19 @@ class PromptDataCollator:
             "sequences": dict(tokenized_sequences),
             "labels": torch.tensor(batch_scores) if len(batch_scores) > 0 else None,
         }
-    
+
+
 class PairPromptDataCollator:
-    def __init__(self, 
-                 tokenizer, 
-                 prompt : Any,
-                 max_length=512) -> None:
+    def __init__(self, tokenizer, prompt: Any, max_length=512) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.prompt = prompt
-    
+
     def __call__(self, batch) -> dict:
         batch_queries = []
         batch_docs = []
         batch_scores = []
-        for (q, dx, *args) in batch:
+        for q, dx, *args in batch:
             batch_queries.append(q)
             batch_document_pairs = _make_pos_pairs(dx)
             batch_docs.append(batch_document_pairs)
@@ -186,9 +198,13 @@ class PairPromptDataCollator:
                 continue
             batch_score_pairs = _make_pos_pairs(args[0])
             batch_scores.extend(batch_score_pairs)
-            
+
         # tokenize each pair with each query
-        sequences = [self.prompt(query=query, document_1=pair[0], document_2=pair[1]) for query, pairs in zip(batch_queries, batch_docs) for pair in pairs]
+        sequences = [
+            self.prompt(query=query, document_1=pair[0], document_2=pair[1])
+            for query, pairs in zip(batch_queries, batch_docs)
+            for pair in pairs
+        ]
 
         tokenized_sequences = self.tokenizer(
             sequences,
@@ -198,20 +214,24 @@ class PairPromptDataCollator:
             return_tensors="pt",
             add_special_tokens=True,
         )
-                
+
         return {
             "sequences": dict(tokenized_sequences),
-            "labels": torch.tensor(batch_scores).squeeze() if len(batch_scores) > 0 else None,
+            "labels": (
+                torch.tensor(batch_scores).squeeze() if len(batch_scores) > 0 else None
+            ),
         }
-    
+
+
 class ListWisePromptDataCollator:
-    def __init__(self, 
-                 tokenizer,
-                 prompt : Any,
-                 score_format : callable = None,
-                 max_length=8192,
-                 use_scores=False,
-                 ) -> None:
+    def __init__(
+        self,
+        tokenizer,
+        prompt: Any,
+        score_format: callable = None,
+        max_length=8192,
+        use_scores=False,
+    ) -> None:
         self.tokenizer = tokenizer
         self.prompt = prompt
         self.score_format = score_format
@@ -222,17 +242,25 @@ class ListWisePromptDataCollator:
         batch_queries = []
         batch_docs = []
         batch_scores = []
-        for (q, dx, *args) in batch:
+        for q, dx, *args in batch:
             batch_queries.append(q)
             batch_docs.append(dx)
             if len(args) == 0:
                 continue
             batch_scores.append(args[0])
         if self.use_scores:
-            assert len(batch_scores) > 0, "Scores are required for ListWisePromptDataCollator with current settings"
-            sequences = [self.prompt(query=q, docs=dx, scores=score) for q, dx, score in zip(batch_queries, batch_docs, batch_scores)]
+            assert (
+                len(batch_scores) > 0
+            ), "Scores are required for ListWisePromptDataCollator with current settings"
+            sequences = [
+                self.prompt(query=q, docs=dx, scores=score)
+                for q, dx, score in zip(batch_queries, batch_docs, batch_scores)
+            ]
         else:
-            sequences = [self.prompt(query=q, docs=dx) for q, dx in zip(batch_queries, batch_docs)]
+            sequences = [
+                self.prompt(query=q, docs=dx)
+                for q, dx in zip(batch_queries, batch_docs)
+            ]
 
         tokenized_sequences = self.tokenizer(
             sequences,

@@ -9,14 +9,17 @@ from .. import is_torch_available
 
 @dataclass
 class RankerModelArguments:
-    model_name_or_path : str = field(
+    model_name_or_path: str = field(
         metadata={"help": "Huggingface model name or path to model"}
     )
 
     def __str__(self):
         self_as_dict = asdict(self)
 
-        self_as_dict = {k: f"<{k.upper()}>" if k.endswith("_token") else v for k, v in self_as_dict.items()}
+        self_as_dict = {
+            k: f"<{k.upper()}>" if k.endswith("_token") else v
+            for k, v in self_as_dict.items()
+        }
 
         attrs_as_str = [f"{k}={v},\n" for k, v in sorted(self_as_dict.items())]
         return f"{self.__class__.__name__}(\n{''.join(attrs_as_str)})"
@@ -29,7 +32,11 @@ class RankerModelArguments:
         the token values by removing their value.
         """
         # filter out fields that are defined as field(init=False)
-        d = {field.name: getattr(self, field.name) for field in fields(self) if field.init}
+        d = {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if field.init
+        }
 
         for k, v in d.items():
             if isinstance(v, Enum):
@@ -59,30 +66,35 @@ class RankerModelArguments:
 
         return {k: v if type(v) in valid_types else str(v) for k, v in d.items()}
 
+
 @dataclass
 class RankerDotArguments(RankerModelArguments):
-    pooling : Optional[str] = field(
-        default='cls',
-        metadata={"help": "Pooling strategy"}
+    pooling: Optional[str] = field(default="cls", metadata={"help": "Pooling strategy"})
+    use_pooler: Optional[bool] = field(
+        default=False, metadata={"help": "Whether to use the pooler MLP"}
     )
-    use_pooler : Optional[bool] = field(
+    model_tied: Optional[bool] = field(
         default=False,
-        metadata={"help": "Whether to use the pooler MLP"}
+        metadata={
+            "help": "Whether to tie the weights of the query and document encoder"
+        },
     )
-    model_tied : Optional[bool] = field(
-        default=False,
-        metadata={"help": "Whether to tie the weights of the query and document encoder"}
-    )
-    in_batch_loss : Optional[str] = field(
-        default=None,
-        metadata={"help": "Loss function to use for in-batch negatives"}
+    in_batch_loss: Optional[str] = field(
+        default=None, metadata={"help": "Loss function to use for in-batch negatives"}
     )
 
     def __post_init__(self):
         from .loss import LOSS_REGISTRY
-        assert self.pooling in ['cls', 'mean', 'none', 'late_interaction'], "Pooling must be one of 'cls', 'mean', 'late_interaction' or 'none'"
-        assert self.in_batch_loss is None or self.in_batch_loss in LOSS_REGISTRY.available, f"In-batch loss must be one of {LOSS_REGISTRY.available}"
 
-    
+        assert self.pooling in [
+            "cls",
+            "mean",
+            "none",
+            "late_interaction",
+        ], "Pooling must be one of 'cls', 'mean', 'late_interaction' or 'none'"
+        assert (
+            self.in_batch_loss is None or self.in_batch_loss in LOSS_REGISTRY.available
+        ), f"In-batch loss must be one of {LOSS_REGISTRY.available}"
+
 
 RankerCatArguments = RankerModelArguments
