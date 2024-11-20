@@ -128,7 +128,9 @@ def register_loss(name):
 
     return decorator
 
+
 _import_structure = {}
+
 
 try:
     if not is_torch_available():
