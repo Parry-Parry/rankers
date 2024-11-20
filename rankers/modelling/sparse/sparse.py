@@ -45,6 +45,7 @@ def splade_max(outputs, mask):
     
 class Sparse(Dot):
     model_type = "Sparse"
+    config_class = SparseConfig
     architecture_class = AutoModelForMaskedLM
     transformer_class = None
 
