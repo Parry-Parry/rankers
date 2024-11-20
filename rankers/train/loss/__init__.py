@@ -177,13 +177,9 @@ class RegWrapper(object):
             q_reg = self.reg(queries, self.q_weight) if queries is not None else 0
             d_reg = self.reg(documents, self.d_weight) if documents is not None else 0
             outputs = self.obj(pred, labels, **kwargs)
-            loss_val = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+            loss_val = outputs
             loss_val += q_reg + d_reg
-            if isinstance(outputs, dict):
-                outputs["loss"] = loss_val
-            else:
-                outputs = (loss_val, *outputs[1:])
-            return outputs
+            return loss_val
 
 def FLOPS_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
     class FLOPSWrapper(RegWrapper):
