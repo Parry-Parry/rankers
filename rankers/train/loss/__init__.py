@@ -309,13 +309,13 @@ def batched_dot_product(a: Tensor, b: Tensor):
         dot product for each group of vectors
     """
     if len(b.shape) == 2:
-        return torch.matmul(a, b.transpose(0, 1))
+        return dot_product(a, b)
     # Ensure `a` is of shape (batch_size, 1, vector_dim)
     if len(a.shape) == 2:
         a = a.unsqueeze(1)
     
     # Compute batched dot product, result shape: (batch_size, 1, group_size)
-    return torch.bmm(b, a.transpose(1, 2)).squeeze()
+    return dot_product(a, b)
 
 def maxsim(a : Tensor, b : Tensor, a_mask : Tensor, temperature : float = 1.0):
     scores = torch.einsum('qin,pjn->qipj', a, b)
