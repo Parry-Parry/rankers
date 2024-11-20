@@ -3,6 +3,11 @@ from torch import Tensor
 import torch.nn.functional as F
 from . import BaseLoss, register_loss
 
+
+def residual(x):
+    return x[:, 0].unsqueeze(1) - x[:, 1:]
+
+
 @register_loss("margin_mse")
 class MarginMSELoss(BaseLoss):
     """Margin MSE loss with residual calculation."""
