@@ -1,7 +1,7 @@
-import torch.nn as nn
-import torch
-from torch import Tensor
 import functools
+from ..._optional import is_torch_available, is_flax_available
+from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
+from typing import TYPE_CHECKING
 
 
 class SingletonMeta(type):
@@ -41,6 +41,7 @@ class LossFunctionRegistry(metaclass=SingletonMeta):
         """
         Automatically register common PyTorch loss functions.
         """
+        import torch.nn as nn
         builtin_losses = {
             # Basic losses
             "mse": nn.MSELoss,
@@ -126,11 +127,6 @@ def register_loss(name):
         return loss_fn
 
     return decorator
-
-
-from ... import is_torch_available, is_flax_available
-from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
-from typing import TYPE_CHECKING
 
 _import_structure = {}
 
