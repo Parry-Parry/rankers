@@ -2,15 +2,27 @@ import os
 import sys
 import logging
 from transformers import Trainer
-import math 
+import math
 import time
-import pandas as pd 
+import pandas as pd
 from typing import Optional, Union, Dict, List, Callable, Tuple, Any
 import datasets
 from datasets import Dataset
-from transformers import FlaxPreTrainedModel, PreTrainedTokenizerBase, EvalPrediction, TrainerCallback, TrainerControl, PrinterCallback
+from transformers import (
+    FlaxPreTrainedModel,
+    PreTrainedTokenizerBase,
+    EvalPrediction,
+    TrainerCallback,
+    TrainerControl,
+    PrinterCallback,
+)
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
-from transformers.trainer_callback import CallbackHandler, DefaultFlowCallback, ProgressCallback, ExportableState
+from transformers.trainer_callback import (
+    CallbackHandler,
+    DefaultFlowCallback,
+    ProgressCallback,
+    ExportableState,
+)
 from transformers.utils import logging, has_length, can_return_loss
 from transformers.integrations import get_reporting_integration_callbacks
 from functools import partial
@@ -24,6 +36,7 @@ import inspect
 from ..loss import LOSS_REGISTRY
 from .state import FlaxTrainerState
 from ..training_arguments import RankerTrainingArguments
+
 logger = logging.getLogger(__name__)
 
 # heavily inspired by https://github.com/hkjeon13/flax-trainer/blob/main/flax_trainer/trainer.py
@@ -36,28 +49,40 @@ OPTIMIZER_NAME = "optimizer"
 DEFAULT_CALLBACKS = [DefaultFlowCallback]
 DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 
+
 class FlaxContrastTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
+
     def __init__(
         self,
         model: Union[FlaxPreTrainedModel, Any] = None,
         args: RankerTrainingArguments = None,
-        loss = None,
+        loss=None,
         data_collator: Optional["DataCollator"] = None,
         train_dataset: Optional[Union[Dataset, "datasets.Dataset"]] = None,
-        eval_dataset: Optional[Union[Dataset, Dict[str, Dataset], "datasets.Dataset"]] = None,
+        eval_dataset: Optional[
+            Union[Dataset, Dict[str, Dataset], "datasets.Dataset"]
+        ] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         model_init: Optional[Callable[[], FlaxPreTrainedModel]] = None,
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
-        optimizers: Tuple[optax._src.base.Optimizer, optax._src.base.Scheduler] = (None, None), # TODO: Double check these base classes
+        optimizers: Tuple[optax._src.base.Optimizer, optax._src.base.Scheduler] = (
+            None,
+            None,
+        ),  # TODO: Double check these base classes
     ):
         if args is None:
             output_dir = "tmp_trainer"
-            logger.info(f"No `TrainingArguments` passed, using `output_dir={output_dir}`.")
+            logger.info(
+                f"No `TrainingArguments` passed, using `output_dir={output_dir}`."
+            )
             args = RankerTrainingArguments(output_dir=output_dir)
         if args.batch_eval_metrics and compute_metrics is not None:
-            if "compute_result" not in inspect.signature(compute_metrics).parameters.keys():
+            if (
+                "compute_result"
+                not in inspect.signature(compute_metrics).parameters.keys()
+            ):
                 raise ValueError(
                     "When using `batch_eval_metrics`, your `compute_metrics` function must take a `compute_result`"
                     " boolean argument which will be triggered after the last batch of the eval set to signal that the"
@@ -77,7 +102,9 @@ class FlaxContrastTrainer(Trainer):
                 self.model_init = model_init
                 model = self.call_model_init()
             else:
-                raise RuntimeError("`Trainer` requires either a `model` or `model_init` argument")
+                raise RuntimeError(
+                    "`Trainer` requires either a `model` or `model_init` argument"
+                )
         else:
             if model_init is not None:
                 warnings.warn(
@@ -88,12 +115,14 @@ class FlaxContrastTrainer(Trainer):
                 )
             self.model_init = model_init
 
-        if getattr(model, "is_parallelizable", False) and getattr(model, "model_parallel", False):
+        if getattr(model, "is_parallelizable", False) and getattr(
+            model, "model_parallel", False
+        ):
             self.is_model_parallel = True
         else:
             self.is_model_parallel = False
 
-        self.data_collator = data_collator 
+        self.data_collator = data_collator
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.tokenizer = tokenizer
@@ -107,20 +136,28 @@ class FlaxContrastTrainer(Trainer):
         self.model = model
 
         self.optimizer, self.lr_scheduler = optimizers
-        if model_init is not None and (self.optimizer is not None or self.lr_scheduler is not None):
+        if model_init is not None and (
+            self.optimizer is not None or self.lr_scheduler is not None
+        ):
             raise RuntimeError(
                 "Passing a `model_init` is incompatible with providing the `optimizers` argument. "
                 "You should subclass `Trainer` and override the `create_optimizer_and_scheduler` method."
             )
         if self.optimizer is None:
             self.create_optimizer_and_scheduler()
-       
-        default_callbacks = DEFAULT_CALLBACKS + get_reporting_integration_callbacks(self.args.report_to)
-        callbacks = default_callbacks if callbacks is None else default_callbacks + callbacks
+
+        default_callbacks = DEFAULT_CALLBACKS + get_reporting_integration_callbacks(
+            self.args.report_to
+        )
+        callbacks = (
+            default_callbacks if callbacks is None else default_callbacks + callbacks
+        )
         self.callback_handler = CallbackHandler(
             callbacks, self.model, self.tokenizer, self.optimizer, self.lr_scheduler
         )
-        self.add_callback(PrinterCallback if self.args.disable_tqdm else DEFAULT_PROGRESS_CALLBACK)
+        self.add_callback(
+            PrinterCallback if self.args.disable_tqdm else DEFAULT_PROGRESS_CALLBACK
+        )
 
         # Will be set to True by `self._setup_loggers()` on first call to `self.log()`.
         self._loggers_initialized = False
@@ -132,13 +169,23 @@ class FlaxContrastTrainer(Trainer):
         if self.args.should_save:
             os.makedirs(self.args.output_dir, exist_ok=True)
 
-        if not callable(self.data_collator) and callable(getattr(self.data_collator, "collate_batch", None)):
-            raise ValueError("The `data_collator` should be a simple callable (function, class with `__call__`).")
+        if not callable(self.data_collator) and callable(
+            getattr(self.data_collator, "collate_batch", None)
+        ):
+            raise ValueError(
+                "The `data_collator` should be a simple callable (function, class with `__call__`)."
+            )
 
         if args.max_steps > 0 and args.num_train_epochs > 0:
-            logger.warning("max_steps is given, it will override any value given in num_train_epochs")
+            logger.warning(
+                "max_steps is given, it will override any value given in num_train_epochs"
+            )
 
-        if train_dataset is not None and not has_length(train_dataset) and args.max_steps <= 0:
+        if (
+            train_dataset is not None
+            and not has_length(train_dataset)
+            and args.max_steps <= 0
+        ):
             raise ValueError(
                 "The train_dataset does not implement __len__, max_steps has to be specified. "
                 "The number of steps needs to be known in advance for the learning rate scheduler."
@@ -154,7 +201,9 @@ class FlaxContrastTrainer(Trainer):
             is_local_process_zero=self.is_local_process_zero(),
             is_world_process_zero=self.is_world_process_zero(),
             stateful_callbacks=[
-                cb for cb in self.callback_handler.callbacks + [self.control] if isinstance(cb, ExportableState)
+                cb
+                for cb in self.callback_handler.callbacks + [self.control]
+                if isinstance(cb, ExportableState)
             ],
         )
         # Internal variable to count flos in each process, will be accumulated in `self.state.total_flos` then
@@ -162,28 +211,48 @@ class FlaxContrastTrainer(Trainer):
         self.current_flos = 0
         self.hp_search_backend = None
         self.can_return_loss = can_return_loss(self.model.__class__)
-        self.control = self.callback_handler.on_init_end(self.args, self.state, self.control)
+        self.control = self.callback_handler.on_init_end(
+            self.args, self.state, self.control
+        )
 
         # Internal variables to help with automatic batch size reduction
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
 
-        if isinstance(loss, str): 
-            if 'flax' not in loss: loss = f'flax_{loss}'
-            if loss not in LOSS_REGISTRY.available: raise ValueError(f"Unknown loss: {loss}, available losses are {LOSS_REGISTRY.available}")
+        if isinstance(loss, str):
+            if "flax" not in loss:
+                loss = f"flax_{loss}"
+            if loss not in LOSS_REGISTRY.available:
+                raise ValueError(
+                    f"Unknown loss: {loss}, available losses are {LOSS_REGISTRY.available}"
+                )
             self.loss = LOSS_REGISTRY.get(loss)
-        else: 
+        else:
             self.loss = loss
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
     def create_optimizer_and_scheduler(self, num_training_steps=None):
-        self.optimizer = optax.adamw(learning_rate=self.args.learning_rate, b1=0.9, b2=0.98, eps=1e-8, weight_decay=0.01)
-        self.lr_scheduler = optax.cosine_decay_schedule(init_value=self.args.learning_rate, decay_steps=num_training_steps, alpha=0.0) if num_training_steps is not None else None
+        self.optimizer = optax.adamw(
+            learning_rate=self.args.learning_rate,
+            b1=0.9,
+            b2=0.98,
+            eps=1e-8,
+            weight_decay=0.01,
+        )
+        self.lr_scheduler = (
+            optax.cosine_decay_schedule(
+                init_value=self.args.learning_rate,
+                decay_steps=num_training_steps,
+                alpha=0.0,
+            )
+            if num_training_steps is not None
+            else None
+        )
 
-    @partial(jit, static_argnums=(0,2))
+    @partial(jit, static_argnums=(0, 2))
     def compute_loss(self, inputs, return_outputs=False):
-        labels = inputs.pop('labels')
+        labels = inputs.pop("labels")
         pred, _ = self.state.apply_fn(**inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
@@ -192,15 +261,16 @@ class FlaxContrastTrainer(Trainer):
         loss = self.loss(pred, labels)
 
         return (loss, pred) if return_outputs else loss
-    
-    def compute_metrics(self, result_frame : pd.DataFrame):
+
+    def compute_metrics(self, result_frame: pd.DataFrame):
         from ir_measures import evaluator, RR
+
         qrels = self.eval_dataset.qrels
-        metrics = self.args.eval_metrics if self.args.eval_metrics else [RR@10]
+        metrics = self.args.eval_metrics if self.args.eval_metrics else [RR @ 10]
         evaluator = evaluator(metrics, qrels)
 
         return evaluator.calc_aggregate(result_frame)
-    
+
     def evaluation_loop(
         self,
         dataset: Dataset,
@@ -228,8 +298,13 @@ class FlaxContrastTrainer(Trainer):
         num_samples = len(dataset)
         metrics = {f"{metric_key_prefix}_{k}": v for k, v in metrics.items()}
 
-        return EvalLoopOutput(predictions=result_frame, label_ids=None, metrics=metrics, num_samples=num_samples)
-    
+        return EvalLoopOutput(
+            predictions=result_frame,
+            label_ids=None,
+            metrics=metrics,
+            num_samples=num_samples,
+        )
+
     def evaluate(
         self,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
@@ -265,7 +340,9 @@ class FlaxContrastTrainer(Trainer):
 
         self.log(output.metrics)
 
-        self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, output.metrics)
+        self.control = self.callback_handler.on_evaluate(
+            self.args, self.state, self.control, output.metrics
+        )
 
         return output.metrics
 
@@ -280,7 +357,7 @@ class FlaxContrastTrainer(Trainer):
 
     def _save_state(self, checkpoint):
         pass
-    
+
     def get_num_trainable_parameters(self):
         """
         Get the number of trainable parameters.
@@ -292,7 +369,9 @@ class FlaxContrastTrainer(Trainer):
         Returns the learning rate of each parameter from self.optimizer.
         """
         if self.optimizer is None:
-            raise ValueError("Trainer optimizer is None, please make sure you have setup the optimizer before.")
+            raise ValueError(
+                "Trainer optimizer is None, please make sure you have setup the optimizer before."
+            )
         return [group["lr"] for group in self.optimizer.param_groups]
 
     def train(
@@ -325,7 +404,6 @@ class FlaxContrastTrainer(Trainer):
 
         self.is_in_train = True
 
-
         if "model_path" in kwargs:
             resume_from_checkpoint = kwargs.pop("model_path")
             warnings.warn(
@@ -334,7 +412,9 @@ class FlaxContrastTrainer(Trainer):
                 FutureWarning,
             )
         if len(kwargs) > 0:
-            raise TypeError(f"train() received got unexpected keyword arguments: {', '.join(list(kwargs.keys()))}.")
+            raise TypeError(
+                f"train() received got unexpected keyword arguments: {', '.join(list(kwargs.keys()))}."
+            )
         # This might change the seed so needs to run first.
         self._train_batch_size = self.args.train_batch_size
 
@@ -342,7 +422,11 @@ class FlaxContrastTrainer(Trainer):
         model_reloaded = False
         if self.model_init is not None:
             # Seed must be set before instantiating the model when using model_init.
-            enable_full_determinism(self.args.seed) if self.args.full_determinism else seed_everything(self.args.seed)
+            (
+                enable_full_determinism(self.args.seed)
+                if self.args.full_determinism
+                else seed_everything(self.args.seed)
+            )
             self.model = self.call_model_init(trial)
             model_reloaded = True
             # Reinitializes optimizer and scheduler
@@ -352,7 +436,9 @@ class FlaxContrastTrainer(Trainer):
         if isinstance(resume_from_checkpoint, bool) and resume_from_checkpoint:
             resume_from_checkpoint = get_last_checkpoint(args.output_dir)
             if resume_from_checkpoint is None:
-                raise ValueError(f"No valid checkpoint found in output directory ({args.output_dir})")
+                raise ValueError(
+                    f"No valid checkpoint found in output directory ({args.output_dir})"
+                )
 
         if resume_from_checkpoint is not None:
             self._load_state(resume_from_checkpoint)
@@ -381,9 +467,15 @@ class FlaxContrastTrainer(Trainer):
             )
 
     def _inner_training_loop(
-        self, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
+        self,
+        args=None,
+        resume_from_checkpoint=None,
+        trial=None,
+        ignore_keys_for_eval=None,
     ):
-        logger.debug(f"Currently training with a batch size of: {self._train_batch_size}")
+        logger.debug(
+            f"Currently training with a batch size of: {self._train_batch_size}"
+        )
         # Data loader and number of training steps
         train_dataloader = self.get_train_dataloader()
 
@@ -391,13 +483,17 @@ class FlaxContrastTrainer(Trainer):
         # number of training epochs: num_train_epochs
         # number of training steps per epoch: num_update_steps_per_epoch
         # total number of training steps to execute: max_steps
-        total_train_batch_size = self._train_batch_size * args.gradient_accumulation_steps * args.world_size
+        total_train_batch_size = (
+            self._train_batch_size * args.gradient_accumulation_steps * args.world_size
+        )
 
         len_dataloader = None
         num_train_tokens = None
         if has_length(train_dataloader):
             len_dataloader = len(train_dataloader)
-            num_update_steps_per_epoch = len_dataloader // args.gradient_accumulation_steps
+            num_update_steps_per_epoch = (
+                len_dataloader // args.gradient_accumulation_steps
+            )
             num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
             num_examples = self.num_examples(train_dataloader)
             if args.max_steps > 0:
@@ -410,15 +506,24 @@ class FlaxContrastTrainer(Trainer):
                 num_train_samples = args.max_steps * total_train_batch_size
                 if args.include_tokens_per_second:
                     num_train_tokens = (
-                        self.num_tokens(train_dataloader, args.max_steps) * args.gradient_accumulation_steps
+                        self.num_tokens(train_dataloader, args.max_steps)
+                        * args.gradient_accumulation_steps
                     )
             else:
-                max_steps = math.ceil(args.num_train_epochs * num_update_steps_per_epoch)
+                max_steps = math.ceil(
+                    args.num_train_epochs * num_update_steps_per_epoch
+                )
                 num_train_epochs = math.ceil(args.num_train_epochs)
-                num_train_samples = self.num_examples(train_dataloader) * args.num_train_epochs
+                num_train_samples = (
+                    self.num_examples(train_dataloader) * args.num_train_epochs
+                )
                 if args.include_tokens_per_second:
-                    num_train_tokens = self.num_tokens(train_dataloader) * args.num_train_epochs
-        elif args.max_steps > 0:  # Rely on max_steps when dataloader does not have a working size
+                    num_train_tokens = (
+                        self.num_tokens(train_dataloader) * args.num_train_epochs
+                    )
+        elif (
+            args.max_steps > 0
+        ):  # Rely on max_steps when dataloader does not have a working size
             max_steps = args.max_steps
             # Setting a very large number of epochs so we go as many times as necessary over the iterator.
             num_train_epochs = sys.maxsize
@@ -426,20 +531,21 @@ class FlaxContrastTrainer(Trainer):
             num_examples = total_train_batch_size * args.max_steps
             num_train_samples = args.max_steps * total_train_batch_size
             if args.include_tokens_per_second:
-                num_train_tokens = self.num_tokens(train_dataloader, args.max_steps) * args.gradient_accumulation_steps
+                num_train_tokens = (
+                    self.num_tokens(train_dataloader, args.max_steps)
+                    * args.gradient_accumulation_steps
+                )
         else:
             raise ValueError(
                 "args.max_steps must be set to a positive value if dataloader does not have a length, was"
                 f" {args.max_steps}"
             )
 
-
         # We need to reset the scheduler, as its parameters may be different on subsequent calls
         if self._created_lr_scheduler:
             self.lr_scheduler = None
             self._created_lr_scheduler = False
 
-       
         self.create_optimizer_and_scheduler(num_training_steps=max_steps)
 
         # Activate gradient checkpointing if needed
@@ -449,8 +555,10 @@ class FlaxContrastTrainer(Trainer):
             else:
                 gradient_checkpointing_kwargs = args.gradient_checkpointing_kwargs
 
-            self.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
-        
+            self.model.gradient_checkpointing_enable(
+                gradient_checkpointing_kwargs=gradient_checkpointing_kwargs
+            )
+
         # Check if saved optimizer or scheduler states exist
         self._load_state(resume_from_checkpoint)
 
@@ -461,7 +569,9 @@ class FlaxContrastTrainer(Trainer):
             is_local_process_zero=self.is_local_process_zero(),
             is_world_process_zero=self.is_world_process_zero(),
             stateful_callbacks=[
-                cb for cb in self.callback_handler.callbacks + [self.control] if isinstance(cb, ExportableState)
+                cb
+                for cb in self.callback_handler.callbacks + [self.control]
+                if isinstance(cb, ExportableState)
             ],
         )
         self.state.train_batch_size = self._train_batch_size
@@ -494,13 +604,23 @@ class FlaxContrastTrainer(Trainer):
         logger.info("***** Running training *****")
         logger.info(f"  Num examples = {num_examples:,}")
         logger.info(f"  Num Epochs = {num_train_epochs:,}")
-        logger.info(f"  Instantaneous batch size per device = {self.args.per_device_train_batch_size:,}")
+        logger.info(
+            f"  Instantaneous batch size per device = {self.args.per_device_train_batch_size:,}"
+        )
         if self.args.per_device_train_batch_size != self._train_batch_size:
-            logger.info(f"  Training with DataParallel so batch size has been adjusted to: {self._train_batch_size:,}")
-        logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_train_batch_size:,}")
-        logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
+            logger.info(
+                f"  Training with DataParallel so batch size has been adjusted to: {self._train_batch_size:,}"
+            )
+        logger.info(
+            f"  Total train batch size (w. parallel, distributed & accumulation) = {total_train_batch_size:,}"
+        )
+        logger.info(
+            f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}"
+        )
         logger.info(f"  Total optimization steps = {max_steps:,}")
-        logger.info(f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}")
+        logger.info(
+            f"  Number of trainable parameters = {get_model_param_count(model, trainable_only=True):,}"
+        )
 
         self.state.epoch = 0
         start_time = time.time()
@@ -512,18 +632,26 @@ class FlaxContrastTrainer(Trainer):
         if resume_from_checkpoint is not None and os.path.isfile(
             os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME)
         ):
-            self.state = TrainerState.load(os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME))
+            self.state = TrainerState.load(
+                os.path.join(resume_from_checkpoint, TRAINER_STATE_NAME)
+            )
             self.compare_trainer_and_checkpoint_args(self.args, self.state)
             epochs_trained = int(self.state.global_step // num_update_steps_per_epoch)
             if not args.ignore_data_skip:
-                steps_trained_in_current_epoch = self.state.global_step % (num_update_steps_per_epoch)
+                steps_trained_in_current_epoch = self.state.global_step % (
+                    num_update_steps_per_epoch
+                )
                 steps_trained_in_current_epoch *= args.gradient_accumulation_steps
             else:
                 steps_trained_in_current_epoch = 0
 
-            logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+            logger.info(
+                "  Continuing training from checkpoint, will skip to saved global_step"
+            )
             logger.info(f"  Continuing training from epoch {epochs_trained}")
-            logger.info(f"  Continuing training from global step {self.state.global_step}")
+            logger.info(
+                f"  Continuing training from global step {self.state.global_step}"
+            )
             if not args.ignore_data_skip:
                 logger.info(
                     f"  Will skip the first {epochs_trained} epochs then the first"
@@ -548,7 +676,9 @@ class FlaxContrastTrainer(Trainer):
         self._total_loss_scalar = 0.0
         self._globalstep_last_logged = self.state.global_step
         grad_norm: Optional[float] = None
-        self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
+        self.control = self.callback_handler.on_train_begin(
+            args, self.state, self.control
+        )
 
         if args.eval_on_start:
             self._evaluate(trial, ignore_keys_for_eval, skip_scheduler=True)
@@ -568,14 +698,22 @@ class FlaxContrastTrainer(Trainer):
                 if len_dataloader is not None
                 else args.max_steps * args.gradient_accumulation_steps
             )
-            self.control = self.callback_handler.on_epoch_begin(args, self.state, self.control)
+            self.control = self.callback_handler.on_epoch_begin(
+                args, self.state, self.control
+            )
 
-            if epoch == epochs_trained and resume_from_checkpoint is not None and steps_trained_in_current_epoch == 0:
+            if (
+                epoch == epochs_trained
+                and resume_from_checkpoint is not None
+                and steps_trained_in_current_epoch == 0
+            ):
                 self._load_rng_state(resume_from_checkpoint)
 
             steps_skipped = 0
             if steps_trained_in_current_epoch > 0:
-                epoch_iterator = skip_first_batches(epoch_iterator, steps_trained_in_current_epoch)
+                epoch_iterator = skip_first_batches(
+                    epoch_iterator, steps_trained_in_current_epoch
+                )
                 steps_skipped = steps_trained_in_current_epoch
                 steps_trained_in_current_epoch = 0
 
@@ -594,15 +732,18 @@ class FlaxContrastTrainer(Trainer):
                     steps_trained_progress_bar = None
 
                 if step % args.gradient_accumulation_steps == 0:
-                    self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
+                    self.control = self.callback_handler.on_step_begin(
+                        args, self.state, self.control
+                    )
 
                 tr_loss_step = self.training_step(inputs)
 
-                if (
-                    args.logging_nan_inf_filter
-                ):
+                if args.logging_nan_inf_filter:
                     # if loss is nan or inf simply add the average of previous logged losses
-                    tr_loss = tr_loss.at[0].add(tr_loss / (1 + self.state.global_step - self._globalstep_last_logged))
+                    tr_loss = tr_loss.at[0].add(
+                        tr_loss
+                        / (1 + self.state.global_step - self._globalstep_last_logged)
+                    )
                 else:
 
                     tr_loss = tr_loss.at[0].add(float(tr_loss_step))
@@ -610,7 +751,8 @@ class FlaxContrastTrainer(Trainer):
                 self.current_flos += float(self.floating_point_ops(inputs))
 
                 is_last_step_and_steps_less_than_grad_acc = (
-                    steps_in_epoch <= args.gradient_accumulation_steps and (step + 1) == steps_in_epoch
+                    steps_in_epoch <= args.gradient_accumulation_steps
+                    and (step + 1) == steps_in_epoch
                 )
 
                 if (
@@ -628,13 +770,17 @@ class FlaxContrastTrainer(Trainer):
                     if args.max_grad_norm is not None and args.max_grad_norm > 0:
                         # TODO: Implement grad norm
                         _grad_norm = None
-                      
+
                     grad_norm = _grad_norm
 
-                    tr_loss_step, grad = jax.value_and_grad(self.loss)(self.state.params)
+                    tr_loss_step, grad = jax.value_and_grad(self.loss)(
+                        self.state.params
+                    )
                     self.state = self.state.apply_gradients(grads=pmean(grad, "batch"))
 
-                    self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
+                    self.control = self.callback_handler.on_optimizer_step(
+                        args, self.state, self.control
+                    )
 
                     optimizer_was_run = not self.accelerator.optimizer_step_was_skipped
                     if optimizer_was_run:
@@ -643,12 +789,20 @@ class FlaxContrastTrainer(Trainer):
                             self.lr_scheduler(self.state.step)
 
                     self.state.global_step += 1
-                    self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
-                    self.control = self.callback_handler.on_step_end(args, self.state, self.control)
+                    self.state.epoch = (
+                        epoch + (step + 1 + steps_skipped) / steps_in_epoch
+                    )
+                    self.control = self.callback_handler.on_step_end(
+                        args, self.state, self.control
+                    )
 
-                    self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
+                    self._maybe_log_save_evaluate(
+                        tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval
+                    )
                 else:
-                    self.control = self.callback_handler.on_substep_end(args, self.state, self.control)
+                    self.control = self.callback_handler.on_substep_end(
+                        args, self.state, self.control
+                    )
 
                 if self.control.should_epoch_stop or self.control.should_training_stop:
                     # PyTorch/XLA relies on the data loader to insert the mark_step for
@@ -663,8 +817,12 @@ class FlaxContrastTrainer(Trainer):
                 )
                 self.control.should_training_stop = True
 
-            self.control = self.callback_handler.on_epoch_end(args, self.state, self.control)
-            self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
+            self.control = self.callback_handler.on_epoch_end(
+                args, self.state, self.control
+            )
+            self._maybe_log_save_evaluate(
+                tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval
+            )
 
             if self.control.should_training_stop:
                 break
@@ -673,13 +831,17 @@ class FlaxContrastTrainer(Trainer):
             # Clean the state at the end of training
             delattr(self, "_past")
 
-        logger.info("\n\nTraining completed. Do not forget to share your model on huggingface.co/models =)\n\n")
+        logger.info(
+            "\n\nTraining completed. Do not forget to share your model on huggingface.co/models =)\n\n"
+        )
         if args.load_best_model_at_end and self.state.best_model_checkpoint is not None:
             self._load_best_model()
 
         # add remaining tr_loss
         self._total_loss_scalar += tr_loss
-        effective_global_step = max(self.state.global_step, 0.001)  # Avoid ZeroDivisionError
+        effective_global_step = max(
+            self.state.global_step, 0.001
+        )  # Avoid ZeroDivisionError
         train_loss = self._total_loss_scalar / effective_global_step
 
         metrics = speed_metrics(
@@ -698,22 +860,31 @@ class FlaxContrastTrainer(Trainer):
         self.log(metrics)
 
         run_dir = self._get_output_dir(trial)
-        checkpoints_sorted = self._sorted_checkpoints(use_mtime=False, output_dir=run_dir)
+        checkpoints_sorted = self._sorted_checkpoints(
+            use_mtime=False, output_dir=run_dir
+        )
 
         # Delete the last checkpoint when save_total_limit=1 if it's different from the best checkpoint and process allowed to save.
-        if self.args.should_save and self.state.best_model_checkpoint is not None and self.args.save_total_limit == 1:
+        if (
+            self.args.should_save
+            and self.state.best_model_checkpoint is not None
+            and self.args.save_total_limit == 1
+        ):
             for checkpoint in checkpoints_sorted:
                 if not os.path.samefile(checkpoint, self.state.best_model_checkpoint):
-                    logger.info(f"Deleting older checkpoint [{checkpoint}] due to args.save_total_limit")
+                    logger.info(
+                        f"Deleting older checkpoint [{checkpoint}] due to args.save_total_limit"
+                    )
                     shutil.rmtree(checkpoint, ignore_errors=True)
 
-        self.control = self.callback_handler.on_train_end(args, self.state, self.control)
+        self.control = self.callback_handler.on_train_end(
+            args, self.state, self.control
+        )
 
         # Wait for the checkpoint to be uploaded.
         self._finish_current_push()
 
         return TrainOutput(self.state.global_step, train_loss, metrics)
-    
 
     def training_step(self, inputs: Dict[str, Union[jax.Array, Any]]) -> jax.Array:
         """

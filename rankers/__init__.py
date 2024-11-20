@@ -1,5 +1,6 @@
 __version__ = "0.0.6"
 
+
 def seed_everything(seed=42):
     import random
     import numpy as np
@@ -11,6 +12,7 @@ def seed_everything(seed=42):
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
+
 
 from .train import loss as loss
 from .train import *

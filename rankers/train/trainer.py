@@ -2,9 +2,9 @@ import torch
 import os
 import logging
 from transformers import Trainer
-import math 
+import math
 import time
-import pandas as pd 
+import pandas as pd
 from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
@@ -15,33 +15,49 @@ logger = logging.getLogger(__name__)
 
 LOSS_NAME = "loss.pt"
 
+
 class RankerTrainer(Trainer):
     """Customized Trainer from Huggingface's Trainer"""
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(**kwargs)
-        if isinstance(loss_fn, str): 
-            if loss_fn not in LOSS_REGISTRY.availible: raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}")
+        if isinstance(loss_fn, str):
+            if loss_fn not in LOSS_REGISTRY.availible:
+                raise ValueError(
+                    f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}"
+                )
             self.loss = LOSS_REGISTRY.get(loss_fn)
-        else: 
+        else:
             self.loss = loss_fn
 
         self.regularize_loss = False
         if self.args.regularization is not None:
             from .loss import FLOPS_regularization, L1_regularization
-            reg_func = L1_regularization if self.args.regularization == 'l1' else FLOPS_regularization
-            self.loss = reg_func(self.loss, self.args.q_regularization_weight, self.args.d_regularization_weight, 0, self.args.regularization_warmup_steps)
+
+            reg_func = (
+                L1_regularization
+                if self.args.regularization == "l1"
+                else FLOPS_regularization
+            )
+            self.loss = reg_func(
+                self.loss,
+                self.args.q_regularization_weight,
+                self.args.d_regularization_weight,
+                0,
+                self.args.regularization_warmup_steps,
+            )
             self.regularize_loss = True
 
         self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
-    def compute_loss(self, 
-                     model, 
-                     inputs, 
-                     return_outputs=False,
-                     **kwargs, # handle new arguments
-                     ):
+    def compute_loss(
+        self,
+        model,
+        inputs,
+        return_outputs=False,
+        **kwargs,  # handle new arguments
+    ):
         outputs = model(self.loss, **inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
@@ -56,11 +72,12 @@ class RankerTrainer(Trainer):
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         return (loss, outputs) if return_outputs else loss
-    
-    def compute_metrics(self, result_frame : pd.DataFrame):
+
+    def compute_metrics(self, result_frame: pd.DataFrame):
         from ir_measures import evaluator, RR
+
         qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
-        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [RR@10]
+        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [RR @ 10]
         evaluator = evaluator(metrics, qrels)
 
         return evaluator.calc_aggregate(result_frame)
@@ -70,7 +87,7 @@ class RankerTrainer(Trainer):
         dataset: Dataset,
         description: str,
         metric_key_prefix: str = "val",
-        **kwargs, # handle new arguments
+        **kwargs,  # handle new arguments
     ) -> EvalLoopOutput:
         """
         Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
@@ -124,14 +141,19 @@ class RankerTrainer(Trainer):
         num_samples = len(dataset)
         metrics = {f"{metric_key_prefix}_{k}": v for k, v in metrics.items()}
 
-        return EvalLoopOutput(predictions=result_frame, label_ids=None, metrics=metrics, num_samples=num_samples)
-    
+        return EvalLoopOutput(
+            predictions=result_frame,
+            label_ids=None,
+            metrics=metrics,
+            num_samples=num_samples,
+        )
+
     def evaluate(
         self,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
-        **kwargs, # handle new arguments
+        **kwargs,  # handle new arguments
     ) -> Dict[str, float]:
         # handle multipe eval datasets
         override = eval_dataset is not None
@@ -164,7 +186,9 @@ class RankerTrainer(Trainer):
         )
 
         self.log(output.metrics)
-        self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, output.metrics)
+        self.control = self.callback_handler.on_evaluate(
+            self.args, self.state, self.control, output.metrics
+        )
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
         return output.metrics
@@ -178,5 +202,7 @@ class RankerTrainer(Trainer):
 
     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
         logger.info("Loading model's weight from %s", resume_from_checkpoint)
-        if model: return model.load_state_dict(resume_from_checkpoint)
-        else: self.model.load_state_dict(resume_from_checkpoint)
+        if model:
+            return model.load_state_dict(resume_from_checkpoint)
+        else:
+            self.model.load_state_dict(resume_from_checkpoint)
