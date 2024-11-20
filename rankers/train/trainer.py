@@ -9,7 +9,7 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
-from .loss import LOSS_REGISTRY
+from .loss.torch import LOSS_REGISTRY
 
 logger = logging.getLogger(__name__)
 

@@ -161,14 +161,13 @@ class Dot(Ranker):
 
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
         batch_size = query_reps.size(0)
-
+        emb_q = query_reps.reshape(batch_size, 1, -1)
+        emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
         if self.pooling_type == "late_interaction":
             pred = emb_q @ emb_d.permute(0, 2, 1)
             pred = pred.max(1).values
             pred = pred.sum(-1)
         else:
-            emb_q = query_reps.reshape(batch_size, 1, -1)
-            emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
             pred = batched_dot_product(emb_q, emb_d)
 
         if self.config.inbatch_loss is not None:
