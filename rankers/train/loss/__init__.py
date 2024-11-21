@@ -216,10 +216,12 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .torch import BaseLoss
-    from .flax import FlaxBaseLoss
-    from .torch import *
-    from .flax import *
+    if is_torch_available():
+        from .torch import BaseLoss as BaseLoss
+        from .torch import *
+    if is_flax_available():
+        from .flax import FlaxBaseLoss as FlaxBaseLoss
+        from .flax import *
 else:
     import sys
 
