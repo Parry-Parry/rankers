@@ -174,3 +174,55 @@ else:
     sys.modules[__name__] = _LazyModule(
         __name__, globals()["__file__"], _import_structure, module_spec=__spec__
     )
+from .._optional import is_torch_available, is_flax_available
+from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
+from typing import TYPE_CHECKING
+
+_import_structure = {}
+
+try:
+    if not is_torch_available():
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    pass
+else:
+    from .torch import __all__ as __all_torch
+    _import_structure["loss"] = [
+        "BaseLoss",
+        "LossFunctionRegistry",
+        "LOSS_REGISTRY",
+        "register_loss",
+        "FLOPS_regularization",
+        "L1_regularization",
+        "reduce",
+        "normalize",
+        "residual",
+        "maxsim",
+        "dot_product",
+        "batched_dot_product",
+        "cross_dot_product",
+        *__all_torch,
+    ]
+try:
+    if not is_flax_available():
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    pass
+else:
+    from .flax import __all__ as __all_flax
+    _import_structure["flax_loss"] = [
+        "FlaxBaseLoss",
+        *__all_flax,
+    ]
+
+if TYPE_CHECKING:
+    from .torch import BaseLoss
+    from .flax import FlaxBaseLoss
+    from .torch import *
+    from .flax import *
+else:
+    import sys
+
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )
