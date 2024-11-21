@@ -131,12 +131,6 @@ def register_loss(name):
 
 _import_structure = {}
 
-from ..._optional import is_torch_available, is_flax_available
-from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
-from typing import TYPE_CHECKING
-
-_import_structure = {}
-
 try:
     if not is_torch_available():
         raise OptionalDependencyNotAvailable()
