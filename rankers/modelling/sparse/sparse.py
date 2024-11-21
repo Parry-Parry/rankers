@@ -7,7 +7,8 @@ from transformers import (
     PreTrainedTokenizer,
     AutoModelForMaskedLM,
 )
-from ..dot.dot import DotConfig, Dot
+from .dot import DotConfig, Dot
+from torch.nn import functional as F
 
 
 class SparseConfig(DotConfig):
@@ -16,8 +17,8 @@ class SparseConfig(DotConfig):
     def __init__(
         self,
         model_name_or_path: str = "bert-base-uncased",
-        query_processing: str = None,
-        doc_processing: str = None,
+        query_processing: str = 'splade_max',
+        doc_processing: str = 'splade_max',
         pooling_type="cls",
         inbatch_loss=None,
         model_tied=True,
@@ -45,8 +46,8 @@ class SparseConfig(DotConfig):
     def from_pretrained(
         cls,
         model_name_or_path: str = "bert-base-uncased",
-        query_processing: str = None,
-        doc_processing: str = None,
+        query_processing: str = 'splade_max',
+        doc_processing: str = 'splade_max',
         pooling_type="cls",
         inbatch_loss=None,
         model_tied=True,
@@ -72,15 +73,14 @@ class SparseConfig(DotConfig):
 
 def splade_max(outputs, mask):
     outputs = outputs.logits
-    relu = torch.nn.ReLU(inplace=False)
-    values, _ = torch.max(torch.log(1 + relu(outputs)) * mask.unsqueeze(-1), dim=1)
+    values, _ = torch.max(torch.log(1 + F.relu(outputs)) * mask.unsqueeze(-1), dim=1)
     return values
 
 
 class Sparse(Dot):
     model_type = "Sparse"
-    config_class = SparseConfig
     architecture_class = AutoModelForMaskedLM
+    config_class = SparseConfig
     transformer_class = None
 
     def __init__(
@@ -104,7 +104,7 @@ class Sparse(Dot):
             else lambda x, y: x.logits
         )
 
-        from ...pyterrier.sparse import SparseTransformer
+        from .pyterrier.sparse import SparseTransformer
 
         self.transformer_class = SparseTransformer
 
@@ -140,7 +140,7 @@ class Sparse(Dot):
             self.inbatch_loss_fn(
                 inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)
             )
-            if inbatch_pred is not None
+            if (inbatch_pred is not None and self.config.inbatch_loss is not None)
             else 0.0
         )
 
