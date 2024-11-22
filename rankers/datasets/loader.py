@@ -47,7 +47,7 @@ class DotDataCollator:
 
         return {
             "queries": dict(tokenized_queries),
-            "docs_batch": dict(tokenized_docs),
+            "text": dict(tokenized_docs),
             "labels": torch.tensor(batch_scores) if len(batch_scores) > 0 else None,
         }
 
