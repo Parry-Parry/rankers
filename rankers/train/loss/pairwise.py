@@ -12,7 +12,7 @@ class MarginMSELoss(BaseLoss):
 
     name = "MarginMSE"
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         residual_pred = pred[:, 0].unsqueeze(1) - pred[:, 1:]
         residual_label = labels[:, 0].unsqueeze(1) - labels[:, 1:]
         return F.mse_loss(residual_pred, residual_label, reduction=self.reduction)
@@ -28,7 +28,7 @@ class HingeLoss(BaseLoss):
         super().__init__(reduction)
         self.margin = margin
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         pred_residuals = F.relu(residual(F.sigmoid(pred)))
         label_residuals = torch.sign(residual(F.sigmoid(labels)))
         return self._reduce(F.relu(self.margin - (label_residuals * pred_residuals)))
@@ -44,7 +44,7 @@ class ClearLoss(BaseLoss):
         super().__init__(reduction)
         self.margin = margin
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         margin_b = self.margin - residual(labels)
         return self._reduce(F.relu(margin_b - residual(pred)))
 
@@ -55,7 +55,7 @@ class LCELoss(BaseLoss):
 
     name = "LCE"
 
-    def forward(self, pred: Tensor, labels: Tensor = None) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor = None, **kwargs) -> Tensor:
         if labels is not None:
             labels = labels.argmax(dim=1)
         else:
@@ -73,7 +73,7 @@ class ContrastiveLoss(BaseLoss):
         super().__init__(reduction)
         self.temperature = temperature
 
-    def forward(self, pred: Tensor, labels: Tensor = None) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor = None, **kwargs) -> Tensor:
         softmax_scores = F.log_softmax(pred / self.temperature, dim=1)
         labels = (
             labels.argmax(dim=1)
