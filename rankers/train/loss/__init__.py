@@ -210,7 +210,7 @@ class L1Loss(BaseLoss):
         return torch.abs(reps).sum(dim=1).mean() * weight
 
 
-def CompoundLoss(BaseLoss):
+class CompoundLoss(BaseLoss):
     def __init__(self, losses: list, alphas: list = None):
         super(CompoundLoss, self).__init__()
         self.losses = losses
