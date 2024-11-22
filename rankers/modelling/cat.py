@@ -9,6 +9,15 @@ from transformers import (
 )
 import torch
 import torch.nn.functional as F
+from dataclasses import dataclass
+
+
+@dataclass
+class CatOutput:
+    loss: torch.Tensor = 0.0
+    logits: torch.Tensor = None
+    scores: torch.Tensor = None
+    labels: torch.Tensor = None
 
 
 class CatConfig(PretrainedConfig):
@@ -57,8 +66,12 @@ class Cat(PreTrainedModel):
         labels = labels.to(self.model.device) if labels is not None else None
         logits = self.model(**sequences).logits
         pred, labels = self.prepare_outputs(logits, labels)
-        loss_value = loss(pred) if labels is None else loss(pred, labels)
-        return (loss_value, pred)
+
+        output = CatOutput(logits, pred, labels)
+
+        loss_value = loss(output.scores, output.labels) if loss is not None else 0.0
+        output.loss += loss_value
+        return output
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save model"""

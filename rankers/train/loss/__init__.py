@@ -149,12 +149,13 @@ class BaseLoss(nn.Module):
         raise NotImplementedError
 
 
-class RegWrapper(object):
-    def __init__(self, obj: BaseLoss, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-        self.obj = obj
+class RegularizationLoss(BaseLoss):
+    def __init__(
+        self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
+    ) -> None:
+        super().__init__(reduction)
         self.q_weight = q_weight
         self.d_weight = d_weight
-        self.name = obj.name
         self.t = t
         self.T = T
 
@@ -180,35 +181,47 @@ class RegWrapper(object):
             self.q_weight = self.q_weight * (self.t / self.T) ** 2
             self.d_weight = self.d_weight * (self.t / self.T) ** 2
 
-    @staticmethod
-    def reg(reg, weight=0):
+    @abstractmethod
+    def reg(self, reps, weight=0):
         raise NotImplementedError
 
-    def __call__(self, pred, labels=None, queries=None, documents=None, **kwargs):
-        q_reg = self.reg(queries, self.q_weight) if queries is not None else 0
-        d_reg = self.reg(documents, self.d_weight) if documents is not None else 0
-        outputs = self.obj(pred, labels, **kwargs)
-        loss_val = outputs
-        loss_val += q_reg + d_reg
-        return loss_val
+    def forward(self, query_hidden_states, text_hidden_states, **kwargs):
+        q_reg = self.reg(query_hidden_states, self.q_weight)
+        d_reg = self.reg(text_hidden_states, self.d_weight)
+        return q_reg + d_reg
 
 
-def FLOPS_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-    class FLOPSWrapper(RegWrapper):
-        @staticmethod
-        def reg(reps, weight=0):
-            return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
+class FLOPSLoss(RegularizationLoss):
+    def __init__(
+        self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
+    ) -> None:
+        super(FLOPSLoss, self).__init__(q_weight, d_weight, t, T, reduction)
 
-    return FLOPSWrapper(object, q_weight, d_weight, t, T)
+    def reg(reps, weight=0):
+        return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
 
 
-def L1_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-    class L1Wrapper(RegWrapper):
-        @staticmethod
-        def reg(reps, weight=0):
-            return torch.abs(reps).sum(dim=1).mean() * weight
+class L1Loss(BaseLoss):
+    def __init__(self, reduction: str = "mean") -> None:
+        super(L1Loss, self).__init__(reduction)
 
-    return L1Wrapper(object, q_weight, d_weight, t, T)
+    def reg(reps, weight=0):
+        return torch.abs(reps).sum(dim=1).mean() * weight
+
+
+def CompoundLoss(BaseLoss):
+    def __init__(self, losses: list, alphas: list = None):
+        super(CompoundLoss, self).__init__()
+        self.losses = losses
+        self.alphas = alphas if alphas is not None else [1] * len(losses)
+
+    def forward(self, pred, labels=None, **kwargs):
+        loss = 0.0
+        for loss, alpha in zip(self.losses, self.alphas):
+            loss_val = loss(pred, labels, **kwargs)
+            loss_val = loss_val * alpha
+            loss += loss_val
+        return loss
 
 
 def reduce(a: torch.Tensor, reduction: str):

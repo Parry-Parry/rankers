@@ -7,7 +7,7 @@ from transformers import (
     PreTrainedTokenizer,
     AutoModelForMaskedLM,
 )
-from .dot import DotConfig, Dot
+from .dot import DotConfig, Dot, DotOutput
 from torch.nn import functional as F
 
 
@@ -17,8 +17,8 @@ class SparseConfig(DotConfig):
     def __init__(
         self,
         model_name_or_path: str = "bert-base-uncased",
-        query_processing: str = 'splade_max',
-        doc_processing: str = 'splade_max',
+        query_processing: str = "splade_max",
+        doc_processing: str = "splade_max",
         pooling_type="none",
         inbatch_loss=None,
         model_tied=True,
@@ -46,8 +46,8 @@ class SparseConfig(DotConfig):
     def from_pretrained(
         cls,
         model_name_or_path: str = "bert-base-uncased",
-        query_processing: str = 'splade_max',
-        doc_processing: str = 'splade_max',
+        query_processing: str = "splade_max",
+        doc_processing: str = "splade_max",
         pooling_type="none",
         inbatch_loss=None,
         model_tied=True,
@@ -114,27 +114,25 @@ class Sparse(Dot):
     def _encode_q(self, **text):
         return self.query_processing(self.model(**text), text["attention_mask"])
 
-    def forward(self, loss=None, queries=None, docs_batch=None, labels=None):
+    def forward(self, loss=None, queries=None, texts=None, labels=None):
         """Compute the loss given (queries, docs, labels)"""
         queries = (
             {k: v.to(self.model.device) for k, v in queries.items()}
             if queries is not None
             else None
         )
-        docs_batch = (
-            {k: v.to(self.model_d.device) for k, v in docs_batch.items()}
-            if docs_batch is not None
+        texts = (
+            {k: v.to(self.model_d.device) for k, v in texts.items()}
+            if texts is not None
             else None
         )
         labels = labels.to(self.model_d.device) if labels is not None else None
 
-        query_reps = self._encode_q(**queries) if queries is not None else None
-        docs_batch_reps = (
-            self._encode_d(**docs_batch) if docs_batch is not None else None
-        )
+        query_hidden_states = self._encode_q(**queries) if queries is not None else None
+        text_hidden_states = self._encode_d(**texts) if texts is not None else None
 
         pred, labels, inbatch_pred = self.prepare_outputs(
-            query_reps, docs_batch_reps, labels
+            query_hidden_states, text_hidden_states, labels
         )
         inbatch_loss = (
             self.inbatch_loss_fn(
@@ -144,13 +142,26 @@ class Sparse(Dot):
             else 0.0
         )
 
-        loss_value = (
-            loss(pred, labels, query_reps, docs_batch_reps)
-            if labels is not None
-            else loss(pred, None, query_reps, docs_batch_reps)
+        output = DotOutput(
+            scores=pred,
+            labels=labels,
+            query_hidden_states=query_hidden_states,
+            text_hidden_states=text_hidden_states,
+            loss=inbatch_loss,
         )
-        loss_value += inbatch_loss
-        return (loss_value, pred)
+
+        loss_value = (
+            loss(
+                pred=output.scores,
+                labels=output.labels,
+                query_hidden_states=query_hidden_states,
+                text_hidden_states=text_hidden_states,
+            )
+            if loss is not None
+            else 0.0
+        )
+        output.loss += loss_value
+        return output
 
 
 AutoConfig.register("Sparse", SparseConfig)

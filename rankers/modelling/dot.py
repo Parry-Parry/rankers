@@ -12,6 +12,16 @@ from transformers import (
     AutoConfig,
 )
 from ..train.loss import batched_dot_product, cross_dot_product
+from dataclasses import dataclass
+
+
+@dataclass
+class DotOutput:
+    loss: torch.Tensor = None
+    query_hidden_states: torch.Tensor = None
+    text_hidden_states: torch.Tensor = None
+    scores: torch.Tensor = None
+    labels: torch.Tensor = None
 
 
 class DotConfig(PretrainedConfig):
@@ -140,17 +150,17 @@ class Dot(PreTrainedModel):
         else:
             self.model_d = self.model if config.model_tied else deepcopy(self.model)
         self.pooling = {
-            "mean": lambda x: x.mean(dim=1),
-            "cls": lambda x: x[:, 0, :],
-            "late_interaction": lambda x: x,
-            "none": lambda x: x,
+            "mean": self._mean,
+            "cls": self._cls,
+            "late_interaction": self._identity,
+            "none": self._identity,
         }[config.pooling_type]
         self.pooling_type = config.pooling_type
 
         if config.use_pooler:
             self.pooler = Pooler(config) if pooler is None else pooler
         else:
-            self.pooler = lambda x, y=True: x
+            self.pooler = nn.Identity()
 
         self.inbatch_loss_fn = config.inbatch_loss
 
@@ -158,16 +168,16 @@ class Dot(PreTrainedModel):
 
         self.transformer_class = DotTransformer
 
-    def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
-        batch_size = query_reps.size(0)
+    def prepare_outputs(self, query_hidden_states, text_hidden_states, labels=None):
+        batch_size = query_hidden_states.size(0)
+        emb_q = query_hidden_states.reshape(batch_size, 1, -1)
+        emb_d = text_hidden_states.reshape(batch_size, self.config.group_size, -1)
 
         if self.pooling_type == "late_interaction":
             pred = emb_q @ emb_d.permute(0, 2, 1)
             pred = pred.max(1).values
             pred = pred.sum(-1)
         else:
-            emb_q = query_reps.reshape(batch_size, 1, -1)
-            emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
             pred = batched_dot_product(emb_q, emb_d)
 
         if self.config.inbatch_loss is not None:
@@ -193,32 +203,33 @@ class Dot(PreTrainedModel):
     def _mean(self, x: torch.Tensor) -> torch.Tensor:
         return self.pooler(x.mean(dim=1))
 
+    def _identity(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+
     def _encode_d(self, **text):
         return self.pooling(self.model_d(**text).last_hidden_state)
 
     def _encode_q(self, **text):
         return self.pooling(self.model(**text).last_hidden_state)
 
-    def forward(self, loss=None, queries=None, docs_batch=None, labels=None):
+    def forward(self, loss=None, queries=None, texts=None, labels=None):
         """Compute the loss given (queries, docs, labels)"""
         queries = (
             {k: v.to(self.model.device) for k, v in queries.items()}
             if queries is not None
             else None
         )
-        docs_batch = (
-            {k: v.to(self.model_d.device) for k, v in docs_batch.items()}
-            if docs_batch is not None
+        texts = (
+            {k: v.to(self.model_d.device) for k, v in texts.items()}
+            if texts is not None
             else None
         )
         labels = labels.to(self.model_d.device) if labels is not None else None
 
-        query_reps = self._encode_q(**queries) if queries is not None else None
-        docs_batch_reps = (
-            self._encode_d(**docs_batch) if docs_batch is not None else None
-        )
+        query_hidden_states = self._encode_q(**queries) if queries is not None else None
+        text_hidden_states = self._encode_d(**texts) if texts is not None else None
         pred, labels, inbatch_pred = self.prepare_outputs(
-            query_reps, docs_batch_reps, labels
+            query_hidden_states, text_hidden_states, labels
         )
         inbatch_loss = (
             self.inbatch_loss_fn(
@@ -228,9 +239,26 @@ class Dot(PreTrainedModel):
             else 0.0
         )
 
-        loss_value = loss(pred, labels) if labels is not None else loss(pred)
-        loss_value += inbatch_loss
-        return (loss_value, pred)
+        output = DotOutput(
+            query_hidden_states=query_hidden_states,
+            text_hidden_states=text_hidden_states,
+            scores=pred,
+            labels=labels,
+            loss=inbatch_loss,
+        )
+
+        loss_value = (
+            loss(
+                pred=output.scores,
+                labels=output.labels,
+                query_hidden_states=query_hidden_states,
+                text_hidden_states=text_hidden_states,
+            )
+            if loss is not None
+            else 0.0
+        )
+        output.loss += loss_value
+        return output
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document model"""

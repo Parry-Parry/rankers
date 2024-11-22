@@ -4,10 +4,7 @@ from types import SimpleNamespace
 
 class Corpus:
     def __init__(
-        self, 
-        documents: dict = None,
-        queries: dict = None,
-        qrels: pd.DataFrame = None
+        self, documents: dict = None, queries: dict = None, qrels: pd.DataFrame = None
     ) -> None:
         self.documents = documents
         self.queries = queries
@@ -53,6 +50,4 @@ class Corpus:
 
     def qrels_iter(self):
         for queryid, docid, relevance in self.qrels.itertuples(index=False):
-            yield {"query_id": queryid,
-                   "doc_id": docid,
-                   "relevance": relevance}
+            yield {"query_id": queryid, "doc_id": docid, "relevance": relevance}
