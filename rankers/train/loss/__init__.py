@@ -183,7 +183,7 @@ class RegularizationLoss(BaseLoss):
             self.d_weight = self.d_weight * (self.t / self.T) ** 2
 
     @abstractmethod
-    def reg(reps, weight=0):
+    def reg(self, reps, weight=0):
         raise NotImplementedError
 
     def forward(self, query_hidden_states, text_hidden_states, **kwargs):
@@ -198,7 +198,7 @@ class FLOPSLoss(RegularizationLoss):
     ) -> None:
         super(FLOPSLoss, self).__init__(q_weight, d_weight, t, T, reduction)
 
-    def reg(reps, weight=0):
+    def reg(self, reps, weight=0):
         return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
 
 
@@ -206,7 +206,7 @@ class L1Loss(BaseLoss):
     def __init__(self, reduction: str = "mean") -> None:
         super(L1Loss, self).__init__(reduction)
 
-    def reg(reps, weight=0):
+    def reg(self, reps, weight=0):
         return torch.abs(reps).sum(dim=1).mean() * weight
 
 
