@@ -224,7 +224,7 @@ class CompoundLoss(BaseLoss):
         text_hidden_states=None,
         **kwargs,
     ):
-        loss = 0.0
+        total = 0.0
         for loss, alpha in zip(self.losses, self.alphas):
             loss_val = loss(
                 pred=pred,
@@ -234,8 +234,8 @@ class CompoundLoss(BaseLoss):
                 **kwargs,
             )
             loss_val = loss_val * alpha
-            loss += loss_val
-        return loss
+            total += loss_val
+        return total
 
 
 def reduce(a: torch.Tensor, reduction: str):
