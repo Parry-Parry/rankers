@@ -183,7 +183,7 @@ class RegularizationLoss(BaseLoss):
             self.d_weight = self.d_weight * (self.t / self.T) ** 2
 
     @abstractmethod
-    def reg(self, reps, weight=0):
+    def reg(reps, weight=0):
         raise NotImplementedError
 
     def forward(self, query_hidden_states, text_hidden_states, **kwargs):
