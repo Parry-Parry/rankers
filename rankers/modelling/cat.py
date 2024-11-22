@@ -69,7 +69,9 @@ class Cat(PreTrainedModel):
 
         output = CatOutput(logits, pred, labels)
 
-        loss_value = loss(output.scores, output.labels) if loss is not None else 0.0
+        loss_value = (
+            loss(pred=output.scores, labels=output.labels) if loss is not None else 0.0
+        )
         output.loss += loss_value
         return output
 

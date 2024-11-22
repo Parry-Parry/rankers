@@ -215,10 +215,23 @@ def CompoundLoss(BaseLoss):
         self.losses = losses
         self.alphas = alphas if alphas is not None else [1] * len(losses)
 
-    def forward(self, pred, labels=None, **kwargs):
+    def forward(
+        self,
+        pred,
+        labels=None,
+        query_hidden_states=None,
+        text_hidden_states=None,
+        **kwargs,
+    ):
         loss = 0.0
         for loss, alpha in zip(self.losses, self.alphas):
-            loss_val = loss(pred, labels, **kwargs)
+            loss_val = loss(
+                pred=pred,
+                labels=labels,
+                query_hidden_states=query_hidden_states,
+                text_hidden_states=text_hidden_states,
+                **kwargs,
+            )
             loss_val = loss_val * alpha
             loss += loss_val
         return loss
