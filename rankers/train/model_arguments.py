@@ -4,7 +4,7 @@ import json
 from enum import Enum
 from typing import Optional
 import torch
-from .. import is_torch_available
+from .._optional import is_torch_available
 
 
 @dataclass

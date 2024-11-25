@@ -3,7 +3,8 @@ from dataclasses import field, dataclass
 from typing import List, Optional
 from enum import Enum
 import os
-from .. import is_ir_measures_available, seed_everything
+from .. import seed_everything
+from .._optional import is_ir_measures_available
 
 
 def parse_ir_measure(measure: str):

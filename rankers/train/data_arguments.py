@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional
 import json
 from enum import Enum
 import torch
-from .. import is_ir_datasets_available, is_torch_available, is_pyterrier_available
+from .._optional import is_ir_datasets_available, is_torch_available, is_pyterrier_available
 import pandas as pd
 import logging
 
