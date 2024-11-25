@@ -1,7 +1,8 @@
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-from . import BaseLoss, register_loss
+from .. import register_loss
+from . import BaseLoss
 
 
 @register_loss("pointwise_mse")
