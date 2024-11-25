@@ -15,6 +15,13 @@ def is_pyterrier_available():
     except ImportError:
         return False
 
+def is_ir_datasets_available():
+    try:
+        import ir_datasets
+
+        return True
+    except ImportError:
+        return False
 
 def is_tira_available():
     try:
