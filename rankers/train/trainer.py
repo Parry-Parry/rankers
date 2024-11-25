@@ -66,7 +66,7 @@ class RankerTrainer(Trainer):
             )
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-
+        
         return (loss, outputs) if return_outputs else loss
 
     def compute_metrics(self, result_frame: pd.DataFrame):
