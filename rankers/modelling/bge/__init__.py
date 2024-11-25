@@ -1,4 +1,4 @@
-from .._optional import is_torch_available
+from ..._optional import is_torch_available
 from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
 from typing import TYPE_CHECKING
 
