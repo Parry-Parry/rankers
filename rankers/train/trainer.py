@@ -32,7 +32,7 @@ class RankerTrainer(Trainer):
 
         self.regularize_loss = False
         if self.args.regularization is not None:
-            from .loss import FLOPSLoss, L1Loss, CompoundLoss
+            from .loss.torch import FLOPSLoss, L1Loss, CompoundLoss
 
             reg_func = L1Loss if self.args.regularization == "l1" else FLOPSLoss
             reg_loss = reg_func(

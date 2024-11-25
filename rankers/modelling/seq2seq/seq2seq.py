@@ -7,10 +7,8 @@ from transformers import (
     AutoModelForSeq2SeqLM,
     AutoModelForCausalLM,
 )
-from typing import Union
 import torch
 import pandas as pd
-from more_itertools import chunked
 import numpy as np
 from ..._util import not_tested
 from ..base import Ranker
@@ -43,7 +41,7 @@ class Seq2Seq(Ranker):
     model_type = "Seq2Seq"
     architecture_class = AutoModelForSeq2SeqLM
     config_class = Seq2SeqConfig
-    transformer_class =  None
+    transformer_class = None
 
 
 class CausalLMConfig(PretrainedConfig):

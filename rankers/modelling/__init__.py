@@ -3,6 +3,5 @@ from . import (
     cat,
     sparse,
     dot,
-    seq2seq,
     bge
 )

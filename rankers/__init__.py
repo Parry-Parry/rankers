@@ -26,7 +26,6 @@ from .modelling.base import Ranker
 from .modelling.dot import Dot, DotConfig
 from .modelling.sparse import Sparse
 from .modelling.cat import Cat
-from .modelling.seq2seq import Seq2Seq
 from .modelling.bge import BGE
 
 from ._optional import is_pyterrier_available
