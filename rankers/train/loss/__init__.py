@@ -1,6 +1,6 @@
 import functools
 from ..._optional import is_torch_available, is_flax_available
-from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
+from transformers.utils import _LazyModule
 from typing import TYPE_CHECKING
 
 
@@ -129,9 +129,29 @@ def register_loss(name):
 
     return decorator
 
+
+_import_structure = {}
+
+
 if is_torch_available():
-    from .torch import BaseLoss as BaseLoss
-    from .torch import *
+    from .torch import __all__ as _torch_all
+
+    _import_structure["torch"].extend(["BaseLoss", *_torch_all])
 if is_flax_available():
-    from .flax import FlaxBaseLoss as FlaxBaseLoss
-    from .flax import *
+    from .flax import __all__ as _flax_all
+
+    _import_structure["flax"].extend(["FlaxBaseLoss", *_flax_all])
+
+if TYPE_CHECKING:
+    if is_torch_available():
+        from .torch import BaseLoss as BaseLoss
+        from .torch import *
+    if is_flax_available():
+        from .flax import FlaxBaseLoss as FlaxBaseLoss
+        from .flax import *
+else:
+    import sys
+
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

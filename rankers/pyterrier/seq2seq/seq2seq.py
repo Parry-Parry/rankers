@@ -1,4 +1,4 @@
-import pyterrier as pt 
+import pyterrier as pt
 from transformers import (
     AutoModelForSeq2SeqLM,
     PreTrainedModel,
@@ -14,7 +14,13 @@ import pandas as pd
 from more_itertools import chunked
 import numpy as np
 from ..._util import not_tested
-from ...modelling.seq2seq.seq2seq import Seq2SeqConfig, DEFAULT_MONO_PROMPT, DEFAULT_DUO_PROMPT, CausalLMConfig
+from ...modelling.seq2seq.seq2seq import (
+    Seq2SeqConfig,
+    DEFAULT_MONO_PROMPT,
+    DEFAULT_DUO_PROMPT,
+    CausalLMConfig,
+)
+
 
 @not_tested
 class Seq2SeqTransformer(pt.Transformer):
@@ -189,6 +195,7 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
         pt.model.add_ranks(res)
         res = res.sort_values(["qid", "rank"])
         return res
+
 
 class CausalLMTransformer(Seq2SeqTransformer):
     architecture_class = AutoModelForCausalLM

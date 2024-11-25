@@ -22,6 +22,7 @@ class RankerTrainer(Trainer):
         super(RankerTrainer, self).__init__(**kwargs)
         if isinstance(loss_fn, str):
             from .loss import LOSS_REGISTRY
+
             if loss_fn not in LOSS_REGISTRY.availible:
                 raise ValueError(
                     f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}"
@@ -66,7 +67,7 @@ class RankerTrainer(Trainer):
             )
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-        
+
         return (loss, outputs) if return_outputs else loss
 
     def compute_metrics(self, result_frame: pd.DataFrame):

@@ -13,8 +13,9 @@ class BaseLoss(nn.Module):
     reduction: str
         the reduction type
     """
+
     name = "base"
-    
+
     def __init__(self, reduction: str = "mean") -> None:
         super(BaseLoss, self).__init__()
         self.reduction = reduction
@@ -24,7 +25,7 @@ class BaseLoss(nn.Module):
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
-    
+
     def __repr__(self):
         return self.name
 

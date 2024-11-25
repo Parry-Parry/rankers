@@ -1,5 +1,1 @@
-from . import (
-    cat,
-    dot,
-    sparse
-)
+from . import cat, dot, sparse
