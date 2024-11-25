@@ -34,11 +34,11 @@ class Ranker(PreTrainedModel):
 
     @classmethod
     def from_pretrained(
-        cls, model_name_or_path: str, num_labels=2, config=None, **kwargs
-    ) -> "Cat":
+        cls, model_name_or_path: str, config=None, **kwargs
+    ) -> "Ranker":
         """Load model from a directory"""
         config = (
-            cls.config_class.from_pretrained(model_name_or_path, num_labels=num_labels)
+            cls.config_class.from_pretrained(model_name_or_path)
             if config is None
             else config
         )
