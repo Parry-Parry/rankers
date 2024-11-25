@@ -1,5 +1,132 @@
+from abc import abstractmethod
+import torch.nn as nn
 import torch
-from torch import nn, Tensor
+from torch import Tensor
+import functools
+
+
+class SingletonMeta(type):
+    """
+    Metaclass to implement the Singleton design pattern.
+    Ensures only one instance of a class can be created.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Controlled object creation to ensure only one instance exists.
+        """
+        if cls not in cls._instances:
+            # If no instance exists, create one
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class LossFunctionRegistry(metaclass=SingletonMeta):
+    """
+    A singleton registry for managing and retrieving loss functions by name.
+    Supports both built-in PyTorch losses and custom loss functions.
+    """
+
+    def __init__(self):
+        # Check if the registry has already been initialized
+        if not hasattr(self, "_registry"):
+            # Dictionary to store registered loss functions
+            self._registry = {}
+
+            # Automatically register built-in PyTorch loss functions
+            self._register_builtin_losses()
+
+    def _register_builtin_losses(self):
+        """
+        Automatically register common PyTorch loss functions.
+        """
+        builtin_losses = {
+            # Basic losses
+            "mse": nn.MSELoss,
+            "l1": nn.L1Loss,
+            "cross_entropy": nn.CrossEntropyLoss,
+            "nll": nn.NLLLoss,
+            "binary_cross_entropy": nn.BCELoss,
+            "binary_cross_entropy_with_logits": nn.BCEWithLogitsLoss,
+            # Reduction variant losses
+            "mse_sum": functools.partial(nn.MSELoss, reduction="sum"),
+            "mse_none": functools.partial(nn.MSELoss, reduction="none"),
+        }
+
+        for name, loss_fn in builtin_losses.items():
+            self.register(name, loss_fn)
+
+    def register(self, name, loss_fn):
+        """
+        Register a loss function with a given name.
+
+        Args:
+            name (str): Name to register the loss function under
+            loss_fn (callable): Loss function to register
+        """
+        if not callable(loss_fn):
+            raise TypeError(f"Loss function {name} must be callable")
+
+        if name in self._registry:
+            print(f"Warning: Overwriting existing loss function '{name}'")
+
+        self._registry[name] = loss_fn
+
+    def get(self, name, **kwargs):
+        """
+        Retrieve a loss function by name.
+
+        Args:
+            name (str): Name of the loss function
+            **kwargs: Additional arguments to pass to the loss function constructor
+
+        Returns:
+            callable: Instantiated loss function
+
+        Raises:
+            KeyError: If the loss function is not found in the registry
+        """
+        if name not in self._registry:
+            available_losses = ", ".join(sorted(self._registry.keys()))
+            raise KeyError(
+                f"Loss function '{name}' not found. Available losses: {available_losses}"
+            )
+
+        return self._registry[name](**kwargs)
+
+    @property
+    def available(self):
+        """
+        List all available loss functions.
+
+        Returns:
+            list: Names of registered loss functions
+        """
+        return list(self._registry.keys())
+
+
+# Global singleton instance
+LOSS_REGISTRY = LossFunctionRegistry()
+
+
+def register_loss(name):
+    """
+    Decorator to register a custom loss function.
+
+    Args:
+        name (str): Name to register the loss function under
+
+    Returns:
+        decorator function
+    """
+
+    def decorator(loss_fn):
+        LOSS_REGISTRY.register(name, loss_fn)
+        return loss_fn
+
+    return decorator
 
 
 class BaseLoss(nn.Module):
@@ -23,12 +150,13 @@ class BaseLoss(nn.Module):
         raise NotImplementedError
 
 
-class RegWrapper(object):
-    def __init__(self, obj: BaseLoss, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-        self.obj = obj
+class RegularizationLoss(BaseLoss):
+    def __init__(
+        self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
+    ) -> None:
+        super().__init__(reduction)
         self.q_weight = q_weight
         self.d_weight = d_weight
-        self.name = obj.name
         self.t = t
         self.T = T
 
@@ -54,39 +182,60 @@ class RegWrapper(object):
             self.q_weight = self.q_weight * (self.t / self.T) ** 2
             self.d_weight = self.d_weight * (self.t / self.T) ** 2
 
-    @staticmethod
-    def reg(reg, weight=0):
+    @abstractmethod
+    def reg(self, reps, weight=0):
         raise NotImplementedError
 
-    def __call__(self, pred, labels=None, queries=None, documents=None, **kwargs):
-        q_reg = self.reg(queries, self.q_weight) if queries is not None else 0
-        d_reg = self.reg(documents, self.d_weight) if documents is not None else 0
-        outputs = self.obj(pred, labels, **kwargs)
-        loss_val = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-        loss_val += q_reg + d_reg
-        if isinstance(outputs, dict):
-            outputs["loss"] = loss_val
-        else:
-            outputs = (loss_val, *outputs[1:])
-        return outputs
+    def forward(self, query_hidden_states, text_hidden_states, **kwargs):
+        q_reg = self.reg(query_hidden_states, self.q_weight)
+        d_reg = self.reg(text_hidden_states, self.d_weight)
+        return q_reg + d_reg
 
 
-def FLOPS_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-    class FLOPSWrapper(RegWrapper):
-        @staticmethod
-        def reg(reps, weight=0):
-            return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
+class FLOPSLoss(RegularizationLoss):
+    def __init__(
+        self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
+    ) -> None:
+        super(FLOPSLoss, self).__init__(q_weight, d_weight, t, T, reduction)
 
-    return FLOPSWrapper(object, q_weight, d_weight, t, T)
+    def reg(self, reps, weight=0):
+        return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
 
 
-def L1_regularization(object, q_weight=0.08, d_weight=0.1, t=0, T=1000):
-    class L1Wrapper(RegWrapper):
-        @staticmethod
-        def reg(reps, weight=0):
-            return torch.abs(reps).sum(dim=1).mean() * weight
+class L1Loss(BaseLoss):
+    def __init__(self, reduction: str = "mean") -> None:
+        super(L1Loss, self).__init__(reduction)
 
-    return L1Wrapper(object, q_weight, d_weight, t, T)
+    def reg(self, reps, weight=0):
+        return torch.abs(reps).sum(dim=1).mean() * weight
+
+
+class CompoundLoss(BaseLoss):
+    def __init__(self, losses: list, alphas: list = None):
+        super(CompoundLoss, self).__init__()
+        self.losses = losses
+        self.alphas = alphas if alphas is not None else [1] * len(losses)
+
+    def forward(
+        self,
+        pred,
+        labels=None,
+        query_hidden_states=None,
+        text_hidden_states=None,
+        **kwargs,
+    ):
+        total = 0.0
+        for loss, alpha in zip(self.losses, self.alphas):
+            loss_val = loss(
+                pred=pred,
+                labels=labels,
+                query_hidden_states=query_hidden_states,
+                text_hidden_states=text_hidden_states,
+                **kwargs,
+            )
+            loss_val = loss_val * alpha
+            total += loss_val
+        return total
 
 
 def reduce(a: torch.Tensor, reduction: str):
@@ -208,13 +357,12 @@ def batched_dot_product(a: Tensor, b: Tensor):
     """
     if len(b.shape) == 2:
         return dot_product(a, b)
-
     # Ensure `a` is of shape (batch_size, 1, vector_dim)
     if len(a.shape) == 2:
         a = a.unsqueeze(1)
 
     # Compute batched dot product, result shape: (batch_size, 1, group_size)
-    return (a * b).sum(dim=-1)
+    return dot_product(a, b)
 
 
 def maxsim(a: Tensor, b: Tensor, a_mask: Tensor, temperature: float = 1.0):

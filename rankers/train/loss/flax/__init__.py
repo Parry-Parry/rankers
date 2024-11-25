@@ -213,9 +213,9 @@ def batched_dot_product(a: jax.Array, b: jax.Array):
     jax.Array: size of (batch_size x group_size)
         dot product for each group of vectors
     """
-    if len(b.shape) == 2:
-        return jnp.matmul(a, b.transpose(0, 1))
-    return jnp.matmul(a, jnp.permute(b, [0, 2, 1])).squeeze(1)
+    if len(a.shape) == 2:
+        a = a.unsqueeze(1)
+    return dot_product(a, b)
 
 
 def num_non_zero(a: jax.Array):

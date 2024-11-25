@@ -9,7 +9,6 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
-from .loss.torch import LOSS_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +20,7 @@ class RankerTrainer(Trainer):
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(**kwargs)
+        from .loss.torch import LOSS_REGISTRY
         if isinstance(loss_fn, str):
             if loss_fn not in LOSS_REGISTRY.availible:
                 raise ValueError(
