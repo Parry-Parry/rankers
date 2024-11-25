@@ -1,4 +1,4 @@
-from ._optional import is_torch_available, is_flax_availible, is_pyterrier_available
+from ._optional import is_torch_available, is_torch_available, is_pyterrier_available, is_flax_available
 import functools
 from transformers.utils import _LazyModule
 from typing import TYPE_CHECKING
@@ -48,7 +48,7 @@ if is_torch_available():
     _import_structure["modelling.bge"].extend(["BGE"])
     _import_structure["modelling.seq2seq"].extend(["Seq2Seq"])
 
-if is_flax_availible():
+if is_flax_available():
     _import_structure["modelling.flax"].extend(["FlaxBaseLoss"])
     _import_structure["modelling.cat"].extend(["FlaxCat"])
     _import_structure["modelling.dot"].extend(["FlaxDot", "FlaxDotConfig"])
@@ -90,5 +90,9 @@ else:
     import sys
 
     sys.modules[__name__] = _LazyModule(
-        __name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects={"__version__": __version__},
+        __name__,
+        globals()["__file__"],
+        _import_structure,
+        module_spec=__spec__,
+        extra_objects={"__version__": __version__},
     )

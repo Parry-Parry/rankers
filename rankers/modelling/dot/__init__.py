@@ -23,7 +23,6 @@ except OptionalDependencyNotAvailable:
 else:
     _import_structure["flaxdot"] = [
         "FlaxDot",
-        
     ]
 
 if TYPE_CHECKING:
