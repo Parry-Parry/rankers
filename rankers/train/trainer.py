@@ -20,9 +20,8 @@ class RankerTrainer(Trainer):
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(**kwargs)
-        from .loss.torch import LOSS_REGISTRY
-
         if isinstance(loss_fn, str):
+            from .loss import LOSS_REGISTRY
             if loss_fn not in LOSS_REGISTRY.availible:
                 raise ValueError(
                     f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}"
@@ -33,20 +32,16 @@ class RankerTrainer(Trainer):
 
         self.regularize_loss = False
         if self.args.regularization is not None:
-            from .loss import FLOPS_regularization, L1_regularization
+            from .loss import FLOPSLoss, L1Loss, CompoundLoss
 
-            reg_func = (
-                L1_regularization
-                if self.args.regularization == "l1"
-                else FLOPS_regularization
-            )
-            self.loss = reg_func(
-                self.loss,
+            reg_func = L1Loss if self.args.regularization == "l1" else FLOPSLoss
+            reg_loss = reg_func(
                 self.args.q_regularization_weight,
                 self.args.d_regularization_weight,
                 0,
                 self.args.regularization_warmup_steps,
             )
+            self.loss = CompoundLoss([self.loss, reg_loss])
             self.regularize_loss = True
 
         self.tokenizer = self.data_collator.tokenizer
@@ -71,7 +66,7 @@ class RankerTrainer(Trainer):
             )
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-
+        
         return (loss, outputs) if return_outputs else loss
 
     def compute_metrics(self, result_frame: pd.DataFrame):
