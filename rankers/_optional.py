@@ -22,6 +22,15 @@ def is_ir_datasets_available():
         return True
     except ImportError:
         return False
+    
+
+def is_ir_measures_available():
+    try:
+        import ir_measures
+
+        return True
+    except ImportError:
+        return False
 
 def is_tira_available():
     try:
