@@ -49,7 +49,7 @@ if is_torch_available():
     _import_structure["modelling.seq2seq"].extend(["Seq2Seq"])
 
 if is_flax_available():
-    _import_structure["modelling.flax"].extend(["FlaxBaseLoss"])
+    _import_structure["modelling.flax"] = ["FlaxBaseLoss"]
     _import_structure["modelling.cat"].extend(["FlaxCat"])
     _import_structure["modelling.dot"].extend(["FlaxDot", "FlaxDotConfig"])
     _import_structure["modelling.sparse"].extend(["FlaxSparse"])

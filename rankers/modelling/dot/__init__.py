@@ -28,6 +28,7 @@ else:
 if TYPE_CHECKING:
     try:
         if not is_torch_available():
+            print("Errpor")
             raise OptionalDependencyNotAvailable()
     except OptionalDependencyNotAvailable:
         pass
