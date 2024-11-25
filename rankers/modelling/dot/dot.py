@@ -2,7 +2,6 @@ from copy import deepcopy
 import os
 import torch
 from torch import nn
-import pyterrier as pt
 from transformers import (
     PreTrainedModel,
     PreTrainedTokenizer,

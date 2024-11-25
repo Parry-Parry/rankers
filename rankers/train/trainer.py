@@ -21,6 +21,7 @@ class RankerTrainer(Trainer):
     def __init__(self, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(**kwargs)
         from .loss.torch import LOSS_REGISTRY
+
         if isinstance(loss_fn, str):
             if loss_fn not in LOSS_REGISTRY.availible:
                 raise ValueError(

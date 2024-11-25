@@ -15,8 +15,8 @@ class LazyTextLoader:
 
     def __getitem__(self, doc_id):
         if type == list:
-            return [self.docstore.get(id).text for id in doc_id]
-        return self.docstore.get(doc_id).text
+            return [self.docstore.get(str(id)).text for id in doc_id]
+        return self.docstore.get(str(doc_id)).text
 
 
 class TrainingDataset(Dataset):

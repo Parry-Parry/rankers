@@ -17,8 +17,8 @@ class SparseConfig(DotConfig):
     def __init__(
         self,
         model_name_or_path: str = "bert-base-uncased",
-        query_processing: str = 'splade_max',
-        doc_processing: str = 'splade_max',
+        query_processing: str = "splade_max",
+        doc_processing: str = "splade_max",
         pooling_type="cls",
         inbatch_loss=None,
         model_tied=True,
@@ -46,8 +46,8 @@ class SparseConfig(DotConfig):
     def from_pretrained(
         cls,
         model_name_or_path: str = "bert-base-uncased",
-        query_processing: str = 'splade_max',
-        doc_processing: str = 'splade_max',
+        query_processing: str = "splade_max",
+        doc_processing: str = "splade_max",
         pooling_type="cls",
         inbatch_loss=None,
         model_tied=True,

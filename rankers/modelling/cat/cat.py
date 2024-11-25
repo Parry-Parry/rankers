@@ -4,7 +4,6 @@ from transformers import (
     PretrainedConfig,
     PreTrainedTokenizer,
     AutoModelForSequenceClassification,
-    AutoTokenizer,
     AutoConfig,
 )
 import torch

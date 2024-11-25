@@ -42,6 +42,7 @@ class LossFunctionRegistry(metaclass=SingletonMeta):
         Automatically register common PyTorch loss functions.
         """
         import torch.nn as nn
+
         builtin_losses = {
             # Basic losses
             "mse": nn.MSELoss,
@@ -138,6 +139,7 @@ except OptionalDependencyNotAvailable:
     pass
 else:
     from .torch import __all__ as __all_torch
+
     _import_structure["loss"] = [
         "BaseLoss",
         "LossFunctionRegistry",
@@ -161,6 +163,7 @@ except OptionalDependencyNotAvailable:
     pass
 else:
     from .flax import __all__ as __all_flax
+
     _import_structure["flax_loss"] = [
         "FlaxBaseLoss",
         *__all_flax,
