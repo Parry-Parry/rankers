@@ -1,6 +1,6 @@
 from transformers import (
     PreTrainedModel,
-    PreTrainedConfig,
+    PretrainedConfig,
     PreTrainedTokenizer,
     AutoTokenizer,
     AutoConfig,
@@ -19,7 +19,7 @@ DEFAULT_MONO_PROMPT = r"query: {query} document: {text} relevant:"
 DEFAULT_DUO_PROMPT = r"query: {query} positive: {text} negative: {text} relevant:"
 
 
-class Seq2SeqConfig(PreTrainedConfig):
+class Seq2SeqConfig(PretrainedConfig):
     model_type = "Seq2Seq"
 
     @classmethod
@@ -43,112 +43,16 @@ class Seq2Seq(Ranker):
     model_type = "Seq2Seq"
     architecture_class = AutoModelForSeq2SeqLM
     config_class = Seq2SeqConfig
-    transformer_class = Seq2SeqTransformer
+    transformer_class =  None
 
 
-class CausalLMConfig(PreTrainedConfig):
+class CausalLMConfig(PretrainedConfig):
     model_type = "CausalLM"
 
     @classmethod
     def from_pretrained(cls, model_name_or_path, **kwargs) -> "CausalLMConfig":
         config = super().from_pretrained(model_name_or_path, **kwargs)
         return config
-
-
-class CausalLMTransformer(Seq2SeqTransformer):
-    architecture_class = AutoModelForCausalLM
-    config_class = CausalLMConfig
-
-    def __init__(
-        self,
-        model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizer,
-        config: PreTrainedConfig,
-        batch_size: int,
-        text_field: str = "text",
-        device: Union[str, torch.device] = None,
-        prompt: str = None,
-        verbose: bool = False,
-    ) -> None:
-        raise NotImplementedError("Incomplete, do not use")
-        super().__init__(
-            model, tokenizer, config, batch_size, text_field, device, prompt, verbose
-        )
-
-    @classmethod
-    def from_pretrained(
-        cls,
-        model_name_or_path: str,
-        batch_size: int = 64,
-        text_field: str = "text",
-        config: PreTrainedConfig = None,
-        device: Union[str, torch.device] = None,
-        prompt: str = None,
-        verbose: bool = False,
-        **kwargs,
-    ):
-        config = (
-            cls.config_class.from_pretrained(model_name_or_path)
-            if config is None
-            else config
-        )
-        model = (
-            cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
-            .to(device)
-            .eval()
-        )
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        return cls(
-            model,
-            tokenizer,
-            config,
-            batch_size,
-            text_field,
-            device,
-            prompt,
-            verbose=verbose,
-        )
-
-    @classmethod
-    def from_model(
-        cls,
-        model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizer,
-        batch_size: int = 64,
-        text_field: str = "text",
-        verbose: bool = False,
-    ):
-        config = model.config
-        return cls(
-            model,
-            tokenizer,
-            config,
-            batch_size,
-            text_field,
-            model.device,
-            verbose=verbose,
-        )
-
-    def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
-        scores = []
-        it = inp[["query", self.text_field]].itertuples(index=False)
-        if self.verbose:
-            it = pt.tqdm(it, total=len(inp), unit="record", desc="Cat scoring")
-        with torch.no_grad():
-            for chunk in chunked(it, self.batch_size):
-                queries, texts = map(list, zip(*chunk))
-                prompts = [
-                    self.prompt.format(query=q, text=t) for q, t in zip(queries, texts)
-                ]
-                inps = self.tokenizer(
-                    prompts, return_tensors="pt", padding=True, truncation=True
-                )
-                inps = {k: v.to(self.device) for k, v in inps.items()}
-                scores.append(self.model(**inps).logits[:, 0].cpu().detach().numpy())
-        res = inp.assign(score=np.concatenate(scores))
-        pt.model.add_ranks(res)
-        res = res.sort_values(["qid", "rank"])
-        return res
 
 
 class CausalLM(Seq2Seq):
@@ -166,7 +70,7 @@ class CausalLM(Seq2Seq):
 
     model_type = "CausalLM"
     architecture_class = AutoModelForCausalLM
-    transformer_class = CausalLMTransformer
+    transformer_class = None
     config_class = CausalLMConfig
 
     def __init__(self, model, tokenizer, config):
