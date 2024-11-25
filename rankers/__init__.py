@@ -90,5 +90,5 @@ else:
     import sys
 
     sys.modules[__name__] = _LazyModule(
-        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__, extra_objects={"__version__": __version__},
     )
