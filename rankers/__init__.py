@@ -13,7 +13,13 @@ def seed_everything(seed=42):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
 
+from .train.trainer import RankerTrainer
 from .train import loss as loss
+from .train.loss.torch import BaseLoss
+from .train.data_arguments import RankerDataArguments
+from .train.model_arguments import RankerModelArguments, RankerDotArguments, RankerCatArguments
+from .train.training_arguments import RankerTrainingArguments
+
 from .datasets import *
 
 from .modelling.base import Ranker
@@ -23,6 +29,9 @@ from .modelling.cat import Cat
 from .modelling.seq2seq import Seq2Seq
 from .modelling.bge import BGE
 
-from .pyterrier.dot import DotTransformer
-from .pyterrier.sparse import SparseTransformer
-from .pyterrier.cat import CatTransformer
+from ._optional import is_pyterrier_available
+
+if is_pyterrier_available():
+    from .pyterrier.dot import DotTransformer
+    from .pyterrier.sparse import SparseTransformer
+    from .pyterrier.cat import CatTransformer

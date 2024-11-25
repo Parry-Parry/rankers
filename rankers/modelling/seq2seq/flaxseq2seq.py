@@ -15,7 +15,6 @@ PT_AVAILIBLE = is_pyterrier_available()
 
 if PT_AVAILIBLE:
     import pyterrier as pt
-
     if not pt.started():
         pt.init()
 

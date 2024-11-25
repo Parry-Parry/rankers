@@ -10,7 +10,8 @@ from transformers import (
     AutoTokenizer,
     AutoConfig,
 )
-from ...train.loss import batched_dot_product, cross_dot_product
+from ..._optional import is_pyterrier_available
+from ...train.loss.torch import batched_dot_product, cross_dot_product
 from ..base import Ranker
 
 
@@ -154,9 +155,10 @@ class Dot(Ranker):
 
         self.inbatch_loss_fn = config.inbatch_loss
 
-        from ...pyterrier.dot import DotTransformer
+        if is_pyterrier_available():
+            from ...pyterrier.dot import DotTransformer
 
-        self.transformer_class = DotTransformer
+            self.transformer_class = DotTransformer
 
     def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
         batch_size = query_reps.size(0)

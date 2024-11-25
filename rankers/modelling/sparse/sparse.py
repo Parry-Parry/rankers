@@ -7,7 +7,8 @@ from transformers import (
     PreTrainedTokenizer,
     AutoModelForMaskedLM,
 )
-from .dot import DotConfig, Dot
+from ..dot import DotConfig, Dot
+from ..._optional import is_pyterrier_available
 from torch.nn import functional as F
 
 
@@ -104,9 +105,10 @@ class Sparse(Dot):
             else lambda x, y: x.logits
         )
 
-        from .pyterrier.sparse import SparseTransformer
+        if is_pyterrier_available():
+            from ...pyterrier.sparse import SparseTransformer
 
-        self.transformer_class = SparseTransformer
+            self.transformer_class = SparseTransformer
 
     def _encode_d(self, **text):
         return self.doc_processing(self.model_d(**text), text["attention_mask"])

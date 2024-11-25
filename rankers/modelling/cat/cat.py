@@ -1,4 +1,3 @@
-import pyterrier as pt
 from transformers import (
     PreTrainedModel,
     PretrainedConfig,
@@ -8,6 +7,7 @@ from transformers import (
 )
 import torch
 import torch.nn.functional as F
+from ..._optional import is_pyterrier_available
 from ..base import Ranker
 
 
@@ -40,9 +40,11 @@ class Cat(Ranker):
         config: AutoConfig,
     ):
         super().__init__(model, tokenizer, config)
-        from ...pyterrier.cat import CatTransformer
 
-        self.transformer_class = CatTransformer
+        if is_pyterrier_available():
+            from ...pyterrier.cat import CatTransformer
+
+            self.transformer_class = CatTransformer
 
     def prepare_outputs(self, logits, labels=None):
         """Prepare outputs"""

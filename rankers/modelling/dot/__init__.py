@@ -13,6 +13,7 @@ else:
     _import_structure["dot"] = [
         "Dot",
         "DotConfig",
+        "Pooler",
     ]
 try:
     if not is_flax_available():
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .dot import Dot, DotConfig
+        from .dot import Dot, DotConfig, Pooler
     try:
         if not is_flax_available():
             raise OptionalDependencyNotAvailable()
