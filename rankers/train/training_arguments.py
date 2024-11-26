@@ -1,9 +1,7 @@
 from transformers import TrainingArguments
 from dataclasses import field, dataclass
 from typing import List, Optional
-from enum import Enum
 import os
-from .. import seed_everything
 from .._optional import is_ir_measures_available
 
 
@@ -57,7 +55,6 @@ class RankerTrainingArguments(TrainingArguments):
 
     def __post_init__(self):
         super().__post_init__()
-        seed_everything(self.seed)
 
         if self.wandb_project is not None:
             os.environ["WANDB_PROJECT"] = self.wandb_project
