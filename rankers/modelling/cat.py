@@ -67,7 +67,7 @@ class Cat(PreTrainedModel):
         logits = self.model(**sequences).logits
         pred, labels = self.prepare_outputs(logits, labels)
 
-        output = CatOutput(logits, pred, labels)
+        output = CatOutput(logits=logits, scores=pred, labels=labels)
 
         loss_value = (
             loss(pred=output.scores, labels=output.labels) if loss is not None else 0.0
