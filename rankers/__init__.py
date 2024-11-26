@@ -1,5 +1,4 @@
 from ._optional import is_torch_available, is_torch_available, is_pyterrier_available, is_flax_available
-import functools
 from transformers.utils import _LazyModule
 from typing import TYPE_CHECKING
 
