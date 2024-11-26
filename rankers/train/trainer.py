@@ -9,6 +9,7 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
+from dataclasses import dataclass
 from .loss import LOSS_REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ class RankerTrainer(Trainer):
                 f"{','.join(outputs.keys())}. For reference, the inputs it received are {','.join(inputs.keys())}."
             )
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
-        loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+        loss = outputs.loss if isinstance(outputs, dataclass) else outputs[0]
         
         return (loss, outputs) if return_outputs else loss
 
