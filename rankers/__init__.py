@@ -16,7 +16,7 @@ _import_structure = {
     ],
     "_util" : ["seed_everything", "not_tested", "load_json", "save_json"],
     "train.training_arguments": ["RankerTrainingArguments"],
-    "datasets": [""],
+    "datasets": ["Corpus", "TrainingDataset", "EvaluationDataset", "DotDataCollator", "CatDataCollator"],
     "modelling.cat": [],
     "modelling.dot": [],
     "modelling.sparse": [],
@@ -50,6 +50,7 @@ if is_pyterrier_available():
 
 if TYPE_CHECKING:
     from ._util import seed_everything, not_tested, load_json, save_json
+    from .datasets import Corpus, TrainingDataset, EvaluationDataset, DotDataCollator, CatDataCollator
 
     if is_torch_available():
         from .train.loss.torch import BaseLoss as BaseLoss
