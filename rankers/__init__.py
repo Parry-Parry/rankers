@@ -6,19 +6,6 @@ from typing import TYPE_CHECKING
 __version__ = "0.0.6"
 
 
-def seed_everything(seed=42):
-    import random
-    import numpy as np
-    import torch
-
-    random.seed(seed)
-    np.random.seed(seed)
-    if is_torch_available():
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-
-
 _import_structure = {
     "train.trainer": ["RankerTrainer"],
     "train.loss": ["LOSS_REGISTRY, register_loss"],
@@ -28,6 +15,7 @@ _import_structure = {
         "RankerDotArguments",
         "RankerCatArguments",
     ],
+    "_util" : ["seed_everything", "not_tested", "load_json", "save_json"],
     "train.training_arguments": ["RankerTrainingArguments"],
     "datasets": [""],
     "modelling.cat": [],
@@ -35,7 +23,7 @@ _import_structure = {
     "modelling.sparse": [],
     "modelling.bge": [],
     "modelling.base": [],
-    "modelling.seq2seq": [],
+    "modelling.seq2seq": [],"
 }
 
 
@@ -62,6 +50,8 @@ if is_pyterrier_available():
     _import_structure["pyterrier.cat"] = ["CatTransformer"]
 
 if TYPE_CHECKING:
+    from ._util import seed_everything, not_tested, load_json, save_json
+
     if is_torch_available():
         from .train.loss.torch import BaseLoss as BaseLoss
         from .train.loss.torch import *

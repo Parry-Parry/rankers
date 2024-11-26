@@ -6,6 +6,18 @@ import ir_datasets as irds
 
 logger = logging.getLogger(__name__)
 
+def seed_everything(seed=42):
+    import random
+    import numpy as np
+    import torch
+
+    random.seed(seed)
+    np.random.seed(seed)
+    if is_torch_available():
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+
 
 # decorator which raises warning that this class is not fully tested
 def not_tested(cls):
