@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from .datasets import Corpus, TrainingDataset, EvaluationDataset, DotDataCollator, CatDataCollator
 
     if is_torch_available():
+        from .train.loss import LOSS_REGISTRY, register_loss
         from .train.loss.torch import BaseLoss as BaseLoss
         from .train.loss.torch import *
 

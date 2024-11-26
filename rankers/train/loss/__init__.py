@@ -155,3 +155,7 @@ else:
     sys.modules[__name__] = _LazyModule(
         __name__, globals()["__file__"], _import_structure, module_spec=__spec__
     )
+    sys.modules[__name__]['LOSS_REGISTRY'] = LOSS_REGISTRY
+    sys.modules[__name__]['register_loss'] = register_loss
+    sys.modules[__name__]['LossFunctionRegistry'] = LossFunctionRegistry
+
