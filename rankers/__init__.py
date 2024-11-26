@@ -1,4 +1,4 @@
-from ._optional import is_torch_available, is_torch_available, is_pyterrier_available, is_flax_available
+from ._optional import is_torch_available, is_pyterrier_available, is_flax_available
 from transformers.utils import _LazyModule
 from typing import TYPE_CHECKING
 
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from .datasets import Corpus, TrainingDataset, EvaluationDataset, DotDataCollator, CatDataCollator
 
     if is_torch_available():
-        from .train.loss import LOSS_REGISTRY, register_loss
+        from .train.loss import LOSS_REGISTRY as LOSS_REGISTRY, register_loss as register_loss
         from .train.loss.torch import BaseLoss as BaseLoss
         from .train.loss.torch import *
 

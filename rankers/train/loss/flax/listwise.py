@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import jax.nn as nn
 from jax import jit
 from . import FlaxBaseLoss
-from .. import register_loss
+from ..util import register_loss
 
 
 @register_loss("flax_kl_divergence")

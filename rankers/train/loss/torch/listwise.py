@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-from .. import register_loss
+from ..util import register_loss
 from . import BaseLoss
 
 

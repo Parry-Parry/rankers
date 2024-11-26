@@ -4,7 +4,7 @@ import jax.nn as nn
 import optax.losses as L
 from jax import jit
 from . import FlaxBaseLoss
-from .. import register_loss
+from ..util import register_loss
 
 residual = lambda x: jnp.expand_dims(x[:, 0], axis=1) - x[:, 1:]
 

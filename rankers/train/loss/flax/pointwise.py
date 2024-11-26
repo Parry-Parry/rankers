@@ -1,8 +1,9 @@
-from . import BaseLoss, register_loss
+from . import FlaxBaseLoss
+from ..util import register_loss
 
 
 @register_loss("flax_flax_pointwise_mse")
-class PointwiseMSELoss(BaseLoss):
+class PointwiseMSELoss(FlaxBaseLoss):
     """Pointwise MSE loss"""
 
     name = "PointwiseMSE"
