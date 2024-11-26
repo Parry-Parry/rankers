@@ -22,7 +22,7 @@ _import_structure = {
     "modelling.sparse": [],
     "modelling.bge": [],
     "modelling.base": [],
-    "modelling.seq2seq": [],"
+    "modelling.seq2seq": [],
 }
 
 
