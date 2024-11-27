@@ -20,10 +20,10 @@ if TYPE_CHECKING:
     from .util import LossFunctionRegistry as LossFunctionRegistry, register_loss as register_loss, LOSS_REGISTRY as LOSS_REGISTRY
     if is_torch_available():
         from .torch import BaseLoss as BaseLoss
-        from .torch import *
+        from . import torch as torch
     if is_flax_available():
         from .flax import FlaxBaseLoss as FlaxBaseLoss
-        from .flax import *
+        from . import flax as flax
 else:
     import sys
 
