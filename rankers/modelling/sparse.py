@@ -73,8 +73,10 @@ class SparseConfig(DotConfig):
 
 def splade_max(outputs, mask):
     outputs = outputs.logits
-    values, _ = torch.max(torch.log(1 + F.relu(outputs)) * mask.unsqueeze(-1), dim=1)
-    return values
+    post_act = F.relu(outputs)
+    norm = torch.log(1 + post_act)
+    masked = norm * mask.unsqueeze(-1)
+    return torch.max(masked, dim=1).values
 
 
 class Sparse(Dot):
