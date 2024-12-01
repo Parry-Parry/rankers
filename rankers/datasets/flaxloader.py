@@ -3,9 +3,15 @@ import numpy as np
 from flax.training.common_utils import shard
 import jax.numpy as jnp
 
+def process_distributed_tokens(tokens):
+    if not isinstance(tokens, dict):
+        return shard(jnp.array(tokens))
+    return {k: shard(jnp.array(v)) for k, v in tokens.items()}
 
 def process_tokens(tokens):
-    return {k: shard(jnp.array(v)) for k, v in tokens.items()}
+    if not isinstance(tokens, dict):
+        return jnp.array(tokens)
+    return {k: jnp.array(v) for k, v in tokens.items()}
 
 
 class FlaxDotDataCollator:
@@ -15,11 +21,13 @@ class FlaxDotDataCollator:
         special_mask=False,
         q_max_length=30,
         d_max_length=200,
+        distributed=False,
     ) -> None:
         self.tokenizer = tokenizer
         self.q_max_length = q_max_length
         self.d_max_length = d_max_length
         self.special_mask = special_mask
+        self.process_tokens = process_distributed_tokens if distributed else process_tokens
 
     def __call__(self, batch) -> dict:
         batch_queries = []
@@ -50,10 +58,10 @@ class FlaxDotDataCollator:
         )
 
         return {
-            "queries": process_tokens(dict(tokenized_queries)),
-            "docs_batch": process_tokens(dict(tokenized_docs)),
+            "queries": self.process_tokens(dict(tokenized_queries)),
+            "docs_batch": self.process_tokens(dict(tokenized_docs)),
             "labels": (
-                shard(jnp.array(np.array(batch_scores)))
+                self.process_tokens(jnp.array(np.array(batch_scores)))
                 if len(batch_scores) > 0
                 else None
             ),
@@ -66,10 +74,12 @@ class FlaxCatDataCollator:
         tokenizer,
         q_max_length=30,
         d_max_length=200,
+        distributed=False,
     ) -> None:
         self.tokenizer = tokenizer
         self.q_max_length = q_max_length
         self.d_max_length = d_max_length
+        self.process_tokens = process_distributed_tokens if distributed else process_tokens
 
     def __call__(self, batch) -> dict:
         batch_queries = []
@@ -93,7 +103,7 @@ class FlaxCatDataCollator:
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
             "labels": (
-                shard(jnp.array(np.array(batch_scores)))
+                self.process_tokens(np.array(batch_scores))
                 if len(batch_scores) > 0
                 else None
             ),
@@ -109,9 +119,14 @@ def _make_pos_pairs(texts) -> list:
 
 
 class FlaxPairDataCollator:
-    def __init__(self, tokenizer, max_length=512) -> None:
+    def __init__(self, 
+                 tokenizer, 
+                 max_length=512,
+                 distributed=False
+                 ) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.process_tokens = process_distributed_tokens if distributed else process_tokens
 
     def __call__(self, batch) -> dict:
         batch_queries = []
@@ -158,10 +173,12 @@ class FlaxPromptDataCollator:
         tokenizer,
         prompt: Any,
         max_length=512,
+        distributed=False,
     ) -> None:
         self.tokenizer = tokenizer
         self.prompt = prompt
         self.max_length = max_length
+        self.process_tokens = process_distributed_tokens if distributed else process_tokens
 
     def __call__(self, batch) -> dict:
         batch_queries = []
@@ -189,7 +206,7 @@ class FlaxPromptDataCollator:
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
             "labels": (
-                shard(jnp.array(np.array(batch_scores)))
+                self.process_tokens(jnp.array(np.array(batch_scores)))
                 if len(batch_scores) > 0
                 else None
             ),
@@ -197,10 +214,16 @@ class FlaxPromptDataCollator:
 
 
 class FlaxPairPromptDataCollator:
-    def __init__(self, tokenizer, prompt: Any, max_length=512) -> None:
+    def __init__(self,
+                 tokenizer,
+                 prompt: Any,
+                 max_length=512,
+                 distributed=False
+                 ) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.prompt = prompt
+        self.process_tokens = process_distributed_tokens if distributed else process_tokens
 
     def __call__(self, batch) -> dict:
         batch_queries = []
@@ -234,7 +257,7 @@ class FlaxPairPromptDataCollator:
         return {
             "sequences": process_tokens(dict(tokenized_sequences)),
             "labels": (
-                shard(jnp.squeeze(jnp.array(np.array(batch_scores))))
+                self.process_tokens(jnp.squeeze(jnp.array(np.array(batch_scores))))
                 if len(batch_scores) > 0
                 else None
             ),
