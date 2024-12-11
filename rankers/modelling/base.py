@@ -32,6 +32,21 @@ class Ranker(PreTrainedModel):
     def prepare_outputs(self, logits, labels=None):
         raise NotImplementedError("prepare_outputs must be implemented by subclasses")
 
+    def add_adapter(self, config, adapter_name='adapter', **kwargs):
+        self.model.add_adapter(config, adapter_name=adapter_name, **kwargs)
+
+    def set_adapter(self, adapter_name='adapter'):
+        self.model.set_adapter(adapter_name)
+
+    def disable_adapters(self):
+        self.model.disable_adapters()
+
+    def enable_adapters(self):
+        self.model.enable_adapters()
+
+    def get_adapter_state_dict(self, adapter_name='adapter'):
+        return self.model.get_adapter_state_dict(adapter_name)
+
     @classmethod
     def from_pretrained(
         cls, model_name_or_path: str, config=None, **kwargs
