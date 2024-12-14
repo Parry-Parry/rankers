@@ -79,10 +79,11 @@ class DotTransformer(pt.Transformer):
             )
         )
         model_q = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs)
-        model = Dot(model_q, config, model_d, pooler)
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        model = Dot(model_q, tokenizer, config, model_d, pooler)
         return cls(
             model,
-            AutoTokenizer.from_pretrained(model_name_or_path),
+            tokenizer,
             config,
             batch_size,
             text_field,
