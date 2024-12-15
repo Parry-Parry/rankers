@@ -5,8 +5,7 @@ from transformers import (
     AutoModel,
     AutoTokenizer,
 )
-from ...modelling import Dot, DotConfig
-from ...modelling.dot.dot import Pooler
+from ...modelling.dot.dot import Pooler, Dot, DotConfig
 from typing import Union
 import torch
 import pandas as pd
