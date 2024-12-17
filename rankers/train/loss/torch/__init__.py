@@ -69,6 +69,7 @@ class RegularizationLoss(BaseLoss):
     def forward(self, query_hidden_states, text_hidden_states, **kwargs):
         q_reg = self.reg(query_hidden_states, self.q_weight)
         d_reg = self.reg(text_hidden_states, self.d_weight)
+        self.step()
         return q_reg + d_reg
 
 
