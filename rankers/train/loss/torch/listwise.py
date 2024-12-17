@@ -16,7 +16,7 @@ class KL_DivergenceLoss(BaseLoss):
         self.temperature = temperature
         self.kl_div = torch.nn.KLDivLoss(reduction=self.reduction)
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         return self.kl_div(
             F.log_softmax(pred / self.temperature, dim=1),
             F.softmax(labels / self.temperature, dim=1),
@@ -35,7 +35,7 @@ class RankNetLoss(BaseLoss):
         self.temperature = temperature
         self.bce = torch.nn.BCEWithLogitsLoss(reduction=reduction)
 
-    def forward(self, pred: Tensor, labels: Tensor = None) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor =  None, **kwargs) -> Tensor:
         _, g = pred.shape
         i1, i2 = torch.triu_indices(g, g, offset=1)
         pred_diff = pred[:, i1] - pred[:, i2]
@@ -70,7 +70,7 @@ class DistillRankNetLoss(BaseLoss):
         self.base_margin = base_margin
         self.increment_margin = increment_margin
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         _, g = pred.shape
         i1, i2 = torch.triu_indices(g, g, offset=1)
 
@@ -96,7 +96,7 @@ class ListNetLoss(BaseLoss):
         self.temperature = temperature
         self.epsilon = epsilon
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         if not torch.all((labels >= 0) & (labels <= 1)):
             labels = F.softmax(labels / self.temperature, dim=1)
         return self._reduce(
@@ -119,7 +119,7 @@ class Poly1SoftmaxLoss(BaseLoss):
         self.temperature = temperature
         self.ce = torch.nn.CrossEntropyLoss(reduction="none")
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         labels_for_softmax = torch.divide(labels, labels.sum(dim=1))
         expansion = (
             labels_for_softmax * F.softmax(pred / self.temperature, dim=1)

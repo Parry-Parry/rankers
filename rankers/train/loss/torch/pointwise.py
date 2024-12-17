@@ -11,7 +11,7 @@ class PointwiseMSELoss(BaseLoss):
 
     name = "PointwiseMSE"
 
-    def forward(self, pred: Tensor, labels: Tensor) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         flattened_pred = pred.view(-1)
         flattened_labels = labels.view(-1)
         return F.mse_loss(flattened_pred, flattened_labels, reduction=self.reduction)
