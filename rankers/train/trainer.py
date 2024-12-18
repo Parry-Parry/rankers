@@ -33,15 +33,24 @@ class RankerTrainer(Trainer):
 
         self.regularize_loss = False
         if self.args.regularization is not None:
-            from .loss.torch import FLOPSLoss, L1Loss, CompoundLoss
+            # if regularization is callable, use it directly
+            if callable(self.args.regularization):
+                reg_loss = self.args.regularization(
+                    self.args.q_regularization_weight,
+                    self.args.d_regularization_weight,
+                    0,
+                    self.args.regularization_warmup_steps,
+                )
+            else:
+                from .loss.torch import FLOPSLoss, L1Loss, CompoundLoss
 
-            reg_func = L1Loss if self.args.regularization == "l1" else FLOPSLoss
-            reg_loss = reg_func(
-                self.args.q_regularization_weight,
-                self.args.d_regularization_weight,
-                0,
-                self.args.regularization_warmup_steps,
-            )
+                reg_func = L1Loss if self.args.regularization == "l1" else FLOPSLoss
+                reg_loss = reg_func(
+                    self.args.q_regularization_weight,
+                    self.args.d_regularization_weight,
+                    0,
+                    self.args.regularization_warmup_steps,
+                )
             self.loss = CompoundLoss([self.loss, reg_loss])
             self.regularize_loss = True
 
