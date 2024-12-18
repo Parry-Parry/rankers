@@ -151,8 +151,13 @@ class Sparse(Dot):
             if labels is not None
             else loss(pred, None, query_reps, docs_batch_reps)
         )
+        if len(loss_value) == 2:
+            loss_value, to_log = loss_value
+        else:
+            to_log = {}
+        to_log["inbatch_loss"] = inbatch_loss
         loss_value += inbatch_loss
-        return (loss_value, pred)
+        return (loss_value, to_log, pred)
 
 
 AutoConfig.register("Sparse", SparseConfig)

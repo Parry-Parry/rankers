@@ -231,8 +231,13 @@ class Dot(Ranker):
         )
 
         loss_value = loss(pred, labels) if labels is not None else loss(pred)
+        if len(loss_value) == 2:
+            loss_value, to_log = loss_value
+        else:
+            to_log = {}
+        to_log["inbatch_loss"] = inbatch_loss
         loss_value += inbatch_loss
-        return (loss_value, pred)
+        return (loss_value, to_log, pred)
 
     def save_pretrained(self, model_dir, **kwargs):
         """Save both query and document model"""

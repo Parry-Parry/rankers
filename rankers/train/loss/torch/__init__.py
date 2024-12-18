@@ -70,7 +70,10 @@ class RegularizationLoss(BaseLoss):
         q_reg = self.reg(query_hidden_states, self.q_weight)
         d_reg = self.reg(text_hidden_states, self.d_weight)
         self.step()
-        return q_reg + d_reg
+        to_log = {"q_reg": q_reg, "d_reg": d_reg}
+        to_log['q_num_non_zeo'] = num_non_zero(query_hidden_states)
+        to_log['d_num_non_zeo'] = num_non_zero(text_hidden_states)
+        return q_reg + d_reg, to_log
 
 
 class FLOPSLoss(RegularizationLoss):
@@ -106,6 +109,7 @@ class CompoundLoss(BaseLoss):
         **kwargs,
     ):
         total = 0.0
+        to_log = {}
         for loss, alpha in zip(self.losses, self.alphas):
             loss_val = loss(
                 pred=pred,
@@ -114,9 +118,14 @@ class CompoundLoss(BaseLoss):
                 text_hidden_states=text_hidden_states,
                 **kwargs,
             )
+            if len(loss_val) == 2:
+                loss_val, _to_log = loss_val
+                for k, v in _to_log.items():
+                    to_log[k] = v.detach().cpu().item()
+            to_log[loss.name] = loss_val.detach().cpu().item()
             loss_val = loss_val * alpha
             total += loss_val
-        return total
+        return total, to_log
 
 
 def reduce(a: torch.Tensor, reduction: str):
