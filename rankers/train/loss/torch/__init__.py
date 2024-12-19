@@ -2,6 +2,7 @@ from abc import abstractmethod
 import torch.nn as nn
 import torch
 from torch import Tensor
+from .. import register_loss
 
 
 class BaseLoss(nn.Module):
@@ -75,7 +76,7 @@ class RegularizationLoss(BaseLoss):
         to_log['d_num_non_zeo'] = num_non_zero(text_hidden_states)
         return q_reg + d_reg, to_log
 
-
+@register_loss("flops")
 class FLOPSLoss(RegularizationLoss):
     def __init__(
         self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
@@ -85,7 +86,7 @@ class FLOPSLoss(RegularizationLoss):
     def reg(self, reps, weight=0):
         return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
 
-
+@register_loss("l1")
 class L1Loss(BaseLoss):
     def __init__(self, reduction: str = "mean") -> None:
         super(L1Loss, self).__init__(reduction)

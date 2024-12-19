@@ -4,7 +4,7 @@ import jax
 import optax.losses as L
 
 
-@register_loss("flax_flax_pointwise_mse")
+@register_loss("flax_pointwise_mse")
 class PointwiseMSELoss(FlaxBaseLoss):
     """Pointwise MSE loss"""
 
