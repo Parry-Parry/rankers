@@ -54,7 +54,7 @@ def main():
             opt,
             get_constant_schedule_with_warmup(opt, training_args.warmup_steps),
         ),
-        loss_fn="lce",
+        loss_fn=training_args.loss_fn,
     )
 
     trainer.train()
