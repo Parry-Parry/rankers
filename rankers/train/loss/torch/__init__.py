@@ -2,7 +2,7 @@ from abc import abstractmethod
 import torch.nn as nn
 import torch
 from torch import Tensor
-from .. import register_loss
+from ..util import register_loss
 
 
 class BaseLoss(nn.Module):
