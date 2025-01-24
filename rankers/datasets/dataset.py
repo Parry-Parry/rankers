@@ -121,10 +121,11 @@ class TrainingDataset(Dataset):
         )
 
     def _teacher(self, query_id, doc_id):
+        if query_id not in self.teacher:
+            raise KeyError(f"Query ID {query_id} not found")
         if doc_id not in self.teacher[query_id]:
-            return 0
-        else:
-            return self.teacher[query_id][doc_id]
+            raise KeyError(f"Doc ID {doc_id} not found for query {query_id}")
+        return self.teacher[query_id][doc_id]
 
     def _precomputed_get(self, data):
         query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_text = (

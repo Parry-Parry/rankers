@@ -1,6 +1,6 @@
 from collections import defaultdict
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, Union
 import pandas as pd
 import ir_datasets as irds
 
@@ -154,3 +154,7 @@ def save_json(data, file: str):
                 f.write(json.dumps(item) + "\n")
     else:
         raise ValueError(f"Unknown file type for {file}")
+
+
+def type_invariant_equal(a : Union[str, int], b : Union[str, int]) -> bool:
+    return str(a) == str(b) or int(a) == int(b)
