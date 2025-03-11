@@ -197,17 +197,13 @@ class TrainingDataset(Dataset):
                     )
                     texts, scores = texts[: self.group_size], scores[: self.group_size]
                 else:
-                    texts, scores = zip(
+                    # sample n_neg from the negatives
+                    doc_id_b_text, doc_id_a_scores = zip(
                         *random.sample(
-                            list(
-                                zip(
-                                    doc_id_a_text + doc_id_b_text,
-                                    doc_id_a_scores + doc_id_b_scores,
-                                )
-                            ),
-                            self.group_size,
+                            list(zip(doc_id_b_text, doc_id_b_scores)), self.n_neg
                         )
                     )
+                    texts, scores = doc_id_a_text + doc_id_b_text, doc_id_a_scores + doc_id_b_scores
                 return (query, texts, scores)
             return (
                 query,
