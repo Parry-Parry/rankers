@@ -52,7 +52,6 @@ class CatTransformer(pt.Transformer):
         config: PretrainedConfig = None,
         device: Union[str, torch.device] = None,
         verbose: bool = False,
-        num_labels: int = 2,
         **kwargs,
     ):
         config = (
@@ -61,7 +60,7 @@ class CatTransformer(pt.Transformer):
             else config
         )
         model = cls.cls_architecture.from_pretrained(
-            model_name_or_path, config=config, num_labels=num_labels, **kwargs
+            model_name_or_path, config=config, **kwargs
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
