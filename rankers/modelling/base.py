@@ -88,8 +88,8 @@ class Ranker(PreTrainedModel):
         logits = self.model(**sequences).logits
         pred, labels = self.prepare_outputs(logits, labels)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
-        if len(loss_value) == 2:
-            loss_value, to_log = loss_value
+        if type(loss_value) is tuple:
+            loss_value, to_log = loss_value # unpack tuple
         else:
             to_log = {}
         return (loss_value, to_log, pred)
