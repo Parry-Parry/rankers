@@ -91,5 +91,5 @@ class Ranker(PreTrainedModel):
         if type(loss_value) is tuple:
             loss_value, to_log = loss_value # unpack tuple
         else:
-            to_log = {}
+            to_log = {'loss': loss_value.item()}
         return (loss_value, to_log, pred)
