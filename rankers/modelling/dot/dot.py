@@ -231,10 +231,12 @@ class Dot(Ranker):
         )
 
         loss_value = loss(pred, labels) if labels is not None else loss(pred)
-        if len(loss_value) == 2:
+        if type(loss_value) is tuple:
             loss_value, to_log = loss_value
         else:
-            to_log = {}
+            to_log = {
+                "loss": loss_value.item(),
+            }
         to_log["inbatch_loss"] = inbatch_loss
         loss_value += inbatch_loss
         return (loss_value, to_log, pred)
