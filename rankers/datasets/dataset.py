@@ -198,7 +198,7 @@ class TrainingDataset(Dataset):
                     texts, scores = texts[: self.group_size], scores[: self.group_size]
                 else:
                     # sample n_neg from the negatives
-                    doc_id_b_text, doc_id_a_scores = zip(
+                    doc_id_b_text, doc_id_b_scores = zip(
                         *random.sample(
                             list(zip(doc_id_b_text, doc_id_b_scores)), self.n_neg
                         )
