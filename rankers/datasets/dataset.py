@@ -204,7 +204,7 @@ class TrainingDataset(Dataset):
                         )
                     )
                     breakpoint()
-                    texts, scores = doc_id_a_text + doc_id_b_text, doc_id_a_scores + doc_id_b_scores
+                    texts, scores = doc_id_a_text + [*doc_id_b_text], doc_id_a_scores + [*doc_id_b_scores]
                 return (query, texts, scores)
             return (
                 query,
