@@ -203,7 +203,6 @@ class TrainingDataset(Dataset):
                             list(zip(doc_id_b_text, doc_id_b_scores)), self.n_neg
                         )
                     )
-                    breakpoint()
                     texts, scores = doc_id_a_text + [*doc_id_b_text], doc_id_a_scores + [*doc_id_b_scores]
                 return (query, texts, scores)
             return (
