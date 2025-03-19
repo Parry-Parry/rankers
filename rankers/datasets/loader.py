@@ -38,7 +38,7 @@ class DotDataCollator:
         )
         tokenized_docs = self.tokenizer(
             batch_docs,
-            padding=True,
+            padding='longest',
             truncation=True,
             max_length=self.d_max_length,
             return_tensors="pt",
@@ -79,7 +79,7 @@ class CatDataCollator:
         tokenized_sequences = self.tokenizer(
             batch_queries,
             batch_docs,
-            padding=True,
+            padding='longest',
             truncation="only_second",
             max_length=self.q_max_length + self.d_max_length,
             return_tensors="pt",
@@ -125,7 +125,7 @@ class PairDataCollator:
 
         tokenized_sequences = self.tokenizer(
             sequences,
-            padding=True,
+            padding='longest',
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt",
@@ -168,7 +168,7 @@ class PromptDataCollator:
 
         tokenized_sequences = self.tokenizer(
             sequences,
-            padding=True,
+            padding='longest',
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt",
@@ -208,7 +208,7 @@ class PairPromptDataCollator:
 
         tokenized_sequences = self.tokenizer(
             sequences,
-            padding=True,
+            padding='longest',
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt",
@@ -264,7 +264,7 @@ class ListWisePromptDataCollator:
 
         tokenized_sequences = self.tokenizer(
             sequences,
-            padding=True,
+            padding='longest',
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt",
