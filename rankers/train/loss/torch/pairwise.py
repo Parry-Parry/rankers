@@ -43,12 +43,13 @@ class ClearLoss(BaseLoss):
 
     name = "CLEAR"
 
-    def __init__(self, margin=1, reduction="mean"):
+    def __init__(self, margin=1, residual_lambda=0.1, reduction="mean"):
         super().__init__(reduction)
         self.margin = margin
+        self.residual_lambda = residual_lambda
 
     def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
-        margin_b = self.margin - residual(labels)
+        margin_b = self.margin - (self.residual_lambda * residual(labels))
         return self._reduce(F.relu(margin_b - residual(pred)))
 
 
