@@ -204,17 +204,3 @@ class RankerTrainer(Trainer):
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
         return output.metrics
-
-    def _load_optimizer_and_scheduler(self, checkpoint):
-        super()._load_optimizer_and_scheduler(checkpoint)
-        if checkpoint is None:
-            return
-        if os.path.exists(os.path.join(checkpoint, LOSS_NAME)):
-            self.loss.load_state_dict(torch.load(os.path.join(checkpoint, LOSS_NAME)))
-
-    def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
-        logger.info("Loading model's weight from %s", resume_from_checkpoint)
-        if model:
-            return model.load_state_dict(resume_from_checkpoint)
-        else:
-            self.model.load_state_dict(resume_from_checkpoint)
