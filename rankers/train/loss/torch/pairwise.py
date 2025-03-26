@@ -63,7 +63,7 @@ class LCELoss(BaseLoss):
         if labels is not None:
             labels = labels.argmax(dim=1)
         else:
-            labels = torch.zeros(pred.size(0), dtype=torch.long, device=pred.device)
+            labels = torch.zeros(pred.size(0), dtype=pred.dtype, device=pred.device)
         return F.cross_entropy(pred, labels, reduction=self.reduction)
 
 
@@ -82,7 +82,7 @@ class ContrastiveLoss(BaseLoss):
         labels = (
             labels.argmax(dim=1)
             if labels is not None
-            else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(
+            else torch.zeros(pred.size(0), dtype=pred.dtype, device=pred.device).view(
                 -1, 1
             )
         )
