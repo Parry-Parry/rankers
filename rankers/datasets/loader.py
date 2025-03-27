@@ -75,7 +75,6 @@ class CatDataCollator:
             if len(elt) < 3:
                 continue
             batch_scores.extend(elt[2])
-        breakpoint()
         tokenized_sequences = self.tokenizer(
             batch_queries,
             batch_docs,
