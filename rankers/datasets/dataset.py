@@ -151,13 +151,13 @@ class TrainingDataset(Dataset):
             doc_id_b_text = (
                 [self.docs[str(doc)] for doc in doc_id_b]
                 if not self.lazy_load_text
-                else [self.docs[doc_id_b]]
+                else self.docs[doc_id_b]
             )
         else:
             doc_id_b_text = (
                 [self.docs[str(doc_id_b)]]
                 if not self.lazy_load_text
-                else [self.docs[doc_id_b]]
+                else self.docs[doc_id_b]
             )
 
         return (query, query_id, doc_id_a, doc_id_a_text, doc_id_b, doc_id_b_text)
