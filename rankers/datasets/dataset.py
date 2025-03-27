@@ -14,7 +14,7 @@ class LazyTextLoader:
         self.docstore = corpus.docs_store()
 
     def __getitem__(self, doc_id):
-        if type == list:
+        if type(doc_id) is list:
             return [self.docstore.get(str(id)).text for id in doc_id]
         return self.docstore.get(str(doc_id)).text
 
