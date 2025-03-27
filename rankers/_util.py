@@ -156,5 +156,20 @@ def save_json(data, file: str):
         raise ValueError(f"Unknown file type for {file}")
 
 
-def type_invariant_equal(a : Union[str, int], b : Union[str, int]) -> bool:
+def type_invariant_equal(a: Union[str, int], b : Union[str, int]) -> bool:
     return str(a) == str(b) or int(a) == int(b)
+
+
+def read_trec(filename):
+    df = pd.read_csv(filename, sep=r'\s+', names=["qid", "iter", "docno", "rank", "score", "name"], dtype={'qid': str, 'docno': str, 'rank': int, 'score': float}) 
+    df = df.drop(columns="iter")
+    return df
+
+
+def write_trec(df, filename):
+    if 'iter' not in df.columns:
+        df['iter'] = 0
+    if 'name' not in df.columns:
+        df['name'] = 'rankers_run'
+    df = df[['qid', 'iter', 'docno', 'rank', 'score', 'name']]
+    df.to_csv(filename, sep=r'\s+', header=False, index=False)

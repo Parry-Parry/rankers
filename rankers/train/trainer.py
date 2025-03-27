@@ -147,7 +147,7 @@ class RankerTrainer(Trainer):
         logger.info(f"  Batch size = {batch_size}")
 
         eval_model = model.to_pyterrier()
-        result_frame = eval_model.transform(dataset.validation_data)
+        result_frame = eval_model.transform(dataset.data)
         metrics = self.compute_metrics(result_frame)
 
         num_samples = len(dataset)

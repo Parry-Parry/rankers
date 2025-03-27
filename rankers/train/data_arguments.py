@@ -8,7 +8,7 @@ from .._optional import (
     is_torch_available,
     is_pyterrier_available,
 )
-import pandas as pd
+from .._util import read_trec
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -35,7 +35,7 @@ class RankerDataArguments:
         default=None, metadata={"help": "IR Dataset for text lookup"}
     )
     lazy_load_text: Optional[bool] = field(
-        default=False, metadata={"help": "Lazy load text from the corpus"}
+        default=True, metadata={"help": "Lazy load text from the corpus"}
     )
     precomputed: Optional[bool] = field(
         default=False, metadata={"help": "DataFrame with existing text fields"}
@@ -104,9 +104,7 @@ class RankerDataArguments:
                 logging.warning(
                     "Pyterrier not available, validation dataset will be loaded as a DataFrame"
                 )
-                self.validation_data = pd.read_csv(
-                    self.validation_dataset_file, sep="\t"
-                )
+                self.validation_data = read_trec(self.validation_dataset_file)
         if self.test_dataset_file:
             assert (
                 self.test_dataset_file.endswith(".gz")
@@ -121,7 +119,7 @@ class RankerDataArguments:
                 logging.warning(
                     "Pyterrier not available, test dataset will be loaded as a DataFrame"
                 )
-                self.test_data = pd.read_csv(self.test_dataset_file, sep="\t")
+                self.test_data = read_trec(self.test_dataset_file)
 
     def to_dict(self):
         """

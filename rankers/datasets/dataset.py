@@ -5,7 +5,7 @@ import torch
 from typing import Union
 import ir_datasets as irds
 import json
-from .._util import load_json, initialise_irds_eval
+from .._util import load_json, initialise_irds_eval, read_trec
 from .corpus import Corpus
 
 
@@ -27,7 +27,7 @@ class TrainingDataset(Dataset):
         teacher_file: str = None,
         group_size: int = 2,
         no_positive: bool = False,
-        lazy_load_text: bool = False,
+        lazy_load_text: bool = True,
         top_k_group: bool = False,
         precomputed: bool = False,
         text_field: str = "text",
@@ -216,25 +216,34 @@ class TrainingDataset(Dataset):
             return (query, doc_id_a_text + doc_id_b_text)
 
 
-class EvaluationDataset(Dataset):
+class TestDataset(Dataset):
     def __init__(
-        self, evaluation_dataset: pd.DataFrame, corpus: Union[Corpus, irds.Dataset]
+        self,
+        data: pd.DataFrame,
+        corpus: Union[Corpus, irds.Dataset],
+        lazy_load_text: bool = True,
     ) -> None:
         super().__init__()
-        self.evaluation_dataset = evaluation_dataset
+        self.data = data
         self.corpus = corpus
+        self.lazy_load_text = lazy_load_text
 
         self.__post_init__()
 
     def __post_init__(self):
         for column in "query_id", "docno", "score":
-            if column not in self.evaluation_dataset.columns:
+            if column not in self.data.columns:
                 raise ValueError(
                     f"Format not recognised, Column '{column}' not found in dataframe"
                 )
-        self.docs = (
-            pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
-        )
+        if not self.lazy_load_text:
+            self.docs = (
+                pd.DataFrame(self.corpus.docs_iter())
+                .set_index("doc_id")["text"]
+                .to_dict()
+            )
+        else:
+            self.docs = LazyTextLoader(self.corpus)
         self.queries = (
             pd.DataFrame(self.corpus.queries_iter())
             .set_index("query_id")["text"]
@@ -242,20 +251,29 @@ class EvaluationDataset(Dataset):
         )
         self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
-        self.evaluation_dataset["text"] = self.evaluation_dataset["docno"].map(
+        self.data["text"] = self.data["docno"].map(
             self.docs
         )
-        self.evaluation_dataset["query"] = self.evaluation_dataset["query_id"].map(
+        self.data["query"] = self.data["qid"].map(
             self.queries
         )
+
+    @classmethod
+    def from_trec(
+        cls,
+        trec_file: str,
+        ir_dataset: irds.Dataset,
+    ) -> "TestDataset":
+        data = read_trec(trec_file)
+        return cls(data, ir_dataset)
 
     @classmethod
     def from_irds(
         cls,
         ir_dataset: irds.Dataset,
-    ) -> "EvaluationDataset":
-        evaluation_dataset = initialise_irds_eval(ir_dataset)
-        return cls(evaluation_dataset, ir_dataset)
+    ) -> "TestDataset":
+        data = initialise_irds_eval(ir_dataset)
+        return cls(data, ir_dataset)
 
     def __len__(self):
-        return len(self.evaluation_dataset.query_id.unique())
+        return len(self.data.query_id.unique())

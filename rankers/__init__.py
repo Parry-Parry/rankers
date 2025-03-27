@@ -14,9 +14,9 @@ _import_structure = {
         "RankerDotArguments",
         "RankerCatArguments",
     ],
-    "_util" : ["seed_everything", "not_tested", "load_json", "save_json"],
+    "_util" : ["seed_everything", "not_tested", "load_json", "save_json", "read_trec", "write_trec"],
     "train.training_arguments": ["RankerTrainingArguments"],
-    "datasets": ["Corpus", "TrainingDataset", "EvaluationDataset", "DotDataCollator", "CatDataCollator"],
+    "datasets": ["Corpus", "TrainingDataset", "TestDataset", "DotDataCollator", "CatDataCollator"],
     "modelling.cat": [],
     "modelling.dot": [],
     "modelling.sparse": [],
@@ -24,7 +24,6 @@ _import_structure = {
     "modelling.base": [],
     "modelling.seq2seq": [],
 }
-
 
 if is_torch_available():
     _import_structure["train.loss.torch"] = ["BaseLoss"]
@@ -49,8 +48,8 @@ if is_pyterrier_available():
     _import_structure["pyterrier.cat"] = ["CatTransformer"]
 
 if TYPE_CHECKING:
-    from ._util import seed_everything, not_tested, load_json, save_json
-    from .datasets import Corpus, TrainingDataset, EvaluationDataset, DotDataCollator, CatDataCollator
+    from ._util import seed_everything, not_tested, load_json, save_json, read_trec, write_trec
+    from .datasets import Corpus, TrainingDataset, TestDataset, DotDataCollator, CatDataCollator
 
     if is_torch_available():
         from .train.loss import LOSS_REGISTRY as LOSS_REGISTRY, register_loss as register_loss
