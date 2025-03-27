@@ -170,6 +170,10 @@ class TrainingDataset(Dataset):
             item
         )
 
+        print(type(query))
+        print(type(doc_id_a_text))
+        print(type(doc_id_b_text))
+
         # Append teacher scores if available
         if self.labels:
             doc_id_a_scores = (
