@@ -164,7 +164,7 @@ class RankerTrainer(Trainer):
         self,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         ignore_keys: Optional[List[str]] = None,
-        metric_key_prefix: str = "eval",
+        metric_key_prefix: str = "test",
         **kwargs,  # handle new arguments
     ) -> Dict[str, float]:
         # handle multipe eval datasets
