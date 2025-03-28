@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 _import_structure = {
     "corpus": ["Corpus"],
-    "dataset": ["TrainingDataset", "EvaluationDataset"],
+    "dataset": ["TrainingDataset", "TestDataset"],
 }
 
 if is_torch_available():
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from .corpus import Corpus as Corpus
     from .dataset import (
         TrainingDataset as TrainingDataset,
-        EvaluationDataset as EvaluationDataset,
+        TestDataset as TestDataset,
     )
 else:
     import sys

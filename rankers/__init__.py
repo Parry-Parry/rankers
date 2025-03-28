@@ -14,7 +14,7 @@ _import_structure = {
         "RankerDotArguments",
         "RankerCatArguments",
     ],
-    "_util" : ["seed_everything", "not_tested", "load_json", "save_json", "read_trec", "write_trec"],
+    "_util": ["seed_everything", "not_tested", "load_json", "save_json", "read_trec", "write_trec"],
     "train.training_arguments": ["RankerTrainingArguments"],
     "datasets": ["Corpus", "TrainingDataset", "TestDataset", "DotDataCollator", "CatDataCollator"],
     "modelling.cat": [],
