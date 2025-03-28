@@ -86,10 +86,10 @@ class RankerTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
     def compute_metrics(self, result_frame: pd.DataFrame):
-        from ir_measures import evaluator, RR
+        from ir_measures import evaluator, nDCG
 
         qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
-        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [RR @ 10]
+        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG@10]
         evaluator = evaluator(metrics, qrels)
 
         return evaluator.calc_aggregate(result_frame)
