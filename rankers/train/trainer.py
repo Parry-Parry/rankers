@@ -92,9 +92,10 @@ class RankerTrainer(Trainer):
 
         qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
         metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG@10]
-        evaluator = evaluator(metrics, qrels)
-
-        return evaluator.calc_aggregate(result_frame)
+        _evaluator = evaluator(metrics, qrels)
+        output = _evaluator.evaluate(result_frame)
+        output = {str(k): v for k, v in output.items()}
+        return output
 
     def evaluation_loop(
         self,
