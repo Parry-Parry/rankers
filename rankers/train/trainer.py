@@ -1,5 +1,4 @@
 import torch
-import os
 import logging
 from transformers import Trainer
 import math
@@ -9,6 +8,7 @@ from typing import Optional, Union, Dict, List
 from datasets import Dataset
 from transformers.trainer_utils import EvalLoopOutput, speed_metrics
 from transformers.integrations.deepspeed import deepspeed_init
+from .._optional import is_ir_datasets_available
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +170,12 @@ class RankerTrainer(Trainer):
         metric_key_prefix: str = "test",
         **kwargs,  # handle new arguments
     ) -> Dict[str, float]:
+        
+        if not is_ir_datasets_available():
+            raise ImportError(
+                "Please install ir_datasets to use the evaluation features."
+            )
+
         # handle multipe eval datasets
         override = eval_dataset is not None
         eval_dataset = eval_dataset if override else self.eval_dataset
