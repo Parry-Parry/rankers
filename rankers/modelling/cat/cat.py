@@ -47,8 +47,12 @@ class Cat(Ranker):
             self.transformer_class = CatTransformer
 
     @classmethod
-    def from_pretrained(cls, model_name_or_path, config=None, num_labels: int=2, **kwargs):
-        return super().from_pretrained(model_name_or_path, config, num_labels=num_labels, **kwargs)
+    def from_pretrained(
+        cls, model_name_or_path, config=None, num_labels: int = 2, **kwargs
+    ):
+        return super().from_pretrained(
+            model_name_or_path, config, num_labels=num_labels, **kwargs
+        )
 
     def prepare_outputs(self, logits, labels=None):
         """Prepare outputs"""

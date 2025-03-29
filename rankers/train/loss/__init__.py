@@ -17,7 +17,12 @@ if is_flax_available():
     _import_structure["flax"] = ["FlaxBaseLoss", *_flax_all]
 
 if TYPE_CHECKING:
-    from .util import LossFunctionRegistry as LossFunctionRegistry, register_loss as register_loss, LOSS_REGISTRY as LOSS_REGISTRY
+    from .util import (
+        LossFunctionRegistry as LossFunctionRegistry,
+        register_loss as register_loss,
+        LOSS_REGISTRY as LOSS_REGISTRY,
+    )
+
     if is_torch_available():
         from .torch import BaseLoss as BaseLoss
         from . import torch as torch

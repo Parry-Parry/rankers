@@ -59,7 +59,7 @@ class LCELoss(BaseLoss):
 
     name = "LCE"
 
-    def forward(self, pred: Tensor, labels: Tensor =  None, **kwargs) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor = None, **kwargs) -> Tensor:
         if labels is not None:
             labels = labels.argmax(dim=1)
         else:

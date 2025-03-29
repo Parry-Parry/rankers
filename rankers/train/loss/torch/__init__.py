@@ -72,9 +72,10 @@ class RegularizationLoss(BaseLoss):
         d_reg = self.reg(text_hidden_states, self.d_weight)
         self.step()
         to_log = {"q_reg": q_reg, "d_reg": d_reg}
-        to_log['q_num_non_zeo'] = num_non_zero(query_hidden_states)
-        to_log['d_num_non_zeo'] = num_non_zero(text_hidden_states)
+        to_log["q_num_non_zeo"] = num_non_zero(query_hidden_states)
+        to_log["d_num_non_zeo"] = num_non_zero(text_hidden_states)
         return q_reg + d_reg, to_log
+
 
 @register_loss("flops_reg")
 class FLOPSLoss(RegularizationLoss):
@@ -85,6 +86,7 @@ class FLOPSLoss(RegularizationLoss):
 
     def reg(self, reps, weight=0):
         return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
+
 
 @register_loss("l1_reg")
 class L1Loss(BaseLoss):

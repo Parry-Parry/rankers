@@ -52,11 +52,11 @@ OPTIMIZER_NAME = "optimizer"
 DEFAULT_CALLBACKS = [DefaultFlowCallback]
 DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 
-'''
+"""
 TODO:
 - Implement call_model_init
 - Implement _load_best_model
-'''
+"""
 
 
 class FlaxContrastTrainer(Trainer):
@@ -79,7 +79,7 @@ class FlaxContrastTrainer(Trainer):
         optimizers: Tuple[optax._src.base.Optimizer, optax._src.base.Scheduler] = (
             None,
             None,
-        )
+        ),
     ):
         if args is None:
             output_dir = "tmp_trainer"
@@ -389,7 +389,8 @@ class FlaxContrastTrainer(Trainer):
                 "Trainer optimizer is None, please make sure you have setup the optimizer before."
             )
         return [group["lr"] for group in self.optimizer.param_groups]
-    '''
+
+    """
     def _load_best_model(self):
         logger.info(f"Loading best model from {self.state.best_model_checkpoint} (score: {self.state.best_metric}).")
         best_model_path = os.path.join(self.state.best_model_checkpoint, WEIGHTS_NAME)
@@ -469,7 +470,8 @@ class FlaxContrastTrainer(Trainer):
             load_result = load_sharded_checkpoint(
                 model, self.state.best_model_checkpoint
             )
-    '''
+    """
+
     def train(
         self,
         resume_from_checkpoint: Optional[Union[str, bool]] = None,

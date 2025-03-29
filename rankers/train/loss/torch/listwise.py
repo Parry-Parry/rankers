@@ -35,7 +35,7 @@ class RankNetLoss(BaseLoss):
         self.temperature = temperature
         self.bce = torch.nn.BCEWithLogitsLoss(reduction=reduction)
 
-    def forward(self, pred: Tensor, labels: Tensor =  None, **kwargs) -> Tensor:
+    def forward(self, pred: Tensor, labels: Tensor = None, **kwargs) -> Tensor:
         _, g = pred.shape
         i1, i2 = torch.triu_indices(g, g, offset=1)
         pred_diff = pred[:, i1] - pred[:, i2]

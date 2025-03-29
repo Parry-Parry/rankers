@@ -35,6 +35,7 @@ class RankerTrainer(Trainer):
         if self.args.regularization is not None:
             # if regularization is callable, use it directly
             from .loss.torch import CompoundLoss
+
             if callable(self.args.regularization):
                 reg_loss = self.args.regularization(
                     self.args.q_regularization_weight,
@@ -44,6 +45,7 @@ class RankerTrainer(Trainer):
                 )
             else:
                 from .loss import LOSS_REGISTRY
+
                 if self.args.regularization not in LOSS_REGISTRY.availible:
                     raise ValueError(
                         f"Unknown regularization: {self.args.regularization}"
@@ -80,7 +82,11 @@ class RankerTrainer(Trainer):
             )
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
-        to_log = outputs['to_log'] if isinstance(outputs, dict) and 'to_log' in outputs else outputs[1]
+        to_log = (
+            outputs["to_log"]
+            if isinstance(outputs, dict) and "to_log" in outputs
+            else outputs[1]
+        )
         if len(to_log) > 0:
             self.log(to_log)
         return (loss, outputs) if return_outputs else loss
@@ -88,10 +94,14 @@ class RankerTrainer(Trainer):
     def compute_metrics(self, result_frame: pd.DataFrame):
         from ir_measures import evaluator, nDCG
 
-        result_frame = result_frame.rename(columns={"query_id": "qid", "doc_id": "docno"})
+        result_frame = result_frame.rename(
+            columns={"query_id": "qid", "doc_id": "docno"}
+        )
 
         qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
-        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG@10]
+        metrics = (
+            self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG @ 10]
+        )
         _evaluator = evaluator(metrics, qrels)
         output = _evaluator.evaluate(result_frame)
         output = {str(k): v for k, v in output.items()}
@@ -170,7 +180,7 @@ class RankerTrainer(Trainer):
         metric_key_prefix: str = "test",
         **kwargs,  # handle new arguments
     ) -> Dict[str, float]:
-        
+
         if not is_ir_datasets_available():
             raise ImportError(
                 "Please install ir_datasets to use the evaluation features."

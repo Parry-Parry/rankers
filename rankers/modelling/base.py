@@ -32,10 +32,10 @@ class Ranker(PreTrainedModel):
     def prepare_outputs(self, logits, labels=None):
         raise NotImplementedError("prepare_outputs must be implemented by subclasses")
 
-    def add_adapter(self, config, adapter_name='adapter', **kwargs):
+    def add_adapter(self, config, adapter_name="adapter", **kwargs):
         self.model.add_adapter(config, adapter_name=adapter_name, **kwargs)
 
-    def set_adapter(self, adapter_name='adapter'):
+    def set_adapter(self, adapter_name="adapter"):
         self.model.set_adapter(adapter_name)
 
     def disable_adapters(self):
@@ -44,7 +44,7 @@ class Ranker(PreTrainedModel):
     def enable_adapters(self):
         self.model.enable_adapters()
 
-    def get_adapter_state_dict(self, adapter_name='adapter'):
+    def get_adapter_state_dict(self, adapter_name="adapter"):
         return self.model.get_adapter_state_dict(adapter_name)
 
     @classmethod
@@ -89,7 +89,7 @@ class Ranker(PreTrainedModel):
         pred, labels = self.prepare_outputs(logits, labels)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
         if type(loss_value) is tuple:
-            loss_value, to_log = loss_value # unpack tuple
+            loss_value, to_log = loss_value  # unpack tuple
         else:
-            to_log = {'loss': loss_value.item()}
+            to_log = {"loss": loss_value.item()}
         return (loss_value, to_log, pred)
