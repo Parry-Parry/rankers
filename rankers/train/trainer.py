@@ -88,6 +88,8 @@ class RankerTrainer(Trainer):
     def compute_metrics(self, result_frame: pd.DataFrame):
         from ir_measures import evaluator, nDCG
 
+        result_frame = result_frame.rename(columns={"query_id": "qid", "doc_id": "docno"})
+
         qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
         metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG@10]
         evaluator = evaluator(metrics, qrels)
