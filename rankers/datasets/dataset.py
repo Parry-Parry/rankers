@@ -3,10 +3,14 @@ from torch.utils.data import Dataset
 import pandas as pd
 import torch
 from typing import Union
-import ir_datasets as irds
+
 import json
 from .._util import load_json, initialise_irds_eval, read_trec
+from .._optional import is_ir_datasets_available
 from .corpus import Corpus
+
+if is_ir_datasets_available():
+    import ir_datasets as irds
 
 
 class LazyTextLoader:
@@ -272,6 +276,10 @@ class TestDataset(Dataset):
         cls,
         ir_dataset: irds.Dataset,
     ) -> "TestDataset":
+        if not is_ir_datasets_available():
+            raise ImportError(
+                "ir_datasets is not available, please install ir_datasets to use this function"
+            )
         data = initialise_irds_eval(ir_dataset)
         return cls(data, ir_dataset)
 
