@@ -86,3 +86,12 @@ def is_lmdb_available():
         return True
     except ImportError:
         return False
+
+
+def is_lz4_available():
+    try:
+        import lz4
+
+        return True
+    except ImportError:
+        return False
