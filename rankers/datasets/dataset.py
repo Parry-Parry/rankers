@@ -39,7 +39,7 @@ class TrainingDataset(Dataset):
         negative_id_key: str = "doc_id_b",
         text_field: str = "text",
         query_field: str = "text",
-        storage_format: str = 'parquet'
+        storage_format: str = "parquet",
     ) -> None:
         self.training_dataset_file = training_dataset_file
         self.corpus = corpus
@@ -63,11 +63,13 @@ class TrainingDataset(Dataset):
         self.__post_init__()
 
     def __post_init__(self):
-        if self.storage_format == 'parquet':
+        if self.storage_format == "parquet":
             from .format import ParquetTrainingData
+
             self.training_data = ParquetTrainingData(self.training_dataset_file)
-        elif self.storage_format == 'jsonl':
+        elif self.storage_format == "jsonl":
             from .format import JSONLTrainingData
+
             self.training_data = JSONLTrainingData(self.training_dataset_file)
         else:
             raise ValueError(f"Storage format {self.storage_format} not recognised")
