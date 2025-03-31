@@ -1,6 +1,7 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 import torch.nn as nn
 import torch
+import torch.distributed as dist
 from torch import Tensor
 from ..util import register_loss
 
@@ -16,6 +17,7 @@ class BaseLoss(nn.Module):
     """
 
     name = "base"
+    gather_args = [0, 1]
 
     def __init__(self, reduction: str = "mean") -> None:
         super(BaseLoss, self).__init__()
@@ -129,6 +131,54 @@ class CompoundLoss(BaseLoss):
             loss_val = loss_val * alpha
             total += loss_val
         return total, to_log
+
+
+class DistributedLossDecorator(ABC):
+    def __init__(self, loss_fn, gather_args=None, gather_indices=None):
+        """
+        Args:
+            loss_fn: The loss function to be wrapped.
+            gather_args: List of keyword argument names (if any) to be gathered.
+            gather_indices: List of positional argument indices to be gathered.
+        """
+        self.loss_fn = loss_fn
+
+        if gather_args is not None:
+            self.gather_args = gather_args
+        elif hasattr(loss_fn, "gather_args") and loss_fn.gather_args is not None:
+            self.gather_args = loss_fn.gather_args
+        else:
+            self.gather_args = []
+
+        if gather_indices is not None:
+            self.gather_indices = gather_indices
+        elif hasattr(loss_fn, "gather_indices") and loss_fn.gather_indices is not None:
+            self.gather_indices = loss_fn.gather_indices
+        else:
+            self.gather_indices = []
+        if not dist.is_initialized():
+            raise RuntimeError("Distributed training has not been properly initialized.")
+        self.world_size = dist.get_world_size()
+        self.rank = dist.get_rank()
+
+    def gather_tensor(self, t: Tensor) -> Tensor:
+        gathered = [torch.empty_like(t) for _ in range(self.world_size)]
+        dist.all_gather(gathered, t)
+        # Replace the tensor corresponding to the current rank with the local one.
+        gathered[self.rank] = t
+        return torch.cat(gathered, dim=0)
+
+    def __call__(self, *args, **kwargs):
+        # Gather specified positional arguments.
+        args = list(args)
+        for idx in self.gather_indices:
+            if idx < len(args):
+                args[idx] = self.gather_tensor(args[idx])
+        # Gather specified keyword arguments.
+        for key in self.gather_args:
+            if key in kwargs:
+                kwargs[key] = self.gather_tensor(kwargs[key])
+        return self.loss_fn(*args, **kwargs)
 
 
 def reduce(a: torch.Tensor, reduction: str):
