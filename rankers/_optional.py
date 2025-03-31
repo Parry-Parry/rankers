@@ -77,3 +77,12 @@ def is_pyarrow_available():
         return True
     except ImportError:
         return False
+
+
+def is_lmdb_available():
+    try:
+        import lmdb
+
+        return True
+    except ImportError:
+        return False

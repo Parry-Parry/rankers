@@ -47,7 +47,7 @@ class JSONLTrainingData:
     def first_entry(self):
         return self._get_line_by_index(0)
 
-    def __get__(self, idx):
+    def __getitem__(self, idx):
         return self._get_line_by_index(idx)
 
 

@@ -3,8 +3,6 @@ from torch.utils.data import Dataset
 import pandas as pd
 import torch
 from typing import Union
-
-import json
 from .._util import load_json, initialise_irds_eval, read_trec
 from .._optional import is_ir_datasets_available
 from .corpus import Corpus
@@ -71,6 +69,10 @@ class TrainingDataset(Dataset):
             from .format import JSONLTrainingData
 
             self.training_data = JSONLTrainingData(self.training_dataset_file)
+        elif self.storage_format == "lmdb":
+            from .format import LMDBTrainingData
+
+            self.training_data = LMDBTrainingData(self.training_dataset_file)
         else:
             raise ValueError(f"Storage format {self.storage_format} not recognised")
 
@@ -132,7 +134,6 @@ class TrainingDataset(Dataset):
         ), f"Only found {total_negs} negatives, cannot take {self.n_neg} negatives"
 
     def __len__(self):
-        # Length based on line offsets for uncompressed, or generator count for compressed
         return len(self.training_data)
 
     def _teacher(self, query_id, doc_id):
