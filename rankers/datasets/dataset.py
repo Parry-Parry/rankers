@@ -4,8 +4,19 @@ import pandas as pd
 import torch
 from typing import Union
 from .._util import load_json, initialise_irds_eval, read_trec
-from .._optional import is_ir_datasets_available
+from .._optional import is_ir_datasets_available, is_pyarrow_available, is_lmdb_available
 from .corpus import Corpus
+from .format import JSONLTrainingData
+
+FORMATS = {'jsonl': JSONLTrainingData}
+
+if is_pyarrow_available():
+    from .format import ParquetTrainingData
+    FORMATS['parquet'] = ParquetTrainingData
+
+if is_lmdb_available():
+    from .format import LMDBTrainingData
+    FORMATS['lmdb'] = LMDBTrainingData
 
 if is_ir_datasets_available():
     import ir_datasets as irds
@@ -61,20 +72,13 @@ class TrainingDataset(Dataset):
         self.__post_init__()
 
     def __post_init__(self):
-        if self.storage_format == "parquet":
-            from .format import ParquetTrainingData
 
-            self.training_data = ParquetTrainingData(self.training_dataset_file)
-        elif self.storage_format == "jsonl":
-            from .format import JSONLTrainingData
-
-            self.training_data = JSONLTrainingData(self.training_dataset_file)
-        elif self.storage_format == "lmdb":
-            from .format import LMDBTrainingData
-
-            self.training_data = LMDBTrainingData(self.training_dataset_file)
-        else:
-            raise ValueError(f"Storage format {self.storage_format} not recognised")
+        try:
+            storage_format = FORMATS[self.storage_format]
+        except KeyError:
+            raise ValueError(f"Storage format {self.storage_format} not recognised, are you missing a dependency?")
+        
+        self.training_data = storage_format(self.training_dataset_file)
 
         valid_keys = [self.query_id_key, self.negative_id_key]
         if not self.no_positive:
