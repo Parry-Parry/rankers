@@ -1,6 +1,11 @@
-import lmdb
 import json
 from fire import Fire
+from rankers._optional import is_lmdb_available
+
+if not is_lmdb_available():
+    raise ImportError("lmdb is not available. Please install it via `pip install lmdb`.")
+
+import lmdb
 
 
 def jsonl_to_lmdb(jsonl_path, lmdb_path):
