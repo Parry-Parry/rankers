@@ -5,8 +5,7 @@ from lz4.frame import decompress
 
 
 def load_record(row):
-    d = decompress(row).decode()
-
+    d = decompress(row)
     return loads(d)
 
 
