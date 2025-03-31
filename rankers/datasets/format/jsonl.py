@@ -13,7 +13,7 @@ class JSONLTrainingData:
         self.line_offsets = self._get_line_offsets()
 
     def validate_schema(self, schema: List[str]):
-        first_entry = self.get_first_entry()
+        first_entry = self.first_entry
         for key in schema:
             if key not in first_entry:
                 raise ValueError(f"Key {key} not found in schema")

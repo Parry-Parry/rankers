@@ -17,9 +17,9 @@ class ParquetTrainingData:
         return self.num_rows
 
     def validate_schema(self, schema: List[str]):
-        schema = self.table.schema
+        _schema = self.table.schema
         for key in schema:
-            if key not in schema.names:
+            if key not in _schema.names:
                 raise ValueError(f"Key {key} not found in schema")
 
     def _get_line_by_index(self, idx):
