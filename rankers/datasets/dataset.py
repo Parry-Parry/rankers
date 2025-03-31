@@ -121,7 +121,7 @@ class TrainingDataset(Dataset):
 
         # check required keys are present in the first entry
         assert (
-            self.query_id_key_key in first_entry
+            self.query_id_key in first_entry
         ), f"Key {self.query_id_key} not found in the first entry"
         if not self.no_positive:
             assert (
