@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         TrainingDataset as TrainingDataset,
         TestDataset as TestDataset,
     )
+    from . import format as format
 else:
     import sys
 
