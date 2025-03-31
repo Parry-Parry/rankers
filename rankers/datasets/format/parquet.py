@@ -13,6 +13,9 @@ class ParquetTrainingData:
         self.parquet_file = pq.ParquetFile(self.file)
         self.num_rows = self.parquet_file.num_rows
 
+    def __len__(self):
+        return self.num_rows
+
     def validate_schema(self, schema: List[str]):
         schema = self.table.schema
         for key in schema:
