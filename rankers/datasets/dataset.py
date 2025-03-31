@@ -47,7 +47,7 @@ class TrainingDataset(Dataset):
         positive_id_key: str = "doc_id_a",
         negative_id_key: str = "doc_id_b",
         text_field: str = "text",
-        query_field: str = "text",
+        query_field: str = "query",
         storage_format: str = "parquet",
     ) -> None:
         self.training_dataset_file = training_dataset_file
@@ -83,6 +83,14 @@ class TrainingDataset(Dataset):
         valid_keys = [self.query_id_key, self.negative_id_key]
         if not self.no_positive:
             valid_keys.append(self.positive_id_key)
+        if self.precomputed:
+            valid_keys.extend(
+                [
+                    self.query_field,
+                    f"{self.positive_id_key}_text",
+                    f"{self.negative_id_key}_text",
+                ]
+            )
 
         self.training_data.validate_schema(valid_keys)
 
