@@ -1,8 +1,25 @@
+import json
+from functools import cached_property
+from typing import List
 
-class JSONTrainingData:
+
+class JSONLTrainingData:
     def __init__(self, file):
         self.file = file
+
+        self.__post_init__()
+
+    def __post_init__(self):
         self.line_offsets = self._get_line_offsets()
+
+    def validate_schema(self, schema: List[str]):
+        first_entry = self.get_first_entry()
+        for key in schema:
+            if key not in first_entry:
+                raise ValueError(f"Key {key} not found in schema")
+
+    def __len__(self):
+        return len(self.line_offsets)
 
     def _get_line_offsets(self):
         """Store byte offsets for each line in an uncompressed JSONL file, skipping blank lines."""
@@ -26,5 +43,12 @@ class JSONTrainingData:
             f.seek(self.line_offsets[idx])
             return json.loads(f.readline())
 
-    def get_first_entry(self):
+    @cached_property
+    def first_entry(self):
         return self._get_line_by_index(0)
+
+    def __get__(self, idx):
+        return self._get_line_by_index(idx)
+
+
+__all__ = ["JSONLTrainingData"]

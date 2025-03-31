@@ -68,3 +68,12 @@ def is_orbax_checkpoint_available():
         return True
     except ImportError:
         return False
+
+
+def is_pyarrow_available():
+    try:
+        import pyarrow
+
+        return True
+    except ImportError:
+        return False

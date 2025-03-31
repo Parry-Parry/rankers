@@ -39,11 +39,8 @@ class TrainingDataset(Dataset):
         negative_id_key: str = "doc_id_b",
         text_field: str = "text",
         query_field: str = "text",
+        storage_format: str = 'parquet'
     ) -> None:
-        assert training_dataset_file.endswith(
-            "jsonl"
-        ), "Training dataset should be a JSONL file and should not be compressed"
-
         self.training_dataset_file = training_dataset_file
         self.corpus = corpus
         self.teacher_file = teacher_file
@@ -58,36 +55,29 @@ class TrainingDataset(Dataset):
         self.negative_id_key = negative_id_key
         self.text_field = text_field
         self.query_field = query_field
+        self.storage_format = storage_format
 
         self._get = self._precomputed_get if self.precomputed else self._standard_get
 
-        self.line_offsets = self._get_line_offsets()
         super().__init__()
         self.__post_init__()
 
-    def _get_line_offsets(self):
-        """Store byte offsets for each line in an uncompressed JSONL file, skipping blank lines."""
-        offsets = []
-        with open(self.training_dataset_file, "r", encoding="utf-8") as f:
-            while True:
-                offset = f.tell()
-                line = f.readline().strip()
-                if not line:
-                    if f.tell() == f.seek(
-                        0, 2
-                    ):  # Check if we've reached the end of the file
-                        break
-                    continue
-                offsets.append(offset)
-        return offsets
-
-    def _get_line_by_index(self, idx):
-        """Retrieve a line by index, using offsets for uncompressed files."""
-        with open(self.training_dataset_file, "r", encoding="utf-8") as f:
-            f.seek(self.line_offsets[idx])
-            return json.loads(f.readline())
-
     def __post_init__(self):
+        if self.storage_format == 'parquet':
+            from .format import ParquetTrainingData
+            self.training_data = ParquetTrainingData(self.training_dataset_file)
+        elif self.storage_format == 'jsonl':
+            from .format import JSONLTrainingData
+            self.training_data = JSONLTrainingData(self.training_dataset_file)
+        else:
+            raise ValueError(f"Storage format {self.storage_format} not recognised")
+
+        valid_keys = [self.query_id_key, self.negative_id_key]
+        if not self.no_positive:
+            valid_keys.append(self.positive_id_key)
+
+        self.training_data.validate_schema(valid_keys)
+
         assert (
             self.corpus is not None or self.precomputed
         ), "Cannot instantiate a text-based dataset without a lookup"
@@ -117,7 +107,7 @@ class TrainingDataset(Dataset):
             self.labels = False
 
         # Use _get_line_by_index to check multi-negative configuration
-        first_entry = self._get_line_by_index(0)
+        first_entry = self.training_data.first_entry
 
         # check required keys are present in the first entry
         assert (
@@ -141,11 +131,7 @@ class TrainingDataset(Dataset):
 
     def __len__(self):
         # Length based on line offsets for uncompressed, or generator count for compressed
-        return (
-            len(self.line_offsets)
-            if self.line_offsets
-            else sum(1 for _ in self._data_generator())
-        )
+        return len(self.training_data)
 
     def _teacher(self, query_id, doc_id):
         if query_id not in self.teacher:
@@ -205,7 +191,7 @@ class TrainingDataset(Dataset):
 
     def __getitem__(self, idx):
         # Retrieve the line corresponding to idx
-        item = self._get_line_by_index(idx)
+        item = self.training_data[idx]
 
         query_id, query_text, positive_id, positive_text, negative_id, negative_text = (
             self._get(item)
