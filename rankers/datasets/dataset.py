@@ -21,6 +21,9 @@ class LazyTextLoader:
             return [self.docstore.get(str(id)).text for id in doc_id]
         return self.docstore.get(str(doc_id)).text
 
+    def __call__(self, id):
+        return self[id]
+
 
 class TrainingDataset(Dataset):
     def __init__(
