@@ -51,3 +51,11 @@ class Corpus:
     def qrels_iter(self):
         for queryid, docid, relevance in self.qrels.itertuples(index=False):
             yield {"query_id": queryid, "doc_id": docid, "relevance": relevance}
+
+    def __call__(self, maybe_idx):
+        if isinstance(maybe_idx, int):
+            return self.get(maybe_idx)
+        elif isinstance(maybe_idx, list):
+            return self.get_many(maybe_idx)
+        else:
+            raise ValueError("Invalid input type. Must be int or list")
