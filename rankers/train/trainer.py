@@ -124,7 +124,7 @@ class RankerTrainer(Trainer):
         # if eval is called w/o train, handle model prep here
         if self.is_deepspeed_enabled and self.deepspeed is None:
             _, _ = deepspeed_init(self, num_training_steps=0, inference=True)
-
+        model = self.model
         if len(self.accelerator._models) == 0 and model is self.model:
             start_time = time.time()
             model = (
