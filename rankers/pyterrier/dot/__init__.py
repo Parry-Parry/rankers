@@ -13,15 +13,6 @@ else:
     _import_structure["dot"] = [
         "DotTransformer",
     ]
-try:
-    if not is_flax_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["flaxdot"] = [
-        "FlaxDotTransformer",
-    ]
 
 if TYPE_CHECKING:
     try:
@@ -31,13 +22,6 @@ if TYPE_CHECKING:
         pass
     else:
         from .dot import DotTransformer
-    try:
-        if not is_flax_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .flaxdot import FlaxDotTransformer
 else:
     import sys
 

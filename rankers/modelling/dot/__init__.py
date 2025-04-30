@@ -15,15 +15,6 @@ else:
         "DotConfig",
         "Pooler",
     ]
-try:
-    if not is_flax_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["flaxdot"] = [
-        "FlaxDot",
-    ]
 
 if TYPE_CHECKING:
     try:
@@ -34,13 +25,6 @@ if TYPE_CHECKING:
         pass
     else:
         from .dot import Dot, DotConfig, Pooler
-    try:
-        if not is_flax_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .flaxdot import FlaxDot
 else:
     import sys
 

@@ -13,15 +13,6 @@ else:
     _import_structure["cat"] = [
         "Cat",
     ]
-try:
-    if not is_flax_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["flaxcat"] = [
-        "FlaxCat",
-    ]
 
 if TYPE_CHECKING:
     try:
@@ -31,13 +22,6 @@ if TYPE_CHECKING:
         pass
     else:
         from .cat import Cat
-    try:
-        if not is_flax_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .flaxcat import FlaxCat
 else:
     import sys
 

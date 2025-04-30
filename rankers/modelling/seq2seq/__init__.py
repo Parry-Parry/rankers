@@ -13,15 +13,6 @@ else:
     _import_structure["seq2seq"] = [
         "Seq2Seq",
     ]
-try:
-    if not is_flax_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["flaxseq2seq"] = [
-        "FlaxSeq2Seq",
-    ]
 
 if TYPE_CHECKING:
     try:
@@ -31,13 +22,6 @@ if TYPE_CHECKING:
         pass
     else:
         from .seq2seq import Seq2Seq
-    try:
-        if not is_flax_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .flaxseq2seq import FlaxSeq2Seq
 else:
     import sys
 
