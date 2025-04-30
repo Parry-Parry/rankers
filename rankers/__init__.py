@@ -47,14 +47,6 @@ if is_torch_available():
     _import_structure["modelling.bge"].extend(["BGE"])
     _import_structure["modelling.seq2seq"].extend(["Seq2Seq"])
 
-if is_flax_available():
-    _import_structure["modelling.flax"] = ["FlaxBaseLoss"]
-    _import_structure["modelling.cat"].extend(["FlaxCat"])
-    _import_structure["modelling.dot"].extend(["FlaxDot", "FlaxDotConfig"])
-    _import_structure["modelling.sparse"].extend(["FlaxSparse"])
-    _import_structure["modelling.bge"].extend(["FlaxBGE"])
-    _import_structure["modelling.seq2seq"].extend(["FlaxSeq2Seq"])
-
 if is_pyterrier_available():
     _import_structure["pyterrier.dot"] = ["DotTransformer"]
     _import_structure["pyterrier.sparse"] = ["SparseTransformer"]
@@ -92,13 +84,6 @@ if TYPE_CHECKING:
         from .modelling.sparse import Sparse as Sparse
         from .modelling.bge import BGE as BGE
         from .modelling.seq2seq import Seq2Seq as Seq2Seq
-
-    if is_flax_available():
-        from .train.loss.flax import FlaxBaseLoss as FlaxBaseLoss
-        from .train.loss.flax import *
-
-        from .modelling.cat import FlaxCat as FlaxCat
-        from .modelling.dot import FlaxDot as FlaxDot
 
     if is_pyterrier_available():
         from .pyterrier.dot import DotTransformer as DotTransformer

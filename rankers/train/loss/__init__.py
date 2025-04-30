@@ -11,10 +11,6 @@ if is_torch_available():
     from .torch import __all__ as _torch_all
 
     _import_structure["torch"] = ["BaseLoss", *_torch_all]
-if is_flax_available():
-    from .flax import __all__ as _flax_all
-
-    _import_structure["flax"] = ["FlaxBaseLoss", *_flax_all]
 
 if TYPE_CHECKING:
     from .util import (
@@ -26,9 +22,7 @@ if TYPE_CHECKING:
     if is_torch_available():
         from .torch import BaseLoss as BaseLoss
         from . import torch as torch
-    if is_flax_available():
-        from .flax import FlaxBaseLoss as FlaxBaseLoss
-        from . import flax as flax
+
 else:
     import sys
 
