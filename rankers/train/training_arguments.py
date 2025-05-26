@@ -29,7 +29,7 @@ def get_loss(loss_fn: str):
 @dataclass
 class RankerTrainingArguments(TrainingArguments):
     save_total_limit: Optional[int] = field(
-        default=3, metadata={"help": "If a value is passed, will limit the total amount of checkpoints."}
+        default=10, metadata={"help": "Limit the total amount of checkpoints."}
     )
     group_size: Optional[int] = field(
         default=2, metadata={"help": "Number of documents per query"}
