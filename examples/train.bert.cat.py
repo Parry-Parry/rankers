@@ -22,7 +22,7 @@ def main():
         from ir_measures import nDCG
         training_args.eval_ir_metrics = [nDCG@10]
 
-    model = Cat.from_pretrained(model_args.model_name_or_path, num_labels=2)
+    model = Cat.from_pretrained(model_args.model_name_or_path)
 
     dataset = TrainingDataset(
         data_args.training_dataset_file,
