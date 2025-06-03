@@ -7,6 +7,7 @@ from rankers import (
     DotConfig,
     DotDataCollator,
     TrainingDataset,
+    TestDataset,
 )
 from transformers import HfArgumentParser
 from transformers import get_constant_schedule_with_warmup
@@ -20,11 +21,6 @@ def main():
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    if training_args.wandb_project is not None:
-        wandb.init(
-            project=training_args.wandb_project,
-        )
-
     model_config = DotConfig.from_pretrained(
         model_args.model_name_or_path,
         pooling_type=model_args.pooling_type,
@@ -35,30 +31,33 @@ def main():
     model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
 
     dataset = TrainingDataset(
-        data_args.training_data,
+        data_args.training_dataset_file,
+        group_size=training_args.group_size,
         corpus=data_args.ir_dataset,
+        no_positive=data_args.no_positive,
         teacher_file=data_args.teacher_file,
-        group_size=data_args.group_size,
-        use_positive=data_args.use_positive,
     )
-    collate_fn = DotDataCollator(model.tokenizer)
 
-    opt = AdamW(model.parameters(), lr=training_args.lr)
+    collate_fn = DotDataCollator(model.tokenizer)
 
     trainer = RankerTrainer(
         model=model,
         args=training_args,
         train_dataset=dataset,
         data_collator=collate_fn,
-        optimizers=(
-            opt,
-            get_constant_schedule_with_warmup(opt, training_args.warmup_steps),
-        ),
         loss_fn=training_args.loss_fn,
     )
 
     trainer.train()
-    trainer.save_model(training_args.output_dir + "/model")
+    trainer.save_model(training_args.output_dir)
+
+    if data_args.test_dataset_file:
+        test_dataset = TestDataset(
+            data_args.test_data,
+            corpus=data_args.test_ir_dataset,
+            lazy_load_text=True,
+        )
+        trainer.evaluate(test_dataset)
 
 
 if __name__ == "__main__":
