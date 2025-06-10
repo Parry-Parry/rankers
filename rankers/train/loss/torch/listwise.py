@@ -178,6 +178,12 @@ def get_ndcg(
     return ndcg
 
 
+def process_labels(pred: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    if labels.ndim > pred.ndim:
+        return labels.amax(-1)
+    return labels
+
+
 @register_loss("approx_ndcg")
 class ApproxNDCGLoss(BaseLoss):
     name = "ApproxNDCG"
@@ -190,7 +196,7 @@ class ApproxNDCGLoss(BaseLoss):
         self.scale_gains = scale_gains
 
     def forward(self, pred: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        labels = self.process_labels(pred, labels)
+        labels = process_labels(pred, labels)
         approx_ranks = get_approx_ranks(pred, self.temperature)
         ndcg = get_ndcg(approx_ranks, labels, k=None, scale_gains=self.scale_gains)
         loss = 1 - ndcg
