@@ -143,11 +143,7 @@ class TrainingDataset(Dataset):
 
     def __len__(self):
         # Length based on line offsets for uncompressed, or generator count for compressed
-        return (
-            len(self.line_offsets)
-            if self.line_offsets
-            else sum(1 for _ in self._data_generator())
-        )
+        return len(self.line_offsets)
 
     def _teacher(self, query_id, doc_id):
         if query_id not in self.teacher:
@@ -160,8 +156,8 @@ class TrainingDataset(Dataset):
         query_id, query_text, positive_id, positive_text, negative_id, negative_text = (
             data[self.query_id_key],
             data[self.query_field],
-            data[self.positive_id_key],
-            data[f"{self.positive_id_key}_text"],
+            data[self.positive_id_key] if not self.no_positive else None,
+            data[f"{self.positive_id_key}_text"] if not self.no_positive else None,
             data[self.negative_id_key],
             data[f"{self.negative_id_key}_text"],
         )
@@ -177,7 +173,7 @@ class TrainingDataset(Dataset):
     def _standard_get(self, data):
         query_id, positive_id, negative_id = (
             data[self.query_id_key],
-            data[self.positive_id_key],
+            data[self.positive_id_key] if not self.no_positive else None,
             data[self.negative_id_key],
         )
         query_text = self.queries[str(query_id)]
