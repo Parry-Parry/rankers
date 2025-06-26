@@ -229,6 +229,38 @@ class ApproxMRRLoss(BaseLoss):
         loss = 1 - mrr
         return self._reduce(loss)
 
+@register_loss('adr_mse')
+class ADRMSE(BaseLoss):
+    """
+    Approx Discounted Rank MSE (ADR-MSE) as proposed by Schlatt et al. 
+            https://dl.acm.org/doi/10.1007/978-3-031-88714-7_31
+    """
+    
+    name = "ADR_MSE"
+
+    def __init__(self):
+        super().__init__()
+
+    def get_approx_ranks(self, scores: torch.Tensor, temperature: float) -> torch.Tensor:
+        score_diff = scores[:, None] - scores[..., None]
+        normalized_score_diff = torch.sigmoid(score_diff / temperature)
+        # Set diagonal to 0
+        normalized_score_diff = normalized_score_diff * (1 - torch.eye(scores.shape[1], device=scores.device))
+        approx_ranks = normalized_score_diff.sum(-1) + 1
+        return approx_ranks
+
+
+    def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
+        scores = pred
+        targets = labels
+        approx_ranks = self.get_approx_ranks(scores, 1)
+        ranks = torch.argsort(torch.argsort(targets, descending=True)) + 1
+        loss = torch.nn.functional.mse_loss(approx_ranks, ranks.to(approx_ranks), reduction="none")
+        weight = 1 / torch.log2(ranks + 1)
+        loss = loss * weight
+        loss = loss.mean()
+        return loss
+
 
 __all__ = [
     "KL_DivergenceLoss",
@@ -238,4 +270,5 @@ __all__ = [
     "Poly1SoftmaxLoss",
     "ApproxNDCGLoss",
     "ApproxMRRLoss",
+    "ADRMSE"
 ]
