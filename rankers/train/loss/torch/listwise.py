@@ -234,6 +234,9 @@ class ADRMSE(BaseLoss):
     """
     Approx Discounted Rank MSE (ADR-MSE) as proposed by Schlatt et al. 
             https://dl.acm.org/doi/10.1007/978-3-031-88714-7_31
+
+    Implementation from: 
+        github.com/webis-de/lightning-ir/blob/main/lightning_ir/loss/loss.py
     """
     
     name = "ADR_MSE"
