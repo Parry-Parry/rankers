@@ -2,6 +2,7 @@ import os
 import json
 import mmap
 import random
+from functools import cache
 from typing import Union, Iterable, List, Dict, Any, Tuple, Optional
 
 import pandas as pd
@@ -375,13 +376,23 @@ class TestDataset(Dataset):
 
 class ValidationDataset(Dataset):
     """
-    Build a TREC-style DataFrame (qid, query, docno, text) from a training-format JSONL.
+    Validation helper that:
+      (1) Constructs qrels from positives only (others are assumed nonrelevant).
+      (2) Exposes a cached TREC-style ranking DataFrame via `.data`, built from the
+          training-format JSONL, with columns: qid, query, docno, text, label.
+          - label = 1 for positives, 0 for negatives (useful for accuracy checks).
 
-    - Accepts the same key configuration as TrainingDataset (query_id_key, positive_id_key,
-      negative_id_key), and the same corpus for text lookup.
-    - Includes the positive (if present) and all negatives per example.
-    - No scores are produced (column 'score' is intentionally omitted).
-    - Exposes the resulting DataFrame via `data` and provides len() = number of rows.
+    Attributes
+    ----------
+    qrels : pd.DataFrame
+        Columns: ["qid", "docno", "relevance"] with positives only.
+    data : pd.DataFrame (cached property via @cached + @property)
+        Columns: ["qid", "query", "docno", "text", "label"], built from training JSONL.
+
+    Notes
+    -----
+    - `corpus` is required to resolve query and document text.
+    - Any document not listed in `qrels` is implicitly nonrelevant.
     """
 
     def __init__(
@@ -392,20 +403,23 @@ class ValidationDataset(Dataset):
         positive_id_key: str = "doc_id_a",
         negative_id_key: str = "doc_id_b",
         lazy_load_text: bool = True,
+        relevance_label: int = 1,
         include_positive: bool = True,
+        dedupe_qrels: bool = True,
     ) -> None:
         super().__init__()
         assert training_dataset_file.endswith("jsonl"), "validation expects an uncompressed JSONL"
-
         self.training_dataset_file = training_dataset_file
         self.corpus = corpus
         self.query_id_key = query_id_key
         self.positive_id_key = positive_id_key
         self.negative_id_key = negative_id_key
         self.lazy_load_text = lazy_load_text
+        self.relevance_label = relevance_label
         self.include_positive = include_positive
+        self.dedupe_qrels = dedupe_qrels
 
-        # Build text lookup (lazy by default)
+        # Text lookup
         if not self.lazy_load_text:
             self.docs = (
                 pd.DataFrame(self.corpus.docs_iter())
@@ -421,24 +435,64 @@ class ValidationDataset(Dataset):
             .to_dict()
         )
 
-        # Materialize TREC-style DataFrame
-        self.data = self._build_dataframe()
+        # Build qrels once (positives only)
+        self.qrels = self._build_qrels()
 
-    def _build_dataframe(self) -> pd.DataFrame:
+    def _build_qrels(self) -> pd.DataFrame:
         rows: List[Dict[str, Any]] = []
-
-        # Stream once; do not depend on offsets here.
         with open(self.training_dataset_file, "rb") as f:
             for raw in f:
                 if not raw.strip():
                     continue
                 rec = json.loads(raw.decode("utf-8"))
 
-                # Validate keys
                 if self.query_id_key not in rec:
                     raise KeyError(f"Key {self.query_id_key} not found in record")
-                if self.negative_id_key not in rec:
-                    raise KeyError(f"Key {self.negative_id_key} not found in record")
+                qid = rec[self.query_id_key]
+
+                if not self.include_positive or self.positive_id_key not in rec:
+                    continue
+
+                pos = rec[self.positive_id_key]
+                if pos is None:
+                    continue
+
+                if isinstance(pos, list):
+                    for d in pos:
+                        if d is None:
+                            continue
+                        rows.append({"qid": qid, "docno": str(d), "relevance": self.relevance_label})
+                else:
+                    rows.append({"qid": qid, "docno": str(pos), "relevance": self.relevance_label})
+
+        df = pd.DataFrame(rows, columns=["qid", "docno", "relevance"])
+        if self.dedupe_qrels and not df.empty:
+            df = df.drop_duplicates(subset=["qid", "docno"], keep="first").reset_index(drop=True)
+        return df
+
+    @cache
+    @property
+    def data(self) -> pd.DataFrame:
+        """
+        Cached TREC-style ranking file derived from the training JSONL.
+        Columns:
+          - qid   : query identifier (from training JSONL)
+          - query : query text (from corpus)
+          - docno : document identifier (positive and negatives)
+          - text  : document text (from corpus)
+          - label : 1 for positive docs, 0 for negatives
+        """
+        rows: List[Dict[str, Any]] = []
+        with open(self.training_dataset_file, "rb") as f:
+            for raw in f:
+                if not raw.strip():
+                    continue
+                rec = json.loads(raw.decode("utf-8"))
+
+                if self.query_id_key not in rec or self.negative_id_key not in rec:
+                    raise KeyError(
+                        f"Record missing required keys: {self.query_id_key} / {self.negative_id_key}"
+                    )
 
                 qid = rec[self.query_id_key]
                 qtext = self.queries[str(qid)]
@@ -447,12 +501,25 @@ class ValidationDataset(Dataset):
                 if self.include_positive and (self.positive_id_key in rec):
                     pos = rec[self.positive_id_key]
                     if pos is not None:
-                        rows.append({
-                            "qid": qid,
-                            "query": qtext,
-                            "docno": str(pos),
-                            "text": self.docs[str(pos)],
-                        })
+                        if isinstance(pos, list):
+                            for d in pos:
+                                if d is None:
+                                    continue
+                                rows.append({
+                                    "qid": qid,
+                                    "query": qtext,
+                                    "docno": str(d),
+                                    "text": self.docs[str(d)],
+                                    "label": 1,
+                                })
+                        else:
+                            rows.append({
+                                "qid": qid,
+                                "query": qtext,
+                                "docno": str(pos),
+                                "text": self.docs[str(pos)],
+                                "label": 1,
+                            })
 
                 # Negatives (single or list)
                 neg = rec[self.negative_id_key]
@@ -463,6 +530,7 @@ class ValidationDataset(Dataset):
                             "query": qtext,
                             "docno": str(d),
                             "text": self.docs[str(d)],
+                            "label": 0,
                         })
                 else:
                     rows.append({
@@ -470,17 +538,15 @@ class ValidationDataset(Dataset):
                         "query": qtext,
                         "docno": str(neg),
                         "text": self.docs[str(neg)],
+                        "label": 0,
                     })
 
-        # DataFrame with exact columns requested
-        df = pd.DataFrame(rows, columns=["qid", "query", "docno", "text"])
-        return df
+        return pd.DataFrame(rows, columns=["qid", "query", "docno", "text", "label"])
 
     def __len__(self):
+        # Number of rows in ranking DataFrame
         return len(self.data)
 
     def __getitem__(self, idx: int):
-        # Optional: support Dataset-style indexing over rows
         row = self.data.iloc[idx]
-        # Return a tuple matching the TREC-style expectation
-        return row["qid"], row["query"], row["docno"], row["text"]
+        return row["qid"], row["query"], row["docno"], row["text"], row["label"]
