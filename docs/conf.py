@@ -48,11 +48,33 @@ autodoc_default_options = {
     'members': True,
     'member-order': 'bysource',
     'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    'undoc-members': False,  # Don't show undocumented members
+    'private-members': False,  # Don't show private members
+    'inherited-members': False,  # Don't show inherited members
+    'exclude-members': '__weakref__,__dict__,__module__,__annotations__,__doc__,__hash__,__repr__,__str__'
 }
 autodoc_typehints = 'description'
 autodoc_typehints_description_target = 'documented'
+
+# Don't document these special methods
+def skip_member(app, what, name, obj, skip, options):
+    """Skip certain members during documentation generation."""
+    # Skip private methods (starting with _)
+    if name.startswith('_') and name not in ('__init__', '__call__'):
+        return True
+    # Skip certain inherited methods
+    if name in ('training', 'eval', 'parameters', 'modules', 'named_parameters',
+                'named_modules', 'children', 'named_children', 'apply', 'cuda',
+                'cpu', 'to', 'register_buffer', 'register_parameter', 'add_module',
+                'state_dict', 'load_state_dict', 'zero_grad', 'share_memory',
+                'extra_repr', 'train', '__dir__', '__sizeof__', '__reduce__',
+                '__reduce_ex__', '__subclasshook__', '__init_subclass__',
+                '__format__', '__new__', '__delattr__', '__setattr__', '__getattribute__'):
+        return True
+    return skip
+
+def setup(app):
+    app.connect('autodoc-skip-member', skip_member)
 autodoc_mock_imports = [
     'torch',
     'transformers',

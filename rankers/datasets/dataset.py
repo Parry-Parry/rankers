@@ -9,8 +9,8 @@ import os
 import json
 import mmap
 import random
-from functools import cache
-from typing import Union, Iterable, List, Dict, Any, Tuple, Optional
+from functools import cached_property
+from typing import Union, Iterable, List, Dict, Any, Tuple
 
 import pandas as pd
 from torch.utils.data import Dataset
@@ -488,7 +488,6 @@ class TrainingDataset(Dataset):
             negative_text,
         )
 
-    # ---- sampling / grouping ----
     def __getitem__(self, idx: int):
         item = self._get_line_by_index(idx)
 
@@ -765,8 +764,7 @@ class ValidationDataset(Dataset):
             )
         return df
 
-    @cache
-    @property
+    @cached_property
     def data(self) -> pd.DataFrame:
         """
         Cached TREC-style ranking file derived from the training JSONL.

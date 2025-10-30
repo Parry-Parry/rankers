@@ -4,9 +4,23 @@ Loss Functions
 Base Loss Classes
 -----------------
 
-.. automodule:: rankers.train.loss.torch
+.. autoclass:: rankers.train.loss.torch.BaseLoss
    :members:
-   :undoc-members:
+
+.. autoclass:: rankers.train.loss.torch.RegularizationLoss
+   :members:
+   :show-inheritance:
+
+.. autoclass:: rankers.train.loss.torch.FLOPSLoss
+   :members:
+   :show-inheritance:
+
+.. autoclass:: rankers.train.loss.torch.L1Loss
+   :members:
+   :show-inheritance:
+
+.. autoclass:: rankers.train.loss.torch.CompoundLoss
+   :members:
    :show-inheritance:
 
 Pointwise Losses
@@ -14,7 +28,6 @@ Pointwise Losses
 
 .. automodule:: rankers.train.loss.torch.pointwise
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Pairwise Losses
@@ -22,7 +35,6 @@ Pairwise Losses
 
 .. automodule:: rankers.train.loss.torch.pairwise
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Listwise Losses
@@ -30,7 +42,6 @@ Listwise Losses
 
 .. automodule:: rankers.train.loss.torch.listwise
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Loss Utilities
@@ -38,5 +49,4 @@ Loss Utilities
 
 .. automodule:: rankers.train.loss.util
    :members:
-   :undoc-members:
    :show-inheritance:

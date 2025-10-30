@@ -4,33 +4,43 @@ Modelling
 Base Classes
 ------------
 
-.. automodule:: rankers.modelling.base
+.. autoclass:: rankers.modelling.base.Ranker
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Dot (Bi-Encoder)
 ----------------
 
-.. automodule:: rankers.modelling.dot.dot
+.. autoclass:: rankers.modelling.dot.dot.DotConfig
    :members:
-   :undoc-members:
+
+.. autoclass:: rankers.modelling.dot.dot.Pooler
+   :members:
+
+.. autoclass:: rankers.modelling.dot.dot.Dot
+   :members:
    :show-inheritance:
 
 Cat (Cross-Encoder)
 -------------------
 
-.. automodule:: rankers.modelling.cat.cat
+.. autoclass:: rankers.modelling.cat.cat.CatConfig
    :members:
-   :undoc-members:
+
+.. autoclass:: rankers.modelling.cat.cat.Cat
+   :members:
    :show-inheritance:
 
 Sparse Models
 -------------
 
-.. automodule:: rankers.modelling.sparse.sparse
+.. autoclass:: rankers.modelling.sparse.sparse.SparseConfig
    :members:
-   :undoc-members:
+
+.. autofunction:: rankers.modelling.sparse.sparse.splade_max
+
+.. autoclass:: rankers.modelling.sparse.sparse.Sparse
+   :members:
    :show-inheritance:
 
 Sequence-to-Sequence
@@ -38,7 +48,6 @@ Sequence-to-Sequence
 
 .. automodule:: rankers.modelling.seq2seq.seq2seq
    :members:
-   :undoc-members:
    :show-inheritance:
 
 BGE Models
@@ -46,5 +55,4 @@ BGE Models
 
 .. automodule:: rankers.modelling.bge.bge
    :members:
-   :undoc-members:
    :show-inheritance:

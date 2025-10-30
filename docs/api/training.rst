@@ -4,9 +4,8 @@ Training
 Trainer
 -------
 
-.. automodule:: rankers.train.trainer
+.. autoclass:: rankers.train.trainer.RankerTrainer
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Training Arguments
@@ -14,7 +13,6 @@ Training Arguments
 
 .. automodule:: rankers.train.training_arguments
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Model Arguments
@@ -22,7 +20,6 @@ Model Arguments
 
 .. automodule:: rankers.train.model_arguments
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Data Arguments
@@ -30,5 +27,4 @@ Data Arguments
 
 .. automodule:: rankers.train.data_arguments
    :members:
-   :undoc-members:
    :show-inheritance:
