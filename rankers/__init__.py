@@ -41,7 +41,13 @@ __version__ = "0.0.6"
 
 if os.getenv("RANKERS_EAGER_IMPORTS") == "1":
     # Import the subpackages you normally expose lazily
-    from . import modelling, datasets, train, pyterrier, _util  # adjust to your actual public surface
+    from . import (
+        modelling,
+        datasets,
+        train,
+        pyterrier,
+        _util,
+    )  # adjust to your actual public surface
 
     # Advertise a concrete __all__ (must be a list of strings)
     __all__ = ["modelling", "datasets", "train", "pyterrier", "_util"]

@@ -71,27 +71,27 @@ class LazyTextLoader:
         self,
         corpus: Union["irds.Dataset", Corpus],
         cache_size: int = 10000,
-        mode: str = 'docs'
+        mode: str = "docs",
     ) -> None:
         from functools import lru_cache
 
         self.mode = mode
         self.cache_size = cache_size
 
-        if mode == 'docs':
+        if mode == "docs":
             self.store = corpus.doc_store()
-        elif mode == 'queries':
+        elif mode == "queries":
             # For queries, try to build from iterator since most corpora don't have query store
             self._query_cache = {}
             try:
                 for q in corpus.queries_iter():
-                    qid = q.get('query_id') or q.get('qid')
-                    text = q.get('text', '')
+                    qid = q.get("query_id") or q.get("qid")
+                    text = q.get("text", "")
                     if qid:
                         self._query_cache[str(qid)] = text
             except Exception:
                 # Fallback to docstore if available
-                self.store = getattr(corpus, 'doc_store', lambda: None)()
+                self.store = getattr(corpus, "doc_store", lambda: None)()
         else:
             self.store = corpus.doc_store()
 
@@ -108,16 +108,16 @@ class LazyTextLoader:
             str: Item text.
         """
         # If using query cache, check it first
-        if self.mode == 'queries' and hasattr(self, '_query_cache'):
-            return self._query_cache.get(item_id, '')
+        if self.mode == "queries" and hasattr(self, "_query_cache"):
+            return self._query_cache.get(item_id, "")
 
         # Otherwise use the store
         try:
             result = self.store.get(item_id)
             # Handle both object with .text attribute and direct string return
-            return result.text if hasattr(result, 'text') else result
+            return result.text if hasattr(result, "text") else result
         except (AttributeError, KeyError):
-            return ''
+            return ""
 
     def __getitem__(self, item_id):
         """Load item text by ID with caching.
@@ -153,11 +153,11 @@ class LazyTextLoader:
         total = info.hits + info.misses
         hit_rate = info.hits / total if total > 0 else 0.0
         return {
-            'hits': info.hits,
-            'misses': info.misses,
-            'size': info.currsize,
-            'maxsize': info.maxsize,
-            'hit_rate': hit_rate
+            "hits": info.hits,
+            "misses": info.misses,
+            "size": info.currsize,
+            "maxsize": info.maxsize,
+            "hit_rate": hit_rate,
         }
 
     def clear_cache(self):
@@ -364,8 +364,10 @@ class TrainingDataset(Dataset):
                 )
             else:
                 # Use lazy loading with caching for both docs and queries
-                self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode='docs')
-                self.queries = LazyTextLoader(self.corpus, cache_size=5000, mode='queries')
+                self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
+                self.queries = LazyTextLoader(
+                    self.corpus, cache_size=5000, mode="queries"
+                )
 
         if self.teacher_file:
             self.teacher = load_json(self.teacher_file)
@@ -375,10 +377,10 @@ class TrainingDataset(Dataset):
 
         # Validate first entry without triggering full mmap initialization
         # Read directly instead of using _get_line_by_index
-        with open(self.training_dataset_file, 'rb') as f:
+        with open(self.training_dataset_file, "rb") as f:
             f.seek(self.line_offsets[0])
             first_line = f.readline()
-            first_entry = json.loads(first_line.decode('utf-8'))
+            first_entry = json.loads(first_line.decode("utf-8"))
 
         assert self.query_id_key in first_entry, (
             f"Key {self.query_id_key} not found in the first entry"
@@ -427,10 +429,10 @@ class TrainingDataset(Dataset):
             return None
 
         stats = {}
-        if hasattr(self.docs, 'get_cache_stats'):
-            stats['docs'] = self.docs.get_cache_stats()
-        if hasattr(self.queries, 'get_cache_stats'):
-            stats['queries'] = self.queries.get_cache_stats()
+        if hasattr(self.docs, "get_cache_stats"):
+            stats["docs"] = self.docs.get_cache_stats()
+        if hasattr(self.queries, "get_cache_stats"):
+            stats["queries"] = self.queries.get_cache_stats()
 
         return stats if stats else None
 
@@ -618,8 +620,8 @@ class TestDataset(Dataset):
             )
         else:
             # Use lazy loading with caching
-            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode='docs')
-            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode='queries')
+            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
+            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode="queries")
 
         self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
@@ -712,8 +714,8 @@ class ValidationDataset(Dataset):
             )
         else:
             # Use lazy loading with caching
-            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode='docs')
-            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode='queries')
+            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
+            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode="queries")
 
         # Build qrels once (positives only)
         self.qrels = self._build_qrels()

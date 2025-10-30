@@ -20,7 +20,8 @@ def main():
 
     if data_args.test_dataset_file:
         from ir_measures import nDCG
-        training_args.eval_ir_metrics = [nDCG@10]
+
+        training_args.eval_ir_metrics = [nDCG @ 10]
 
     model = Cat.from_pretrained(model_args.model_name_or_path)
 
