@@ -24,56 +24,145 @@ if is_ir_datasets_available():
 
 
 class LazyTextLoader:
-    """Lazy loader for document text from ir_datasets or Corpus.
+    """Lazy loader for document/query text with LRU caching.
 
-    Provides on-demand loading of document text without loading the entire corpus
-    into memory. Uses the document store's indexing for efficient retrieval.
+    Provides on-demand loading of text without loading the entire corpus into memory.
+    Uses LRU caching to avoid repeated I/O for frequently accessed items, which is
+    critical for training performance when documents appear in multiple batches.
 
     Args:
-        corpus (Union[irds.Dataset, Corpus]): Corpus containing documents.
+        corpus (Union[irds.Dataset, Corpus]): Corpus containing documents/queries.
+        cache_size (int, optional): Maximum number of items to cache. Defaults to 10000.
+        mode (str, optional): Type of text to load - 'docs' or 'queries'. Defaults to 'docs'.
+
+    Attributes:
+        cache_size (int): Maximum cache size.
+        mode (str): Loading mode.
 
     Examples:
-        Loading documents on demand::
+        Loading documents on demand with caching::
 
             import ir_datasets as irds
             from rankers.datasets import LazyTextLoader
 
             dataset = irds.load("msmarco-passage/dev")
-            loader = LazyTextLoader(dataset)
+            loader = LazyTextLoader(dataset, cache_size=20000)
 
-            # Load single document
+            # Load single document (cache miss)
+            text = loader["doc123"]
+
+            # Load same document again (cache hit - no I/O!)
             text = loader["doc123"]
 
             # Load multiple documents
             texts = loader[["doc1", "doc2", "doc3"]]
+
+            # Check cache performance
+            stats = loader.get_cache_stats()
+            print(f"Cache hit rate: {stats['hit_rate']:.2%}")
+
+    Note:
+        Cache size should be tuned based on available memory and corpus size.
+        For training with batch_size=32 and group_size=8, ~10k cache covers
+        several hundred batches worth of documents.
     """
 
-    def __init__(self, corpus: Union["irds.Dataset", Corpus]) -> None:
-        self.docstore = corpus.docs_store()
+    def __init__(
+        self,
+        corpus: Union["irds.Dataset", Corpus],
+        cache_size: int = 10000,
+        mode: str = 'docs'
+    ) -> None:
+        from functools import lru_cache
 
-    def __getitem__(self, doc_id):
-        """Load document text by ID.
+        self.mode = mode
+        self.cache_size = cache_size
+
+        if mode == 'docs':
+            self.store = corpus.docs_store()
+        elif mode == 'queries':
+            # For queries, try to build from iterator since most corpora don't have query store
+            self._query_cache = {}
+            try:
+                for q in corpus.queries_iter():
+                    qid = q.get('query_id') or q.get('qid')
+                    text = q.get('text', '')
+                    if qid:
+                        self._query_cache[str(qid)] = text
+            except Exception:
+                # Fallback to docstore if available
+                self.store = getattr(corpus, 'docs_store', lambda: None)()
+        else:
+            self.store = corpus.docs_store()
+
+        # Create cached retrieval function with LRU cache
+        self._get_cached = lru_cache(maxsize=cache_size)(self._get_single)
+
+    def _get_single(self, item_id: str) -> str:
+        """Retrieve single item text (will be cached by lru_cache).
 
         Args:
-            doc_id (Union[str, List[str]]): Document ID or list of IDs.
+            item_id (str): Item ID to retrieve.
 
         Returns:
-            Union[str, List[str]]: Document text or list of texts.
+            str: Item text.
         """
-        if isinstance(doc_id, list):
-            return [self.docstore.get(str(i)).text for i in doc_id]
-        return self.docstore.get(str(doc_id)).text
+        # If using query cache, check it first
+        if self.mode == 'queries' and hasattr(self, '_query_cache'):
+            return self._query_cache.get(item_id, '')
+
+        # Otherwise use the store
+        try:
+            result = self.store.get(item_id)
+            # Handle both object with .text attribute and direct string return
+            return result.text if hasattr(result, 'text') else result
+        except (AttributeError, KeyError):
+            return ''
+
+    def __getitem__(self, item_id):
+        """Load item text by ID with caching.
+
+        Args:
+            item_id (Union[str, List[str]]): Item ID or list of IDs.
+
+        Returns:
+            Union[str, List[str]]: Item text or list of texts.
+        """
+        if isinstance(item_id, list):
+            return [self._get_cached(str(i)) for i in item_id]
+        return self._get_cached(str(item_id))
 
     def __call__(self, id_):
-        """Callable interface for loading documents.
+        """Callable interface for loading items.
 
         Args:
-            id_: Document ID(s) to load.
+            id_: Item ID(s) to load.
 
         Returns:
-            Document text(s).
+            Item text(s).
         """
         return self[id_]
+
+    def get_cache_stats(self):
+        """Get cache performance statistics.
+
+        Returns:
+            dict: Cache statistics including hits, misses, size, and hit rate.
+        """
+        info = self._get_cached.cache_info()
+        total = info.hits + info.misses
+        hit_rate = info.hits / total if total > 0 else 0.0
+        return {
+            'hits': info.hits,
+            'misses': info.misses,
+            'size': info.currsize,
+            'maxsize': info.maxsize,
+            'hit_rate': hit_rate
+        }
+
+    def clear_cache(self):
+        """Clear the LRU cache."""
+        self._get_cached.cache_clear()
 
 
 class TrainingDataset(Dataset):
@@ -262,19 +351,21 @@ class TrainingDataset(Dataset):
 
         if not self.precomputed:
             if not self.lazy_load_text:
+                # Load both docs and queries into memory
                 self.docs = (
                     pd.DataFrame(self.corpus.docs_iter())
                     .set_index("doc_id")["text"]
                     .to_dict()
                 )
+                self.queries = (
+                    pd.DataFrame(self.corpus.queries_iter())
+                    .set_index("query_id")["text"]
+                    .to_dict()
+                )
             else:
-                self.docs = LazyTextLoader(self.corpus)
-
-            self.queries = (
-                pd.DataFrame(self.corpus.queries_iter())
-                .set_index("query_id")["text"]
-                .to_dict()
-            )
+                # Use lazy loading with caching for both docs and queries
+                self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode='docs')
+                self.queries = LazyTextLoader(self.corpus, cache_size=5000, mode='queries')
 
         if self.teacher_file:
             self.teacher = load_json(self.teacher_file)
@@ -282,7 +373,12 @@ class TrainingDataset(Dataset):
         else:
             self.labels = False
 
-        first_entry = self._get_line_by_index(0)
+        # Validate first entry without triggering full mmap initialization
+        # Read directly instead of using _get_line_by_index
+        with open(self.training_dataset_file, 'rb') as f:
+            f.seek(self.line_offsets[0])
+            first_line = f.readline()
+            first_entry = json.loads(first_line.decode('utf-8'))
 
         assert self.query_id_key in first_entry, (
             f"Key {self.query_id_key} not found in the first entry"
@@ -305,6 +401,38 @@ class TrainingDataset(Dataset):
 
     def __len__(self):
         return len(self.line_offsets)
+
+    def get_cache_stats(self):
+        """Get cache performance statistics for lazy loaders.
+
+        Returns:
+            dict: Dictionary with 'docs' and 'queries' cache statistics,
+                  or None if not using lazy loading.
+
+        Examples:
+            Monitoring cache performance during training::
+
+                dataset = TrainingDataset(
+                    training_dataset_file="train.jsonl",
+                    corpus=corpus,
+                    lazy_load_text=True
+                )
+
+                # After some training
+                stats = dataset.get_cache_stats()
+                print(f"Document cache hit rate: {stats['docs']['hit_rate']:.2%}")
+                print(f"Query cache hit rate: {stats['queries']['hit_rate']:.2%}")
+        """
+        if not self.lazy_load_text or self.precomputed:
+            return None
+
+        stats = {}
+        if hasattr(self.docs, 'get_cache_stats'):
+            stats['docs'] = self.docs.get_cache_stats()
+        if hasattr(self.queries, 'get_cache_stats'):
+            stats['queries'] = self.queries.get_cache_stats()
+
+        return stats if stats else None
 
     def _teacher(self, query_id, doc_id):
         if query_id not in self.teacher:
@@ -484,13 +612,16 @@ class TestDataset(Dataset):
                 .set_index("doc_id")["text"]
                 .to_dict()
             )
+            self.queries = (
+                pd.DataFrame(self.corpus.queries_iter())
+                .set_index("query_id")["text"]
+                .to_dict()
+            )
         else:
-            self.docs = LazyTextLoader(self.corpus)
-        self.queries = (
-            pd.DataFrame(self.corpus.queries_iter())
-            .set_index("query_id")["text"]
-            .to_dict()
-        )
+            # Use lazy loading with caching
+            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode='docs')
+            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode='queries')
+
         self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
         self.data["text"] = self.data["docno"].map(self.docs)
@@ -575,14 +706,15 @@ class ValidationDataset(Dataset):
                 .set_index("doc_id")["text"]
                 .to_dict()
             )
+            self.queries = (
+                pd.DataFrame(self.corpus.queries_iter())
+                .set_index("query_id")["text"]
+                .to_dict()
+            )
         else:
-            self.docs = LazyTextLoader(self.corpus)
-
-        self.queries = (
-            pd.DataFrame(self.corpus.queries_iter())
-            .set_index("query_id")["text"]
-            .to_dict()
-        )
+            # Use lazy loading with caching
+            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode='docs')
+            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode='queries')
 
         # Build qrels once (positives only)
         self.qrels = self._build_qrels()
