@@ -127,6 +127,7 @@ class TrainingDataset(Dataset):
         The JSONL file must not be compressed for memory-mapped access.
         Each line should be a JSON object with query and document IDs.
     """
+
     def __init__(
         self,
         training_dataset_file: str,
@@ -143,9 +144,9 @@ class TrainingDataset(Dataset):
         text_field: str = "text",
         query_field: str = "text",
     ) -> None:
-        assert training_dataset_file.endswith(
-            "jsonl"
-        ), "Training dataset should be a JSONL file and should not be compressed"
+        assert training_dataset_file.endswith("jsonl"), (
+            "Training dataset should be a JSONL file and should not be compressed"
+        )
 
         self.training_dataset_file = training_dataset_file
         self.corpus = corpus
@@ -165,8 +166,8 @@ class TrainingDataset(Dataset):
         self._get = self._precomputed_get if self.precomputed else self._standard_get
 
         # Persistent, per-process/worker file resources (lazy-opened)
-        self._fh = None           # file handle
-        self._mm = None           # mmap object
+        self._fh = None  # file handle
+        self._mm = None  # mmap object
         self._opened_in_pid = None
 
         self.line_offsets = self._get_line_offsets()
@@ -180,7 +181,11 @@ class TrainingDataset(Dataset):
             return
         self._close()
         self._fh = open(self.training_dataset_file, "rb")
-        self._mm = mmap.mmap(self._fh.fileno(), 0, access=mmap.ACCESS_READ) if use_mmap else None
+        self._mm = (
+            mmap.mmap(self._fh.fileno(), 0, access=mmap.ACCESS_READ)
+            if use_mmap
+            else None
+        )
         self._opened_in_pid = pid
 
     def _close(self):
@@ -251,9 +256,9 @@ class TrainingDataset(Dataset):
                 i += 1
 
     def __post_init__(self):
-        assert (
-            self.corpus is not None or self.precomputed
-        ), "Cannot instantiate a text-based dataset without a lookup"
+        assert self.corpus is not None or self.precomputed, (
+            "Cannot instantiate a text-based dataset without a lookup"
+        )
 
         if not self.precomputed:
             if not self.lazy_load_text:
@@ -279,24 +284,24 @@ class TrainingDataset(Dataset):
 
         first_entry = self._get_line_by_index(0)
 
-        assert (
-            self.query_id_key in first_entry
-        ), f"Key {self.query_id_key} not found in the first entry"
+        assert self.query_id_key in first_entry, (
+            f"Key {self.query_id_key} not found in the first entry"
+        )
         if not self.no_positive:
-            assert (
-                self.positive_id_key in first_entry
-            ), f"Key {self.positive_id_key} not found in the first entry"
-        assert (
-            self.negative_id_key in first_entry
-        ), f"Key {self.negative_id_key} not found in the first entry"
+            assert self.positive_id_key in first_entry, (
+                f"Key {self.positive_id_key} not found in the first entry"
+            )
+        assert self.negative_id_key in first_entry, (
+            f"Key {self.negative_id_key} not found in the first entry"
+        )
 
         self.multi_negatives = isinstance(first_entry[self.negative_id_key], list)
         total_negs = (
             len(first_entry[self.negative_id_key]) if self.multi_negatives else 1
         )
-        assert (
-            self.n_neg <= total_negs
-        ), f"Only found {total_negs} negatives, cannot take {self.n_neg} negatives"
+        assert self.n_neg <= total_negs, (
+            f"Only found {total_negs} negatives, cannot take {self.n_neg} negatives"
+        )
 
     def __len__(self):
         return len(self.line_offsets)
@@ -312,7 +317,9 @@ class TrainingDataset(Dataset):
         query_id = data[self.query_id_key]
         query_text = data[self.query_field]
         positive_id = data[self.positive_id_key] if not self.no_positive else None
-        positive_text = data[f"{self.positive_id_key}_text"] if not self.no_positive else None
+        positive_text = (
+            data[f"{self.positive_id_key}_text"] if not self.no_positive else None
+        )
         negative_id = data[self.negative_id_key]
         negative_text = data[f"{self.negative_id_key}_text"]
         return (
@@ -368,7 +375,9 @@ class TrainingDataset(Dataset):
                 else []
             )
             if self.multi_negatives:
-                negative_score = [self._teacher(str(query_id), str(doc)) for doc in negative_id]
+                negative_score = [
+                    self._teacher(str(query_id), str(doc)) for doc in negative_id
+                ]
             else:
                 negative_score = [self._teacher(str(query_id), str(negative_id))]
 
@@ -378,7 +387,10 @@ class TrainingDataset(Dataset):
                 if self.top_k_group:
                     texts, scores = zip(
                         *sorted(
-                            zip(positive_text + negative_text, positive_score + negative_score),
+                            zip(
+                                positive_text + negative_text,
+                                positive_score + negative_score,
+                            ),
                             key=lambda x: x[1],
                             reverse=True,
                         )
@@ -543,7 +555,9 @@ class ValidationDataset(Dataset):
         dedupe_qrels: bool = True,
     ) -> None:
         super().__init__()
-        assert training_dataset_file.endswith("jsonl"), "validation expects an uncompressed JSONL"
+        assert training_dataset_file.endswith("jsonl"), (
+            "validation expects an uncompressed JSONL"
+        )
         self.training_dataset_file = training_dataset_file
         self.corpus = corpus
         self.query_id_key = query_id_key
@@ -596,13 +610,27 @@ class ValidationDataset(Dataset):
                     for d in pos:
                         if d is None:
                             continue
-                        rows.append({"qid": qid, "docno": str(d), "relevance": self.relevance_label})
+                        rows.append(
+                            {
+                                "qid": qid,
+                                "docno": str(d),
+                                "relevance": self.relevance_label,
+                            }
+                        )
                 else:
-                    rows.append({"qid": qid, "docno": str(pos), "relevance": self.relevance_label})
+                    rows.append(
+                        {
+                            "qid": qid,
+                            "docno": str(pos),
+                            "relevance": self.relevance_label,
+                        }
+                    )
 
         df = pd.DataFrame(rows, columns=["qid", "docno", "relevance"])
         if self.dedupe_qrels and not df.empty:
-            df = df.drop_duplicates(subset=["qid", "docno"], keep="first").reset_index(drop=True)
+            df = df.drop_duplicates(subset=["qid", "docno"], keep="first").reset_index(
+                drop=True
+            )
         return df
 
     @cache
@@ -640,41 +668,49 @@ class ValidationDataset(Dataset):
                             for d in pos:
                                 if d is None:
                                     continue
-                                rows.append({
+                                rows.append(
+                                    {
+                                        "qid": qid,
+                                        "query": qtext,
+                                        "docno": str(d),
+                                        "text": self.docs[str(d)],
+                                        "label": 1,
+                                    }
+                                )
+                        else:
+                            rows.append(
+                                {
                                     "qid": qid,
                                     "query": qtext,
-                                    "docno": str(d),
-                                    "text": self.docs[str(d)],
+                                    "docno": str(pos),
+                                    "text": self.docs[str(pos)],
                                     "label": 1,
-                                })
-                        else:
-                            rows.append({
-                                "qid": qid,
-                                "query": qtext,
-                                "docno": str(pos),
-                                "text": self.docs[str(pos)],
-                                "label": 1,
-                            })
+                                }
+                            )
 
                 # Negatives (single or list)
                 neg = rec[self.negative_id_key]
                 if isinstance(neg, list):
                     for d in neg:
-                        rows.append({
+                        rows.append(
+                            {
+                                "qid": qid,
+                                "query": qtext,
+                                "docno": str(d),
+                                "text": self.docs[str(d)],
+                                "label": 0,
+                            }
+                        )
+                else:
+                    rows.append(
+                        {
                             "qid": qid,
                             "query": qtext,
-                            "docno": str(d),
-                            "text": self.docs[str(d)],
+                            "docno": str(neg),
+                            "text": self.docs[str(neg)],
                             "label": 0,
-                        })
-                else:
-                    rows.append({
-                        "qid": qid,
-                        "query": qtext,
-                        "docno": str(neg),
-                        "text": self.docs[str(neg)],
-                        "label": 0,
-                    })
+                        }
+                    )
 
         return pd.DataFrame(rows, columns=["qid", "query", "docno", "text", "label"])
 

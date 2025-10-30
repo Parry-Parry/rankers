@@ -49,7 +49,9 @@ class Seq2SeqTransformer(pt.Transformer):
         self.device = (
             device
             if device is not None
-            else "cuda" if torch.cuda.is_available() else "cpu"
+            else "cuda"
+            if torch.cuda.is_available()
+            else "cpu"
         )
         self.pos_token = self.tokenizer.encode(pos_token)[0]
         self.neg_token = self.tokenizer.encode(neg_token)[0]

@@ -71,6 +71,7 @@ def not_tested(cls):
             # Will log warning: "ExperimentalRanker is not fully tested"
             model = ExperimentalRanker()
     """
+
     class NewCls(cls):
         def __init__(self, *args, **kwargs):
             logger.warning(f"{cls.__name__} is not fully tested")
@@ -137,9 +138,9 @@ def get_teacher_scores(
                 subset=10000
             )
     """
-    assert (
-        corpus is not None or ir_dataset is not None
-    ), "Either corpus or ir_dataset must be provided"
+    assert corpus is not None or ir_dataset is not None, (
+        "Either corpus or ir_dataset must be provided"
+    )
     if corpus:
         for column in ["query", "text"]:
             assert column in corpus.columns, f"{column} not found in corpus"

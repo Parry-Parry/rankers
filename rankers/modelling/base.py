@@ -200,9 +200,9 @@ class Ranker(PreTrainedModel):
                 ranker = model.to_pyterrier(batch_size=32)
                 pipeline = pt.BatchRetrieve(index) >> ranker
         """
-        assert (
-            self.transformer_class is not None
-        ), "transformer_class must be set by subclasses, do you have pyterrier installed?"
+        assert self.transformer_class is not None, (
+            "transformer_class must be set by subclasses, do you have pyterrier installed?"
+        )
         return self.transformer_class.from_model(
             self.model, self.tokenizer, text_field="text", batch_size=batch_size
         )

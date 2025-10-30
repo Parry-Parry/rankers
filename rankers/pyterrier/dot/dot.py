@@ -32,7 +32,9 @@ class DotTransformer(pt.Transformer):
         self.device = (
             device
             if device is not None
-            else "cuda" if torch.cuda.is_available() else "cpu"
+            else "cuda"
+            if torch.cuda.is_available()
+            else "cpu"
         )
         self.model = model.eval().to(self.device)
         self.tokenizer = tokenizer

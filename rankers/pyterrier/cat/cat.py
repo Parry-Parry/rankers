@@ -38,7 +38,9 @@ class CatTransformer(pt.Transformer):
         self.device = (
             device
             if device is not None
-            else "cuda" if torch.cuda.is_available() else "cpu"
+            else "cuda"
+            if torch.cuda.is_available()
+            else "cpu"
         )
         self.model = self.model.to(self.device)
         self.verbose = verbose
@@ -125,7 +127,9 @@ class PairTransformer(pt.Transformer):
         self.device = (
             device
             if device is not None
-            else "cuda" if torch.cuda.is_available() else "cpu"
+            else "cuda"
+            if torch.cuda.is_available()
+            else "cpu"
         )
         self.verbose = verbose
 

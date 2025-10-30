@@ -65,9 +65,9 @@ class RankerDataArguments:
 
     def __post_init__(self):
         if self.ir_dataset is not None:
-            assert (
-                is_ir_datasets_available()
-            ), "Please install ir_datasets to use the ir_dataset argument"
+            assert is_ir_datasets_available(), (
+                "Please install ir_datasets to use the ir_dataset argument"
+            )
             try:
                 import ir_datasets
 
@@ -75,9 +75,9 @@ class RankerDataArguments:
             except Exception as e:
                 raise ValueError(f"Unable to load ir_dataset: {e}")
         if self.validation_ir_dataset is not None:
-            assert (
-                is_ir_datasets_available()
-            ), "Please install ir_datasets to use the eval_ir_dataset argument"
+            assert is_ir_datasets_available(), (
+                "Please install ir_datasets to use the eval_ir_dataset argument"
+            )
             try:
                 import ir_datasets
 
@@ -85,9 +85,9 @@ class RankerDataArguments:
             except Exception as e:
                 raise ValueError(f"Unable to load eval_ir_dataset: {e}")
         if self.test_ir_dataset is not None:
-            assert (
-                is_ir_datasets_available()
-            ), "Please install ir_datasets to use the test_ir_dataset argument"
+            assert is_ir_datasets_available(), (
+                "Please install ir_datasets to use the test_ir_dataset argument"
+            )
             try:
                 import ir_datasets
 
@@ -96,9 +96,9 @@ class RankerDataArguments:
                 raise ValueError(f"Unable to load test_ir_dataset: {e}")
         assert self.training_dataset_file.endswith(
             "jsonl"
-        ) or self.training_dataset_file.endswith(
-            "jsonl.gz"
-        ), "Training dataset should be a JSONL file"
+        ) or self.training_dataset_file.endswith("jsonl.gz"), (
+            "Training dataset should be a JSONL file"
+        )
         if self.teacher_file:
             assert self.teacher_file.endswith("json") or self.teacher_file.endswith(
                 "json.gz"

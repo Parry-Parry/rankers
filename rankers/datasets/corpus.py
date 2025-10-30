@@ -52,6 +52,7 @@ class Corpus:
         For large corpora, consider using ir_datasets or lazy loading to avoid
         memory issues.
     """
+
     def __init__(
         self, documents: dict = None, queries: dict = None, qrels: pd.DataFrame = None
     ) -> None:

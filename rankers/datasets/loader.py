@@ -248,9 +248,9 @@ class ListWisePromptDataCollator:
                 continue
             batch_scores.append(args[0])
         if self.use_scores:
-            assert (
-                len(batch_scores) > 0
-            ), "Scores are required for ListWisePromptDataCollator with current settings"
+            assert len(batch_scores) > 0, (
+                "Scores are required for ListWisePromptDataCollator with current settings"
+            )
             sequences = [
                 self.prompt(query=q, docs=dx, scores=score)
                 for q, dx, score in zip(batch_queries, batch_docs, batch_scores)

@@ -172,7 +172,9 @@ def get_ndcg(
         optimal_labels = labels
     dcg = get_dcg(ranks, labels, k, scale_gains)
     sorted_labels, _ = labels.sort(descending=True)
-    ideal_ranks = torch.arange(1, labels.size(-1) + 1, device=labels.device, dtype=labels.dtype)
+    ideal_ranks = torch.arange(
+        1, labels.size(-1) + 1, device=labels.device, dtype=labels.dtype
+    )
     idcg = get_dcg(ideal_ranks, sorted_labels, k=k, scale_gains=scale_gains)
     ndcg = dcg / (idcg.clamp(min=1e-12))
     return ndcg

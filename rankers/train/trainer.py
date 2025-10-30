@@ -263,7 +263,6 @@ class RankerTrainer(Trainer):
         metric_key_prefix: str = "test",
         **kwargs,  # handle new arguments
     ) -> Dict[str, float]:
-
         if not is_ir_datasets_available():
             raise ImportError(
                 "Please install ir_datasets to use the evaluation features."
