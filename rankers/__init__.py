@@ -29,12 +29,22 @@ Examples:
         trainer.train()
 """
 
-from ._optional import is_torch_available, is_pyterrier_available, is_flax_available
-from transformers.utils import _LazyModule
+import os
 from typing import TYPE_CHECKING
+
+from transformers.utils import _LazyModule
+
+
+from ._optional import is_torch_available, is_pyterrier_available
 
 __version__ = "0.0.6"
 
+if os.getenv("RANKERS_EAGER_IMPORTS") == "1":
+    # Import the subpackages you normally expose lazily
+    from . import modelling, datasets, train, pyterrier, _util  # adjust to your actual public surface
+
+    # Advertise a concrete __all__ (must be a list of strings)
+    __all__ = ["modelling", "datasets", "train", "pyterrier", "_util"]
 
 _import_structure = {
     "train.trainer": ["RankerTrainer"],

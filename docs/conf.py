@@ -1,23 +1,23 @@
 # Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+os.environ["RANKERS_EAGER_IMPORTS"] = "1"
 
+# --- Import path (ensure the repo root that contains 'rankers/' is present) ---
+DOCS_DIR = os.path.dirname(__file__)
+REPO_ROOT = os.path.abspath(os.path.join(DOCS_DIR, '..'))  # adjust if needed
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+# --- Project info ---
 project = 'rankers'
-copyright = '2024, Andrew'
 author = 'Andrew'
+copyright = '2024, Andrew'
 release = '0.0.6'
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-
+# --- Extensions ---
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -27,7 +27,7 @@ extensions = [
     'sphinx.ext.coverage',
 ]
 
-# Napoleon settings for Google-style docstrings
+# --- Napoleon (Google-style) ---
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 napoleon_include_init_with_doc = True
@@ -43,59 +43,54 @@ napoleon_preprocess_types = False
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
-# Autodoc settings
+# --- Autodoc / Autosummary ---
+autoclass_content = 'both'                 # include class docstring + __init__ docstring
+autodoc_inherit_docstrings = True
+autodoc_typehints = 'description'
+autodoc_typehints_description_target = 'documented'
+
 autodoc_default_options = {
     'members': True,
     'member-order': 'bysource',
     'special-members': '__init__',
-    'undoc-members': False,  # Don't show undocumented members
-    'private-members': False,  # Don't show private members
-    'inherited-members': False,  # Don't show inherited members
-    'exclude-members': '__weakref__,__dict__,__module__,__annotations__,__doc__,__hash__,__repr__,__str__'
+    'undoc-members': False,     # keep clean output by default
+    'private-members': False,
+    'inherited-members': False,
+    'exclude-members': '__weakref__,__dict__,__module__,__annotations__,__doc__,__hash__,__repr__,__str__',
 }
-autodoc_typehints = 'description'
-autodoc_typehints_description_target = 'documented'
 
-# Don't document these special methods
+# If you still see empty pages, temporarily set:
+# autodoc_warningiserror = True
+
+# IMPORTANT: keep skip hook permissive; only skip what you explicitly list.
 def skip_member(app, what, name, obj, skip, options):
-    """Skip certain members during documentation generation."""
-    # Skip private methods (starting with _)
     if name.startswith('_') and name not in ('__init__', '__call__'):
         return True
-    # Skip certain inherited methods
-    if name in ('training', 'eval', 'parameters', 'modules', 'named_parameters',
-                'named_modules', 'children', 'named_children', 'apply', 'cuda',
-                'cpu', 'to', 'register_buffer', 'register_parameter', 'add_module',
-                'state_dict', 'load_state_dict', 'zero_grad', 'share_memory',
-                'extra_repr', 'train', '__dir__', '__sizeof__', '__reduce__',
-                '__reduce_ex__', '__subclasshook__', '__init_subclass__',
-                '__format__', '__new__', '__delattr__', '__setattr__', '__getattribute__'):
+    torch_like = {
+        'training','eval','parameters','modules','named_parameters','named_modules',
+        'children','named_children','apply','cuda','cpu','to','register_buffer',
+        'register_parameter','add_module','state_dict','load_state_dict','zero_grad',
+        'share_memory','extra_repr','train','__dir__','__sizeof__','__reduce__',
+        '__reduce_ex__','__subclasshook__','__init_subclass__','__format__','__new__',
+        '__delattr__','__setattr__','__getattribute__'
+    }
+    if name in torch_like:
         return True
     return skip
 
 def setup(app):
     app.connect('autodoc-skip-member', skip_member)
+
 autodoc_mock_imports = [
-    'torch',
-    'transformers',
-    'datasets',
-    'ir_measures',
-    'ir_datasets',
-    'pandas',
-    'numpy',
-    'pyterrier',
-    'flax',
-    'optax',
-    'orbax',
-    'tira',
-    'more_itertools',
+    'torch','transformers','datasets','ir_measures','ir_datasets','pandas','numpy',
+    'pyterrier','flax','optax','orbax','tira','more_itertools',
 ]
 
-# Autosummary settings
 autosummary_generate = True
 autosummary_imported_members = False
+autosummary_generate_overwrite = True
 
-# Intersphinx configuration
+# --- Intersphinx ---
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'torch': ('https://pytorch.org/docs/stable/', None),
@@ -103,16 +98,12 @@ intersphinx_mapping = {
     'numpy': ('https://numpy.org/doc/stable/', None),
 }
 
+# --- Templates / Theme ---
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
-
-# Theme options
 html_theme_options = {
     'navigation_depth': 4,
     'collapse_navigation': False,
@@ -121,5 +112,6 @@ html_theme_options = {
     'titles_only': False
 }
 
-# The master toctree document.
+# Root document
 master_doc = 'index'
+add_module_names = False  # cleaner headings (no 'rankers.modelling...' prefixes)
