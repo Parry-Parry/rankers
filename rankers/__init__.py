@@ -1,3 +1,34 @@
+"""Rankers: A neural information retrieval framework.
+
+This package provides modular implementations of various neural ranking models including
+dot-product (bi-encoder), concatenation (cross-encoder), sparse, and sequence-to-sequence
+architectures. It integrates with HuggingFace Transformers and PyTerrier for flexible
+information retrieval pipelines.
+
+The package uses lazy loading for optional dependencies (torch, pyterrier, flax) to ensure
+minimal installation requirements while supporting advanced features when available.
+
+Examples:
+    Basic usage with a dot-product model::
+
+        from rankers.modelling import Dot
+
+        model = Dot.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+        scores = model.score(["query"], ["document"])
+
+    Training a custom ranker::
+
+        from rankers.modelling import Dot
+        from rankers.train import RankerTrainer, RankerTrainingArguments
+        from rankers.datasets import TrainingDataset
+
+        model = Dot.from_pretrained("bert-base-uncased")
+        dataset = TrainingDataset.from_json("train.json")
+        args = RankerTrainingArguments(output_dir="./output")
+        trainer = RankerTrainer(model=model, args=args, train_dataset=dataset)
+        trainer.train()
+"""
+
 from ._optional import is_torch_available, is_pyterrier_available, is_flax_available
 from transformers.utils import _LazyModule
 from typing import TYPE_CHECKING

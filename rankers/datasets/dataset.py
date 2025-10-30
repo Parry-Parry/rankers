@@ -1,3 +1,10 @@
+"""Dataset classes for training and evaluating neural rankers.
+
+This module provides PyTorch Dataset implementations for ranking tasks, including
+support for training with negatives, test evaluation, and efficient lazy loading
+of large corpora.
+"""
+
 import os
 import json
 import mmap
@@ -17,19 +24,109 @@ if is_ir_datasets_available():
 
 
 class LazyTextLoader:
+    """Lazy loader for document text from ir_datasets or Corpus.
+
+    Provides on-demand loading of document text without loading the entire corpus
+    into memory. Uses the document store's indexing for efficient retrieval.
+
+    Args:
+        corpus (Union[irds.Dataset, Corpus]): Corpus containing documents.
+
+    Examples:
+        Loading documents on demand::
+
+            import ir_datasets as irds
+            from rankers.datasets import LazyTextLoader
+
+            dataset = irds.load("msmarco-passage/dev")
+            loader = LazyTextLoader(dataset)
+
+            # Load single document
+            text = loader["doc123"]
+
+            # Load multiple documents
+            texts = loader[["doc1", "doc2", "doc3"]]
+    """
+
     def __init__(self, corpus: Union["irds.Dataset", Corpus]) -> None:
         self.docstore = corpus.docs_store()
 
     def __getitem__(self, doc_id):
+        """Load document text by ID.
+
+        Args:
+            doc_id (Union[str, List[str]]): Document ID or list of IDs.
+
+        Returns:
+            Union[str, List[str]]: Document text or list of texts.
+        """
         if isinstance(doc_id, list):
             return [self.docstore.get(str(i)).text for i in doc_id]
         return self.docstore.get(str(doc_id)).text
 
     def __call__(self, id_):
+        """Callable interface for loading documents.
+
+        Args:
+            id_: Document ID(s) to load.
+
+        Returns:
+            Document text(s).
+        """
         return self[id_]
 
 
 class TrainingDataset(Dataset):
+    """Dataset for training neural rankers with query-document pairs.
+
+    Loads training data from JSONL files containing query-positive-negative tuples.
+    Supports various training configurations including group sizes, teacher scores
+    for distillation, and lazy text loading for memory efficiency.
+
+    The dataset handles fork-safe file access for multiprocessing and provides
+    efficient random access through memory-mapped files.
+
+    Args:
+        training_dataset_file (str): Path to JSONL training file.
+        corpus (Union[Corpus, irds.Dataset]): Document corpus for text retrieval.
+        teacher_file (str, optional): Path to teacher scores file. Defaults to None.
+        group_size (int, optional): Number of documents per query (1 positive + negatives).
+            Defaults to 2.
+        no_positive (bool, optional): Whether to exclude positive documents. Defaults to False.
+        lazy_load_text (bool, optional): Load document text on-demand. Defaults to True.
+        top_k_group (bool, optional): Select top-k documents from group. Defaults to False.
+        precomputed (bool, optional): Whether text is pre-computed in dataset. Defaults to False.
+        query_id_key (str, optional): JSON key for query ID. Defaults to "query_id".
+        positive_id_key (str, optional): JSON key for positive doc ID. Defaults to "doc_id_a".
+        negative_id_key (str, optional): JSON key for negative doc ID. Defaults to "doc_id_b".
+        text_field (str, optional): Field name for document text. Defaults to "text".
+        query_field (str, optional): Field name for query text. Defaults to "text".
+
+    Examples:
+        Basic training dataset::
+
+            from rankers.datasets import TrainingDataset, Corpus
+
+            corpus = Corpus.from_ir_datasets("msmarco-passage")
+            dataset = TrainingDataset(
+                training_dataset_file="train.jsonl",
+                corpus=corpus,
+                group_size=8  # 1 positive + 7 negatives
+            )
+
+        With teacher distillation::
+
+            dataset = TrainingDataset(
+                training_dataset_file="train.jsonl",
+                corpus=corpus,
+                teacher_file="teacher_scores.json",
+                group_size=8
+            )
+
+    Note:
+        The JSONL file must not be compressed for memory-mapped access.
+        Each line should be a JSON object with query and document IDs.
+    """
     def __init__(
         self,
         training_dataset_file: str,
@@ -313,6 +410,44 @@ class TrainingDataset(Dataset):
 
 
 class TestDataset(Dataset):
+    """Dataset for evaluating ranker models on test data.
+
+    Loads test/evaluation data in TREC format with query-document pairs and relevance
+    judgments. Integrates with ir_datasets for standard IR benchmark evaluation.
+
+    Args:
+        data (pd.DataFrame): DataFrame in TREC format with 'qid', 'docno', 'score' columns.
+        corpus (Union[Corpus, irds.Dataset]): Corpus containing documents and queries.
+        lazy_load_text (bool, optional): Load document text on-demand. Defaults to True.
+
+    Attributes:
+        data (pd.DataFrame): Test data with enriched query and document text.
+        queries (dict): Mapping of query IDs to query text.
+        docs: Document loader (LazyTextLoader or dict).
+        qrels (pd.DataFrame): Relevance judgments from corpus.
+
+    Examples:
+        Loading from TREC file::
+
+            import ir_datasets as irds
+            from rankers.datasets import TestDataset
+
+            dataset = irds.load("msmarco-passage/dev")
+            test_data = TestDataset.from_trec("run.trec", dataset)
+
+        Loading from ir_datasets::
+
+            test_data = TestDataset.from_irds(dataset)
+
+        Evaluating a model::
+
+            from rankers.modelling import Dot
+
+            model = Dot.from_pretrained("model-path")
+            # Use with DataLoader for batch evaluation
+            results = model.evaluate(test_data)
+    """
+
     def __init__(
         self,
         data: pd.DataFrame,

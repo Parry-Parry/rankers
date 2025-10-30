@@ -1,3 +1,10 @@
+"""Dot-product (bi-encoder) ranking model.
+
+This module implements a bi-encoder architecture where queries and documents are encoded
+separately and their relevance is computed via dot product. This allows for efficient
+retrieval through pre-computed document embeddings.
+"""
+
 from copy import deepcopy
 import os
 import torch
@@ -16,24 +23,36 @@ from ..base import Ranker
 
 
 class DotConfig(PretrainedConfig):
-    """Configuration for Dot Model
+    """Configuration for Dot (bi-encoder) ranking model.
 
-    Parameters
-    ----------
-    model_name_or_path : str
-        the model name or path
-    mode : str
-        the pooling mode for the model
-    model_tied : bool
-        whether the model is tied
-    use_pooler : bool
-        whether to use the pooler
-    pooler_dim_in : int
-        the input dimension for the pooler
-    pooler_dim_out : int
-        the output dimension for the pooler
-    pooler_tied : bool
-        whether the pooler is tied
+    This configuration class stores all hyperparameters for the dot-product ranking model,
+    including pooling strategy, model architecture choices, and optional components.
+
+    Args:
+        model_name_or_path (str, optional): HuggingFace model identifier or path.
+            Defaults to "bert-base-uncased".
+        pooling_type (str, optional): Pooling strategy for embeddings. Options:
+            "cls", "mean", "late_interaction", "none". Defaults to "cls".
+        inbatch_loss (optional): Loss function for in-batch negatives. Defaults to None.
+        model_tied (bool, optional): Whether to share weights between query and document
+            encoders. Defaults to True.
+        use_pooler (bool, optional): Whether to use an additional projection layer.
+            Defaults to False.
+        pooler_dim_in (int, optional): Input dimension for pooler. Defaults to 768.
+        pooler_dim_out (int, optional): Output dimension for pooler. Defaults to 768.
+        pooler_tied (bool, optional): Whether to share pooler weights between query
+            and document. Defaults to True.
+        **kwargs: Additional configuration parameters.
+
+    Examples:
+        Creating a custom configuration::
+
+            config = DotConfig(
+                model_name_or_path="bert-base-uncased",
+                pooling_type="mean",
+                use_pooler=True,
+                pooler_dim_out=256
+            )
     """
 
     model_type = "Dot"
@@ -85,6 +104,19 @@ class DotConfig(PretrainedConfig):
 
 
 class Pooler(nn.Module):
+    """Learnable projection layer for query and document embeddings.
+
+    Projects embeddings to a lower-dimensional space. Can optionally use separate
+    projections for queries and documents.
+
+    Args:
+        config (DotConfig): Configuration containing pooler dimensions and tying settings.
+
+    Attributes:
+        dense_q (nn.Linear): Projection layer for queries.
+        dense_d (nn.Linear): Projection layer for documents (may be shared with dense_q).
+    """
+
     def __init__(self, config):
         super().__init__()
         self.dense_q = nn.Linear(config.pooler_dim_in, config.pooler_dim_out)
@@ -96,28 +128,81 @@ class Pooler(nn.Module):
 
     @classmethod
     def from_pretrained(cls, model_name_or_path: str = "bert-base-uncased") -> "Pooler":
+        """Load a pooler from a pretrained model directory.
+
+        Args:
+            model_name_or_path (str, optional): Path to model directory.
+                Defaults to "bert-base-uncased".
+
+        Returns:
+            Pooler: Initialized pooler module.
+        """
         config = DotConfig.from_pretrained(model_name_or_path)
         model = cls(config)
         return model
 
     def forward(self, hidden_states, d=False):
+        """Project hidden states to output dimension.
+
+        Args:
+            hidden_states (torch.Tensor): Input embeddings to project.
+            d (bool, optional): Whether to use document projection. Defaults to False.
+
+        Returns:
+            torch.Tensor: Projected embeddings.
+        """
         return self.dense_d(hidden_states) if d else self.dense_q(hidden_states)
 
 
 class Dot(Ranker):
-    """
-    Dot Model for Fine-Tuning
+    """Bi-encoder (dot-product) ranking model.
 
-    Parameters
-    ----------
-    model : PreTrainedModel
-        the model model
-    config : DotConfig
-        the configuration for the model
-    model_d : PreTrainedModel
-        the document model model
-    pooler : Pooler
-        the pooling layer
+    The Dot model uses separate encoders for queries and documents, computing relevance
+    scores via dot product of their embeddings. This architecture enables efficient
+    retrieval by pre-computing and indexing document embeddings.
+
+    The model supports various features:
+    - Multiple pooling strategies (CLS, mean, late interaction)
+    - Optional learnable projection layers
+    - Tied or untied query/document encoders
+    - In-batch negative training
+
+    Args:
+        model (PreTrainedModel): Query encoder (HuggingFace transformer).
+        tokenizer (PreTrainedTokenizer): Tokenizer for text processing.
+        config (DotConfig): Configuration object.
+        model_d (PreTrainedModel, optional): Document encoder. If None, shares weights
+            with query encoder when config.model_tied=True. Defaults to None.
+        pooler (Pooler, optional): Projection layer. Created from config if None and
+            config.use_pooler=True. Defaults to None.
+
+    Attributes:
+        model_type (str): Model identifier "Dot".
+        architecture_class: AutoModel class for loading.
+        config_class: DotConfig class.
+        transformer_class: PyTerrier transformer class (set if pyterrier available).
+
+    Examples:
+        Basic usage::
+
+            from rankers.modelling import Dot
+
+            # Load pretrained model
+            model = Dot.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+
+            # Custom configuration
+            config = DotConfig(pooling_type="mean", use_pooler=True)
+            model = Dot.from_pretrained("bert-base-uncased", config=config)
+
+        Training with in-batch negatives::
+
+            from rankers.train.loss import get_loss
+
+            config = DotConfig(
+                inbatch_loss=get_loss("cross_entropy"),
+                model_tied=False  # Separate query/doc encoders
+            )
+            model = Dot.from_pretrained("bert-base-uncased", config=config)
     """
 
     model_type = "Dot"
@@ -201,7 +286,26 @@ class Dot(Ranker):
         return self.pooling(self.model(**text).last_hidden_state)
 
     def forward(self, loss=None, queries=None, docs_batch=None, labels=None):
-        """Compute the loss given (queries, docs, labels)"""
+        """Forward pass computing ranking loss.
+
+        Encodes queries and documents separately, computes dot-product scores, and
+        applies the loss function. Optionally includes in-batch negative loss.
+
+        Args:
+            loss (callable, optional): Loss function to apply.
+            queries (dict, optional): Tokenized query inputs (input_ids, attention_mask, etc.).
+            docs_batch (dict, optional): Tokenized document inputs.
+            labels (torch.Tensor, optional): Relevance labels.
+
+        Returns:
+            tuple: Contains:
+                - loss_value (torch.Tensor): Total loss (main + in-batch).
+                - to_log (dict): Metrics dictionary with 'loss' and 'inbatch_loss'.
+                - pred (torch.Tensor): Predicted relevance scores.
+
+        Note:
+            All tensors are automatically moved to the appropriate device.
+        """
         queries = (
             {k: v.to(self.model.device) for k, v in queries.items()}
             if queries is not None
@@ -242,7 +346,19 @@ class Dot(Ranker):
         return (loss_value, to_log, pred)
 
     def save_pretrained(self, model_dir, **kwargs):
-        """Save both query and document model"""
+        """Save the complete model to a directory.
+
+        Saves all model components including query encoder, document encoder (if untied),
+        pooler (if used), tokenizer, and configuration.
+
+        Args:
+            model_dir (str): Directory path to save the model.
+            **kwargs: Additional arguments (currently unused).
+
+        Note:
+            The document encoder is saved to model_dir/model_d if not tied.
+            The pooler is saved to model_dir/pooler if used.
+        """
         self.config.save_pretrained(model_dir)
         self.model.save_pretrained(model_dir)
         if not self.config.model_tied:
@@ -272,7 +388,34 @@ class Dot(Ranker):
 
     @classmethod
     def from_pretrained(cls, model_name_or_path, config=None, **kwargs) -> "Dot":
-        """Load model"""
+        """Load a pretrained Dot model.
+
+        Loads from either a saved Dot model directory (with separate components) or
+        a HuggingFace model hub identifier for initialization.
+
+        Args:
+            model_name_or_path (str): Path to model directory or HuggingFace model ID.
+            config (DotConfig, optional): Pre-initialized configuration. If None,
+                loads or creates from model_name_or_path. Defaults to None.
+            **kwargs: Additional arguments passed to the underlying model loader.
+
+        Returns:
+            Dot: Initialized Dot model ready for inference or fine-tuning.
+
+        Examples:
+            Loading a saved Dot model::
+
+                model = Dot.from_pretrained("./my_saved_model")
+
+            Initializing from HuggingFace model::
+
+                model = Dot.from_pretrained("bert-base-uncased")
+
+            With custom configuration::
+
+                config = DotConfig(pooling_type="mean")
+                model = Dot.from_pretrained("bert-base-uncased", config=config)
+        """
         if os.path.isdir(model_name_or_path):
             config = (
                 cls.config_class.from_pretrained(model_name_or_path)

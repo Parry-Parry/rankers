@@ -1,8 +1,57 @@
+"""Corpus management for neural ranking.
+
+This module provides a simple interface for managing document collections, queries,
+and relevance judgments compatible with ir_datasets format.
+"""
+
 import pandas as pd
 from types import SimpleNamespace
 
 
 class Corpus:
+    """In-memory corpus of documents, queries, and relevance judgments.
+
+    Provides a unified interface for accessing corpus data, compatible with ir_datasets
+    API. Useful for small to medium-sized collections or custom datasets.
+
+    Args:
+        documents (dict, optional): Mapping of document IDs to text. Defaults to None.
+        queries (dict, optional): Mapping of query IDs to text. Defaults to None.
+        qrels (pd.DataFrame, optional): Relevance judgments with columns
+            'query_id', 'doc_id', 'relevance'. Defaults to None.
+
+    Attributes:
+        documents (dict): Document ID to text mapping.
+        queries (dict): Query ID to text mapping.
+        qrels (pd.DataFrame): Relevance judgments.
+
+    Examples:
+        Creating a custom corpus::
+
+            from rankers.datasets import Corpus
+            import pandas as pd
+
+            corpus = Corpus(
+                documents={"d1": "First document", "d2": "Second document"},
+                queries={"q1": "What is IR?"},
+                qrels=pd.DataFrame([
+                    {"query_id": "q1", "doc_id": "d1", "relevance": 1}
+                ])
+            )
+
+        Using with datasets::
+
+            from rankers.datasets import TrainingDataset
+
+            dataset = TrainingDataset(
+                training_dataset_file="train.jsonl",
+                corpus=corpus
+            )
+
+    Note:
+        For large corpora, consider using ir_datasets or lazy loading to avoid
+        memory issues.
+    """
     def __init__(
         self, documents: dict = None, queries: dict = None, qrels: pd.DataFrame = None
     ) -> None:

@@ -36,3 +36,10 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/Parry-Parry/rankers.git"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=5.0",
+    "sphinx-rtd-theme>=1.0",
+    "sphinx-autodoc-typehints>=1.19",
+]

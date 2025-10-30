@@ -1,3 +1,9 @@
+"""Training infrastructure for neural rankers.
+
+This module provides a customized Trainer class built on HuggingFace's Trainer,
+with specialized support for ranking losses, regularization, and IR-specific evaluation.
+"""
+
 import torch
 import logging
 from transformers import Trainer
@@ -16,7 +22,84 @@ LOSS_NAME = "loss.pt"
 
 
 class RankerTrainer(Trainer):
-    """Customized Trainer from Huggingface's Trainer"""
+    """Specialized trainer for neural ranking models.
+
+    Extends HuggingFace's Trainer with ranking-specific functionality including:
+    - Flexible loss function registration and composition
+    - Optional regularization (e.g., FLOPS, sparsity)
+    - Custom training loop for bi-encoder models
+    - IR evaluation metrics integration
+
+    The trainer handles complex loss configurations, supports both string-based
+    loss selection via registry and direct loss function passing, and manages
+    compound losses with regularization.
+
+    Args:
+        loss_fn (Union[str, callable], optional): Loss function. Can be a string
+            key from LOSS_REGISTRY or a callable loss function. Defaults to None.
+        **kwargs: Additional arguments passed to Trainer (model, args, datasets, etc.).
+
+    Attributes:
+        loss: The main ranking loss function.
+        regularize_loss (bool): Whether regularization is enabled.
+
+    Examples:
+        Basic training setup::
+
+            from rankers.train import RankerTrainer, RankerTrainingArguments
+            from rankers.modelling import Dot
+            from rankers.datasets import TrainingDataset
+
+            model = Dot.from_pretrained("bert-base-uncased")
+            dataset = TrainingDataset.from_json("train.jsonl")
+
+            args = RankerTrainingArguments(
+                output_dir="./output",
+                num_train_epochs=3,
+                per_device_train_batch_size=32
+            )
+
+            trainer = RankerTrainer(
+                model=model,
+                args=args,
+                train_dataset=dataset,
+                loss_fn="margeMSE"  # String key from registry
+            )
+
+            trainer.train()
+
+        With regularization::
+
+            args = RankerTrainingArguments(
+                output_dir="./output",
+                regularization="FLOPSLoss",
+                q_regularization_weight=0.001,
+                regularization_warmup_steps=1000
+            )
+
+            trainer = RankerTrainer(
+                model=model,
+                args=args,
+                train_dataset=dataset,
+                loss_fn="margeMSE"
+            )
+
+        Custom loss function::
+
+            def custom_loss(scores, labels):
+                return torch.nn.functional.mse_loss(scores, labels)
+
+            trainer = RankerTrainer(
+                model=model,
+                args=args,
+                train_dataset=dataset,
+                loss_fn=custom_loss
+            )
+
+    Note:
+        The trainer automatically composes regularization losses with the main
+        loss when regularization is specified in training arguments.
+    """
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
         super(RankerTrainer, self).__init__(**kwargs)

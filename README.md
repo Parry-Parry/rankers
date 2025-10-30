@@ -55,6 +55,27 @@ Run the example training script:
 python examples/train.bert.cat.py --model_name_or_path bert-base-uncased --training_data path/to/data --output_dir path/to/save/model
 ```
 
+## Documentation
+
+Full API documentation is available and can be built using Sphinx:
+
+```bash
+# Install documentation dependencies
+pip install -e ".[docs]"
+
+# Build the documentation
+cd docs
+make html
+
+# View documentation
+open _build/html/index.html
+```
+
+The documentation includes:
+- Complete API reference for all modules
+- Usage examples and tutorials
+- Installation and quickstart guides
+
 ## Contributing
 
 We welcome contributions! Please read our [contributing guidelines](CONTRIBUTING.md) for more details.

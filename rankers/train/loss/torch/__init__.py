@@ -1,3 +1,10 @@
+"""Base loss classes for neural ranking.
+
+This module provides the foundational loss class hierarchy and common regularization
+losses. All ranking losses inherit from BaseLoss and can be registered in the
+global loss registry for easy access.
+"""
+
 from abc import abstractmethod
 import torch.nn as nn
 import torch
@@ -6,13 +13,32 @@ from ..util import register_loss
 
 
 class BaseLoss(nn.Module):
-    """
-    Base class for Losses
+    """Abstract base class for all ranking loss functions.
 
-    Parameters
-    ----------
-    reduction: str
-        the reduction type
+    Provides common functionality including reduction strategies and a standard
+    interface for all loss implementations. Subclasses must implement the forward method.
+
+    Args:
+        reduction (str, optional): Reduction method for loss values. Options:
+            "mean", "sum", "none". Defaults to "mean".
+
+    Attributes:
+        name (str): Loss function identifier.
+        reduction (str): Reduction strategy.
+
+    Examples:
+        Creating a custom loss::
+
+            from rankers.train.loss.torch import BaseLoss, register_loss
+
+            @register_loss("my_custom_loss")
+            class MyLoss(BaseLoss):
+                def forward(self, scores, labels):
+                    return torch.nn.functional.mse_loss(scores, labels)
+
+    Note:
+        Use the @register_loss decorator to make losses available via string
+        keys in LOSS_REGISTRY.
     """
 
     name = "base"
@@ -22,9 +48,29 @@ class BaseLoss(nn.Module):
         self.reduction = reduction
 
     def _reduce(self, a: torch.Tensor):
+        """Apply reduction to tensor.
+
+        Args:
+            a (torch.Tensor): Tensor to reduce.
+
+        Returns:
+            torch.Tensor: Reduced tensor.
+        """
         return reduce(a, self.reduction)
 
     def forward(self, *args, **kwargs):
+        """Compute the loss.
+
+        Args:
+            *args: Loss-specific arguments (typically scores and labels).
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            torch.Tensor: Computed loss value.
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
+        """
         raise NotImplementedError
 
     def __repr__(self):
@@ -32,6 +78,41 @@ class BaseLoss(nn.Module):
 
 
 class RegularizationLoss(BaseLoss):
+    """Base class for regularization losses with warmup scheduling.
+
+    Implements regularization for query and document representations with
+    quadratic warmup scheduling. Commonly used for sparse models (e.g., SPLADE)
+    to control representation sparsity.
+
+    Args:
+        q_weight (float, optional): Initial query regularization weight. Defaults to 0.08.
+        d_weight (float, optional): Initial document regularization weight. Defaults to 0.1.
+        t (int, optional): Initial timestep. Defaults to 0.
+        T (int, optional): Warmup steps. Defaults to 1000.
+        reduction (str, optional): Reduction method. Defaults to "mean".
+
+    Attributes:
+        q_weight (float): Current query regularization weight.
+        d_weight (float): Current document regularization weight.
+        t (int): Current training step.
+        T (int): Total warmup steps.
+
+    Examples:
+        Using with sparse models::
+
+            from rankers.train.loss.torch import FLOPSLoss
+
+            reg_loss = FLOPSLoss(
+                q_weight=0.001,
+                d_weight=0.001,
+                T=5000  # Warmup over 5000 steps
+            )
+
+    Note:
+        Weights increase quadratically: weight * (t/T)^2 until t >= T.
+        Call step() after each training step to update weights.
+    """
+
     def __init__(
         self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
     ) -> None:
@@ -42,6 +123,7 @@ class RegularizationLoss(BaseLoss):
         self.T = T
 
     def step_q(self):
+        """Update query weight for one training step."""
         if self.t >= self.T:
             pass
         else:
@@ -49,6 +131,7 @@ class RegularizationLoss(BaseLoss):
             self.q_weight = self.q_weight * (self.t / self.T) ** 2
 
     def step_d(self):
+        """Update document weight for one training step."""
         if self.t >= self.T:
             pass
         else:
@@ -56,6 +139,7 @@ class RegularizationLoss(BaseLoss):
             self.d_weight = self.d_weight * (self.t / self.T) ** 2
 
     def step(self):
+        """Update both query and document weights for one training step."""
         if self.t >= self.T:
             pass
         else:
@@ -65,9 +149,33 @@ class RegularizationLoss(BaseLoss):
 
     @abstractmethod
     def reg(self, reps, weight=0):
+        """Compute regularization for representations.
+
+        Args:
+            reps (torch.Tensor): Representations to regularize.
+            weight (float, optional): Regularization weight. Defaults to 0.
+
+        Returns:
+            torch.Tensor: Regularization loss value.
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
+        """
         raise NotImplementedError
 
     def forward(self, query_hidden_states, text_hidden_states, **kwargs):
+        """Compute combined regularization loss.
+
+        Args:
+            query_hidden_states (torch.Tensor): Query representations.
+            text_hidden_states (torch.Tensor): Document representations.
+            **kwargs: Additional arguments (unused).
+
+        Returns:
+            tuple: Contains:
+                - loss (torch.Tensor): Total regularization loss.
+                - to_log (dict): Metrics dictionary with q_reg, d_reg, and sparsity stats.
+        """
         q_reg = self.reg(query_hidden_states, self.q_weight)
         d_reg = self.reg(text_hidden_states, self.d_weight)
         self.step()
@@ -79,21 +187,82 @@ class RegularizationLoss(BaseLoss):
 
 @register_loss("flops_reg")
 class FLOPSLoss(RegularizationLoss):
+    """FLOPS-based regularization loss for sparse models.
+
+    Penalizes the computational cost (FLOPs) of sparse representations by
+    encouraging smaller L1 norms. Commonly used in SPLADE models.
+
+    The regularization is computed as: sum((abs(reps).mean(dim=0))^2) * weight
+
+    Args:
+        q_weight (float, optional): Query regularization weight. Defaults to 0.08.
+        d_weight (float, optional): Document regularization weight. Defaults to 0.1.
+        t (int, optional): Initial timestep. Defaults to 0.
+        T (int, optional): Warmup steps. Defaults to 1000.
+        reduction (str, optional): Reduction method. Defaults to "mean".
+
+    Examples:
+        Training a sparse model with FLOPS regularization::
+
+            from rankers.train import RankerTrainer, RankerTrainingArguments
+
+            args = RankerTrainingArguments(
+                output_dir="./output",
+                regularization="flops_reg",
+                q_regularization_weight=0.001,
+                d_regularization_weight=0.001,
+                regularization_warmup_steps=5000
+            )
+    """
+
     def __init__(
         self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
     ) -> None:
         super(FLOPSLoss, self).__init__(q_weight, d_weight, t, T, reduction)
 
     def reg(self, reps, weight=0):
+        """Compute FLOPS regularization.
+
+        Args:
+            reps (torch.Tensor): Sparse representations.
+            weight (float, optional): Regularization weight. Defaults to 0.
+
+        Returns:
+            torch.Tensor: FLOPS regularization loss.
+        """
         return (torch.abs(reps).mean(dim=0) ** 2).sum() * weight
 
 
 @register_loss("l1_reg")
 class L1Loss(BaseLoss):
+    """L1 regularization loss.
+
+    Applies L1 (absolute value) regularization to encourage sparsity in
+    representations.
+
+    Args:
+        reduction (str, optional): Reduction method. Defaults to "mean".
+
+    Examples:
+        Using L1 regularization::
+
+            reg_loss = L1Loss()
+            loss_value = reg_loss.reg(representations, weight=0.01)
+    """
+
     def __init__(self, reduction: str = "mean") -> None:
         super(L1Loss, self).__init__(reduction)
 
     def reg(self, reps, weight=0):
+        """Compute L1 regularization.
+
+        Args:
+            reps (torch.Tensor): Representations to regularize.
+            weight (float, optional): Regularization weight. Defaults to 0.
+
+        Returns:
+            torch.Tensor: L1 regularization loss.
+        """
         return torch.abs(reps).sum(dim=1).mean() * weight
 
 

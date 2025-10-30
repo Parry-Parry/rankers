@@ -1,3 +1,38 @@
+"""Loss functions for training neural ranking models.
+
+This module provides an extensible framework for loss functions used in training neural rankers.
+It includes a registry system for dynamically registering and retrieving loss functions, along
+with implementations of various pointwise, pairwise, and listwise loss functions.
+
+Key Components:
+    - **BaseLoss**: Abstract base class for all loss functions
+    - **LOSS_REGISTRY**: Global registry for loss function lookup
+    - **register_loss**: Decorator for registering custom loss functions
+    - **Pointwise losses**: MSE, cross-entropy for point-based scoring
+    - **Pairwise losses**: Margin-based losses for ranking pairs
+    - **Listwise losses**: Losses operating on entire ranked lists
+
+The registry pattern allows for flexible loss function selection via string names
+in training configurations.
+
+Examples:
+    Using a registered loss function::
+
+        from rankers.train.loss import LOSS_REGISTRY
+
+        loss_fn = LOSS_REGISTRY.get("margeMSE")
+        loss = loss_fn(scores, labels)
+
+    Registering a custom loss::
+
+        from rankers.train.loss import register_loss, BaseLoss
+
+        @register_loss("my_loss")
+        class MyCustomLoss(BaseLoss):
+            def forward(self, scores, labels):
+                return custom_computation(scores, labels)
+"""
+
 from typing import TYPE_CHECKING
 from ..._optional import is_torch_available, is_flax_available
 from transformers.utils import _LazyModule
