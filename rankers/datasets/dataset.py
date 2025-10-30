@@ -79,7 +79,7 @@ class LazyTextLoader:
         self.cache_size = cache_size
 
         if mode == 'docs':
-            self.store = corpus.docs_store()
+            self.store = corpus.doc_store()
         elif mode == 'queries':
             # For queries, try to build from iterator since most corpora don't have query store
             self._query_cache = {}
@@ -91,9 +91,9 @@ class LazyTextLoader:
                         self._query_cache[str(qid)] = text
             except Exception:
                 # Fallback to docstore if available
-                self.store = getattr(corpus, 'docs_store', lambda: None)()
+                self.store = getattr(corpus, 'doc_store', lambda: None)()
         else:
-            self.store = corpus.docs_store()
+            self.store = corpus.doc_store()
 
         # Create cached retrieval function with LRU cache
         self._get_cached = lru_cache(maxsize=cache_size)(self._get_single)
