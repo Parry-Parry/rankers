@@ -1,10 +1,8 @@
-API Reference
-=============
-
-This section contains the complete API reference for the rankers library.
+API Overview
+============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    modelling
    datasets

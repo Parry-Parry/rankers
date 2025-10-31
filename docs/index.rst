@@ -38,21 +38,16 @@ Basic Usage::
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Guide
 
    installation
    quickstart
-   api/index
 
 .. toctree::
    :maxdepth: 1
-   :caption: API Reference:
+   :caption: API Reference
 
-   api/modelling
-   api/datasets
-   api/training
-   api/losses
-   api/pyterrier
+   api/index
 
 Indices and tables
 ==================
@@ -60,16 +55,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-API Overview
-============
-
-.. toctree::
-   :maxdepth: 1
-
-   modelling
-   datasets
-   training
-   losses
-   pyterrier
-   utilities

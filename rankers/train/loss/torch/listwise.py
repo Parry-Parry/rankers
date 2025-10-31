@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 from torch import Tensor
 from torch.nn import functional as F
@@ -165,7 +166,7 @@ def get_ndcg(
     labels: torch.Tensor,
     k: int | None = None,
     scale_gains: bool = True,
-    optimal_labels: torch.Tensor | None = None,
+    optimal_labels: Optional[torch.tensor] = None,
 ) -> torch.Tensor:
     labels = labels.clamp(min=0)
     if optimal_labels is None:
