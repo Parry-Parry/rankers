@@ -108,7 +108,8 @@ class RankerDataArguments:
                 self.validation_dataset_file.endswith(".gz")
                 or self.validation_dataset_file.endswith(".tsv")
                 or self.validation_dataset_file.endswith(".rez")
-            ), "Validation dataset should be a TREC formatted run file"
+                or self.validation_dataset_file.endswith(".jsonl")
+            ), "Validation dataset should be a TREC formatted run file or a JSONL training file"
             if is_pyterrier_available():
                 import pyterrier as pt
 
@@ -123,7 +124,8 @@ class RankerDataArguments:
                 self.test_dataset_file.endswith(".gz")
                 or self.test_dataset_file.endswith(".tsv")
                 or self.test_dataset_file.endswith(".rez")
-            ), "Test dataset should be a TREC formatted run file"
+                or self.test_dataset_file.endswith(".jsonl")
+            ), "Test dataset should be a TREC formatted run file or a JSONL training file"
             if is_pyterrier_available():
                 import pyterrier as pt
 
