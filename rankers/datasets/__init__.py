@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 
 _import_structure = {
     "corpus": ["Corpus"],
-    "dataset": ["TrainingDataset", "TestDataset"],
+    "dataset": ["TrainingDataset", "TestDataset", "ValidationDataset"],
 }
 
 if is_torch_available():
