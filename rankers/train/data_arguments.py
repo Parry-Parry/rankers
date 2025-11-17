@@ -110,15 +110,6 @@ class RankerDataArguments:
                 or self.validation_dataset_file.endswith(".rez")
                 or self.validation_dataset_file.endswith(".jsonl")
             ), "Validation dataset should be a TREC formatted run file or a JSONL training file"
-            if is_pyterrier_available():
-                import pyterrier as pt
-
-                self.validation_data = pt.io.read_results(self.validation_dataset_file)
-            else:
-                logging.warning(
-                    "Pyterrier not available, validation dataset will be loaded as a DataFrame"
-                )
-                self.validation_data = read_trec(self.validation_dataset_file)
         if self.test_dataset_file:
             assert (
                 self.test_dataset_file.endswith(".gz")
@@ -126,15 +117,6 @@ class RankerDataArguments:
                 or self.test_dataset_file.endswith(".rez")
                 or self.test_dataset_file.endswith(".jsonl")
             ), "Test dataset should be a TREC formatted run file or a JSONL training file"
-            if is_pyterrier_available():
-                import pyterrier as pt
-
-                self.test_data = pt.io.read_results(self.test_dataset_file)
-            else:
-                logging.warning(
-                    "Pyterrier not available, test dataset will be loaded as a DataFrame"
-                )
-                self.test_data = read_trec(self.test_dataset_file)
 
     def to_dict(self):
         """
