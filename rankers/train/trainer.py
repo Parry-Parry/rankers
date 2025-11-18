@@ -102,7 +102,7 @@ class RankerTrainer(Trainer):
     """
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
-        super(RankerTrainer, self).__init__(**kwargs)
+        super(RankerTrainer, self).__init__(compute_metrics=self.compute_metrics, **kwargs)
         if isinstance(loss_fn, str):
             from .loss import LOSS_REGISTRY
 
