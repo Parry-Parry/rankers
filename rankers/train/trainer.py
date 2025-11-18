@@ -175,13 +175,25 @@ class RankerTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
     def compute_metrics(self, result_frame: pd.DataFrame):
+        """Compute IR metrics for evaluation.
+
+        Uses qrels from the validation dataset to ensure consistency between
+        the evaluation data and the qrels used for metric computation.
+
+        Args:
+            result_frame: PyTerrier-style result frame with query_id and doc_id
+
+        Returns:
+            Dictionary of metric names to values
+        """
         from ir_measures import evaluator, nDCG
 
         result_frame = result_frame.rename(
             columns={"query_id": "qid", "doc_id": "docno"}
         )
 
-        qrels = pd.DataFrame(self.eval_ir_dataset.qrels_iter())
+        # Use qrels from validation dataset - ensures consistency with result_frame
+        qrels = self.eval_dataset.qrels
         metrics = (
             self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG @ 10]
         )
@@ -244,6 +256,7 @@ class RankerTrainer(Trainer):
 
         eval_model = model.to_pyterrier(batch_size=batch_size)
         result_frame = eval_model.transform(dataset.data)
+        breakpoint()
         metrics = self.compute_metrics(result_frame)
 
         num_samples = len(dataset)
