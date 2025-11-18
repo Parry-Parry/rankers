@@ -848,7 +848,7 @@ class ValidationDataset(Dataset):
 
     def __len__(self):
         # Number of rows in ranking DataFrame
-        return len(self.data)
+        return len(self.data.qid.unique())
 
     def __getitem__(self, idx: int):
         row = self.data.iloc[idx]
