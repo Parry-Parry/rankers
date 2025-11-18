@@ -256,7 +256,6 @@ class RankerTrainer(Trainer):
 
         eval_model = model.to_pyterrier(batch_size=batch_size)
         result_frame = eval_model.transform(dataset.data)
-        breakpoint()
         metrics = self.compute_metrics(result_frame)
 
         num_samples = len(dataset)
