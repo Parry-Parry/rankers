@@ -745,23 +745,23 @@ class ValidationDataset(Dataset):
                             continue
                         rows.append(
                             {
-                                "qid": qid,
-                                "docno": str(d),
+                                "query_id": qid,
+                                "doc_id": str(d),
                                 "relevance": self.relevance_label,
                             }
                         )
                 else:
                     rows.append(
                         {
-                            "qid": qid,
-                            "docno": str(pos),
+                            "query_id": qid,
+                            "doc_id": str(pos),
                             "relevance": self.relevance_label,
                         }
                     )
 
-        df = pd.DataFrame(rows, columns=["qid", "docno", "relevance"])
+        df = pd.DataFrame(rows, columns=["query_id", "doc_id", "relevance"])
         if self.dedupe_qrels and not df.empty:
-            df = df.drop_duplicates(subset=["qid", "docno"], keep="first").reset_index(
+            df = df.drop_duplicates(subset=["query_id", "doc_id"], keep="first").reset_index(
                 drop=True
             )
         return df
