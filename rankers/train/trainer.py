@@ -189,7 +189,7 @@ class RankerTrainer(Trainer):
         from ir_measures import evaluator, nDCG
 
         result_frame = result_frame.rename(
-            columns={"query_id": "qid", "doc_id": "docno"}
+            columns={"qid": "query_id", "docno": "doc_id"}
         )
 
         # Use qrels from validation dataset - ensures consistency with result_frame
