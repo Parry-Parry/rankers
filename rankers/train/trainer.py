@@ -198,7 +198,7 @@ class RankerTrainer(Trainer):
             self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG @ 10]
         )
         _evaluator = evaluator(metrics, qrels)
-        output = _evaluator.evaluate(result_frame)
+        output = _evaluator.calc_aggregate(result_frame)
         output = {str(k): v for k, v in output.items()}
         return output
 
