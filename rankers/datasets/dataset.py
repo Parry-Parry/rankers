@@ -745,7 +745,7 @@ class ValidationDataset(Dataset):
                             continue
                         rows.append(
                             {
-                                "query_id": qid,
+                                "query_id": str(qid),
                                 "doc_id": str(d),
                                 "relevance": self.relevance_label,
                             }
@@ -753,7 +753,7 @@ class ValidationDataset(Dataset):
                 else:
                     rows.append(
                         {
-                            "query_id": qid,
+                            "query_id": str(qid),
                             "doc_id": str(pos),
                             "relevance": self.relevance_label,
                         }
@@ -802,7 +802,7 @@ class ValidationDataset(Dataset):
                                     continue
                                 rows.append(
                                     {
-                                        "qid": qid,
+                                        "qid": str(qid),
                                         "query": qtext,
                                         "docno": str(d),
                                         "text": self.docs[str(d)],
@@ -812,7 +812,7 @@ class ValidationDataset(Dataset):
                         else:
                             rows.append(
                                 {
-                                    "qid": qid,
+                                    "qid": str(qid),
                                     "query": qtext,
                                     "docno": str(pos),
                                     "text": self.docs[str(pos)],
@@ -826,7 +826,7 @@ class ValidationDataset(Dataset):
                     for d in neg:
                         rows.append(
                             {
-                                "qid": qid,
+                                "qid": str(qid),
                                 "query": qtext,
                                 "docno": str(d),
                                 "text": self.docs[str(d)],
@@ -836,7 +836,7 @@ class ValidationDataset(Dataset):
                 else:
                     rows.append(
                         {
-                            "qid": qid,
+                            "qid": str(qid),
                             "query": qtext,
                             "docno": str(neg),
                             "text": self.docs[str(neg)],
