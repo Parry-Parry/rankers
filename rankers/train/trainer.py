@@ -242,7 +242,7 @@ class RankerTrainer(Trainer):
         logger.info(f"  Num queries = {len(dataset)}")
         logger.info(f"  Batch size = {batch_size}")
 
-        eval_model = model.to_pyterrier()
+        eval_model = model.to_pyterrier(batch_size=batch_size)
         result_frame = eval_model.transform(dataset.data)
         metrics = self.compute_metrics(result_frame)
 
