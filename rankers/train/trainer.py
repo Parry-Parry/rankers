@@ -236,7 +236,7 @@ class RankerTrainer(Trainer):
             elif args.bf16_full_eval:
                 model = model.to(dtype=torch.bfloat16, device=args.device)
 
-        batch_size = self.args.eval_batch_size
+        batch_size = self.args.per_device_eval_batch_size * max(1, self.args.world_size)
 
         logger.info(f"\n***** Running {description} *****")
         logger.info(f"  Num queries = {len(dataset)}")
