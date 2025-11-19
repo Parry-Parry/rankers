@@ -1,0 +1,144 @@
+name: Version Bump and Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rankers/**'
+      - 'pyproject.toml'
+      - '.github/workflows/version-and-release.yml'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version-changed: ${{ steps.check.outputs.changed }}
+      new-version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version change
+        id: check
+        run: |
+          # Get current version from pyproject.toml
+          NEW_VERSION=$(grep '^version' pyproject.toml | head -1 | cut -d'"' -f2)
+
+          # Get last tag version
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LAST_VERSION=${LAST_TAG#v}
+
+          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          if [ "$NEW_VERSION" != "$LAST_VERSION" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed from $LAST_VERSION to $NEW_VERSION"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged ($NEW_VERSION)"
+          fi
+
+  test:
+    needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install -e ".[docs]"
+
+      - name: Lint with Ruff
+        run: ruff check .
+
+      - name: Test with pytest
+        run: pytest tests/ -v
+
+  create-release:
+    needs: [check-version, test]
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          tag_name: v${{ needs.check-version.outputs.new-version }}
+          body: |
+            # Version ${{ needs.check-version.outputs.new-version }}
+
+            This release is automatically generated when the version in `pyproject.toml` is updated.
+
+            ## Changes
+            See git log for details:
+            ```
+            git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --oneline
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        continue-on-error: true
+
+  notify:
+    needs: [check-version, create-release]
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'release-published',
+              client_payload: {
+                version: '${{ needs.check-version.outputs.new-version }}'
+              }
+            })
