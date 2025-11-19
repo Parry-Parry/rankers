@@ -146,7 +146,7 @@ def get_approx_ranks(pred: torch.Tensor, temperature: float) -> torch.Tensor:
 def get_dcg(
     ranks: torch.Tensor,
     labels: torch.Tensor,
-    k: int | None = None,
+    k: Optional[int] = None,
     scale_gains: bool = True,
 ) -> torch.Tensor:
     log_ranks = torch.log2(1 + ranks)
@@ -164,7 +164,7 @@ def get_dcg(
 def get_ndcg(
     ranks: torch.Tensor,
     labels: torch.Tensor,
-    k: int | None = None,
+    k: Optional[int] = None,
     scale_gains: bool = True,
     optimal_labels: Optional[torch.tensor] = None,
 ) -> torch.Tensor:
@@ -207,7 +207,7 @@ class ApproxNDCGLoss(BaseLoss):
 
 
 def get_mrr(
-    ranks: torch.Tensor, labels: torch.Tensor, k: int | None = None
+    ranks: torch.Tensor, labels: torch.Tensor, k: Optional[int] = None
 ) -> torch.Tensor:
     labels = labels.clamp(None, 1)
     reciprocal_ranks = 1 / ranks
