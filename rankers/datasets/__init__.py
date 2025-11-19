@@ -6,7 +6,7 @@ along with specialized data collators for different model architectures.
 Key Components:
     - **Corpus**: Text corpus management with lazy loading capabilities
     - **TrainingDataset**: Dataset for training ranking models with query-document pairs
-    - **TestDataset**: Dataset for evaluation with TREC-style ranking data
+    - **EvaluationDataset**: Dataset for evaluation with TREC-style ranking data
     - **Data Collators**: Specialized collators for different architectures (Dot, Cat, Sparse)
 
 The module supports both PyTorch and Flax frameworks through conditional imports.
@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 
 _import_structure = {
     "corpus": ["Corpus"],
-    "dataset": ["TrainingDataset", "TestDataset", "ValidationDataset"],
+    "dataset": ["TrainingDataset", "EvaluationDataset"],
 }
 
 if is_torch_available():
@@ -71,7 +71,7 @@ if TYPE_CHECKING:
     from .corpus import Corpus as Corpus
     from .dataset import (
         TrainingDataset as TrainingDataset,
-        TestDataset as TestDataset,
+        EvaluationDataset as EvaluationDataset,
     )
 else:
     import sys

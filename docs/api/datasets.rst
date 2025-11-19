@@ -11,11 +11,7 @@ Dataset Classes
    :members:
    :show-inheritance:
 
-.. autoclass:: rankers.datasets.dataset.TestDataset
-   :members:
-   :show-inheritance:
-
-.. autoclass:: rankers.datasets.dataset.ValidationDataset
+.. autoclass:: rankers.datasets.dataset.EvaluationDataset
    :members:
    :show-inheritance:
 

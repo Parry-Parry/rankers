@@ -73,7 +73,7 @@ _import_structure = {
     "datasets": [
         "Corpus",
         "TrainingDataset",
-        "TestDataset",
+        "EvaluationDataset",
         "DotDataCollator",
         "CatDataCollator",
     ],
@@ -111,7 +111,7 @@ if TYPE_CHECKING:
     from .datasets import (
         Corpus,
         TrainingDataset,
-        TestDataset,
+        EvaluationDataset,
         DotDataCollator,
         CatDataCollator,
     )

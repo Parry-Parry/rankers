@@ -63,7 +63,7 @@ class Corpus:
         self.__post_init__()
 
     def __post_init__(self):
-        if self.qrels:
+        if self.qrels is not None:
             for column in "query_id", "doc_id", "relevance":
                 if column not in self.qrels.columns:
                     raise ValueError(

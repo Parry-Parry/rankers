@@ -9,8 +9,7 @@ import os
 import json
 import mmap
 import random
-from functools import cached_property
-from typing import Union, Iterable, List, Dict, Any, Tuple
+from typing import Union, Iterable, List, Dict, Any, Tuple, Optional
 
 import pandas as pd
 from torch.utils.data import Dataset
@@ -550,157 +549,102 @@ class TrainingDataset(Dataset):
             return (query_text, positive_text + negative_text)
 
 
-class TestDataset(Dataset):
-    """Dataset for evaluating ranker models on test data.
+class EvaluationDataset(Dataset):
+    """Dataset for evaluating ranker models on test and validation data.
 
-    Loads test/evaluation data in TREC format with query-document pairs and relevance
-    judgments. Integrates with ir_datasets for standard IR benchmark evaluation.
+    Supports multiple evaluation modes:
+    - TREC format: Load ranking results from TREC run files
+    - ir_datasets: Load benchmarks from standard IR datasets
+    - JSONL format: Build evaluation data from training-format JSONL files with pseudo-qrels
 
     Args:
-        data (pd.DataFrame): DataFrame in TREC format with 'qid', 'docno', 'score' columns.
+        data (pd.DataFrame, optional): DataFrame in TREC format with 'qid', 'docno', 'score' columns.
         corpus (Union[Corpus, irds.Dataset]): Corpus containing documents and queries.
         lazy_load_text (bool, optional): Load document text on-demand. Defaults to True.
+        jsonl_file (str, optional): Path to JSONL training file for building evaluation data.
+        query_id_key (str, optional): JSON key for query ID. Defaults to "query_id".
+        positive_id_key (str, optional): JSON key for positive doc ID. Defaults to "doc_id_a".
+        negative_id_key (str, optional): JSON key for negative doc ID. Defaults to "doc_id_b".
+        relevance_label (int, optional): Relevance score for positive documents. Defaults to 1.
+        include_negatives (bool, optional): Include negative documents in ranking frame. Defaults to True.
+        dedupe_qrels (bool, optional): Remove duplicate qrels. Defaults to True.
 
     Attributes:
         data (pd.DataFrame): Test data with enriched query and document text.
         queries (dict): Mapping of query IDs to query text.
         docs: Document loader (LazyTextLoader or dict).
-        qrels (pd.DataFrame): Relevance judgments from corpus.
+        qrels (pd.DataFrame): Relevance judgments.
 
     Examples:
         Loading from TREC file::
 
             import ir_datasets as irds
-            from rankers.datasets import TestDataset
+            from rankers.datasets import EvaluationDataset
 
             dataset = irds.load("msmarco-passage/dev")
-            test_data = TestDataset.from_trec("run.trec", dataset)
+            eval_data = EvaluationDataset.from_trec("run.trec", dataset)
 
         Loading from ir_datasets::
 
-            test_data = TestDataset.from_irds(dataset)
+            eval_data = EvaluationDataset.from_irds(dataset)
 
-        Evaluating a model::
+        Building from JSONL (validation mode)::
 
-            from rankers.modelling import Dot
+            eval_data = EvaluationDataset.from_jsonl("train.jsonl", corpus)
 
-            model = Dot.from_pretrained("model-path")
-            # Use with DataLoader for batch evaluation
-            results = model.evaluate(test_data)
+        Building from qrels DataFrame::
+
+            eval_data = EvaluationDataset.from_qrels(qrels_df, corpus)
     """
 
     def __init__(
         self,
-        data: pd.DataFrame,
-        corpus: Union[Corpus, "irds.Dataset"],
+        data: Optional[pd.DataFrame] = None,
+        corpus: Optional[Union[Corpus, "irds.Dataset"]] = None,
         lazy_load_text: bool = True,
-    ) -> None:
-        super().__init__()
-        self.data = data
-        self.corpus = corpus
-        self.lazy_load_text = lazy_load_text
-        self.__post_init__()
-
-    def __post_init__(self):
-        for column in ("qid", "docno", "score"):
-            if column not in self.data.columns:
-                raise ValueError(
-                    f"Format not recognised (Should be TREC), Column '{column}' not found in dataframe"
-                )
-        if not self.lazy_load_text:
-            self.docs = (
-                pd.DataFrame(self.corpus.docs_iter())
-                .set_index("doc_id")["text"]
-                .to_dict()
-            )
-            self.queries = (
-                pd.DataFrame(self.corpus.queries_iter())
-                .set_index("query_id")["text"]
-                .to_dict()
-            )
-        else:
-            # Use lazy loading with caching
-            self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
-            self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode="queries")
-
-        self.qrels = pd.DataFrame(self.corpus.qrels_iter())
-
-        self.data["text"] = self.data["docno"].map(self.docs)
-        self.data["query"] = self.data["qid"].map(self.queries)
-
-    @classmethod
-    def from_trec(
-        cls,
-        trec_file: str,
-        ir_dataset: "irds.Dataset",
-    ) -> "TestDataset":
-        data = read_trec(trec_file)
-        return cls(data, ir_dataset)
-
-    @classmethod
-    def from_irds(
-        cls,
-        ir_dataset: "irds.Dataset",
-    ) -> "TestDataset":
-        if not is_ir_datasets_available():
-            raise ImportError(
-                "ir_datasets is not available, please install ir_datasets to use this function"
-            )
-        data = initialise_irds_eval(ir_dataset)
-        return cls(data, ir_dataset)
-
-    def __len__(self):
-        return self.data.qid.nunique()
-
-
-class ValidationDataset(Dataset):
-    """
-    Validation helper that:
-      (1) Constructs qrels from positives only (others are assumed nonrelevant).
-      (2) Exposes a cached TREC-style ranking DataFrame via `.data`, built from the
-          training-format JSONL, with columns: qid, query, docno, text, label.
-          - label = 1 for positives, 0 for negatives (useful for accuracy checks).
-
-    Attributes
-    ----------
-    qrels : pd.DataFrame
-        Columns: ["qid", "docno", "relevance"] with positives only.
-    data : pd.DataFrame (cached property via @cached + @property)
-        Columns: ["qid", "query", "docno", "text", "label"], built from training JSONL.
-
-    Notes
-    -----
-    - `corpus` is required to resolve query and document text.
-    - Any document not listed in `qrels` is implicitly nonrelevant.
-    """
-
-    def __init__(
-        self,
-        training_dataset_file: str,
-        corpus: Union[Corpus, "irds.Dataset"],
+        jsonl_file: Optional[str] = None,
         query_id_key: str = "query_id",
         positive_id_key: str = "doc_id_a",
         negative_id_key: str = "doc_id_b",
-        lazy_load_text: bool = True,
         relevance_label: int = 1,
-        include_positive: bool = True,
+        include_negatives: bool = True,
         dedupe_qrels: bool = True,
     ) -> None:
         super().__init__()
-        assert training_dataset_file.endswith("jsonl"), (
-            "validation expects an uncompressed JSONL"
-        )
-        self.training_dataset_file = training_dataset_file
         self.corpus = corpus
+        self.lazy_load_text = lazy_load_text
+        self.jsonl_file = jsonl_file
         self.query_id_key = query_id_key
         self.positive_id_key = positive_id_key
         self.negative_id_key = negative_id_key
-        self.lazy_load_text = lazy_load_text
         self.relevance_label = relevance_label
-        self.include_positive = include_positive
+        self.include_negatives = include_negatives
         self.dedupe_qrels = dedupe_qrels
 
-        # Text lookup
+        # If loading from JSONL, build data and qrels
+        if jsonl_file is not None:
+            assert jsonl_file.endswith("jsonl"), (
+                "JSONL file should not be compressed"
+            )
+            self._build_from_jsonl()
+        else:
+            # Standard TREC/ir_datasets mode
+            assert data is not None, (
+                "Either 'data' or 'jsonl_file' must be provided"
+            )
+            self.data = data
+
+        self.__post_init__()
+
+    def __post_init__(self):
+        # Validate required columns
+        for column in ("qid", "docno"):
+            if column not in self.data.columns:
+                raise ValueError(
+                    f"Column '{column}' not found in dataframe"
+                )
+
+        # Load text loaders
         if not self.lazy_load_text:
             self.docs = (
                 pd.DataFrame(self.corpus.docs_iter())
@@ -717,12 +661,23 @@ class ValidationDataset(Dataset):
             self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
             self.queries = LazyTextLoader(self.corpus, cache_size=2000, mode="queries")
 
-        # Build qrels once (positives only)
-        self.qrels = self._build_qrels()
+        # Load qrels if not already built from JSONL
+        if not hasattr(self, "qrels"):
+            self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
-    def _build_qrels(self) -> pd.DataFrame:
+        # Enrich with text and query fields
+        self.data["text"] = self.data["docno"].map(self.docs)
+        self.data["query"] = self.data["qid"].map(self.queries)
+
+    def _build_from_jsonl(self):
+        """Build data and qrels DataFrames from JSONL training format."""
+        self.qrels = self._build_qrels_from_jsonl()
+        self.data = self._build_data_from_jsonl()
+
+    def _build_qrels_from_jsonl(self) -> pd.DataFrame:
+        """Build qrels DataFrame from JSONL positives only."""
         rows: List[Dict[str, Any]] = []
-        with open(self.training_dataset_file, "rb") as f:
+        with open(self.jsonl_file, "rb") as f:
             for raw in f:
                 if not raw.strip():
                     continue
@@ -732,7 +687,7 @@ class ValidationDataset(Dataset):
                     raise KeyError(f"Key {self.query_id_key} not found in record")
                 qid = rec[self.query_id_key]
 
-                if not self.include_positive or self.positive_id_key not in rec:
+                if self.positive_id_key not in rec:
                     continue
 
                 pos = rec[self.positive_id_key]
@@ -761,24 +716,15 @@ class ValidationDataset(Dataset):
 
         df = pd.DataFrame(rows, columns=["query_id", "doc_id", "relevance"])
         if self.dedupe_qrels and not df.empty:
-            df = df.drop_duplicates(subset=["query_id", "doc_id"], keep="first").reset_index(
-                drop=True
-            )
+            df = df.drop_duplicates(
+                subset=["query_id", "doc_id"], keep="first"
+            ).reset_index(drop=True)
         return df
 
-    @cached_property
-    def data(self) -> pd.DataFrame:
-        """
-        Cached TREC-style ranking file derived from the training JSONL.
-        Columns:
-          - qid   : query identifier (from training JSONL)
-          - query : query text (from corpus)
-          - docno : document identifier (positive and negatives)
-          - text  : document text (from corpus)
-          - label : 1 for positive docs, 0 for negatives
-        """
+    def _build_data_from_jsonl(self) -> pd.DataFrame:
+        """Build TREC-style ranking DataFrame from JSONL training format."""
         rows: List[Dict[str, Any]] = []
-        with open(self.training_dataset_file, "rb") as f:
+        with open(self.jsonl_file, "rb") as f:
             for raw in f:
                 if not raw.strip():
                     continue
@@ -790,10 +736,9 @@ class ValidationDataset(Dataset):
                     )
 
                 qid = rec[self.query_id_key]
-                qtext = self.queries[str(qid)]
 
-                # Positive (optional)
-                if self.include_positive and (self.positive_id_key in rec):
+                # Positives
+                if self.positive_id_key in rec:
                     pos = rec[self.positive_id_key]
                     if pos is not None:
                         if isinstance(pos, list):
@@ -803,53 +748,150 @@ class ValidationDataset(Dataset):
                                 rows.append(
                                     {
                                         "qid": str(qid),
-                                        "query": qtext,
                                         "docno": str(d),
-                                        "text": self.docs[str(d)],
-                                        "label": 1,
+                                        "score": self.relevance_label,
                                     }
                                 )
                         else:
                             rows.append(
                                 {
                                     "qid": str(qid),
-                                    "query": qtext,
                                     "docno": str(pos),
-                                    "text": self.docs[str(pos)],
-                                    "label": 1,
+                                    "score": self.relevance_label,
                                 }
                             )
 
                 # Negatives (single or list)
-                neg = rec[self.negative_id_key]
-                if isinstance(neg, list):
-                    for d in neg:
+                if self.include_negatives:
+                    neg = rec[self.negative_id_key]
+                    if isinstance(neg, list):
+                        for d in neg:
+                            rows.append(
+                                {
+                                    "qid": str(qid),
+                                    "docno": str(d),
+                                    "score": 0,
+                                }
+                            )
+                    else:
                         rows.append(
                             {
                                 "qid": str(qid),
-                                "query": qtext,
-                                "docno": str(d),
-                                "text": self.docs[str(d)],
-                                "label": 0,
+                                "docno": str(neg),
+                                "score": 0,
                             }
                         )
-                else:
-                    rows.append(
-                        {
-                            "qid": str(qid),
-                            "query": qtext,
-                            "docno": str(neg),
-                            "text": self.docs[str(neg)],
-                            "label": 0,
-                        }
-                    )
 
-        return pd.DataFrame(rows, columns=["qid", "query", "docno", "text", "label"])
+        return pd.DataFrame(rows, columns=["qid", "docno", "score"])
+
+    @classmethod
+    def from_trec(
+        cls,
+        trec_file: str,
+        ir_dataset: "irds.Dataset",
+        lazy_load_text: bool = True,
+    ) -> "EvaluationDataset":
+        """Load evaluation data from TREC run file.
+
+        Args:
+            trec_file (str): Path to TREC format file.
+            ir_dataset (irds.Dataset): IR dataset for corpus.
+            lazy_load_text (bool, optional): Load text on-demand. Defaults to True.
+
+        Returns:
+            EvaluationDataset: Initialized dataset.
+        """
+        data = read_trec(trec_file)
+        return cls(data=data, corpus=ir_dataset, lazy_load_text=lazy_load_text)
+
+    @classmethod
+    def from_irds(
+        cls,
+        ir_dataset: "irds.Dataset",
+        lazy_load_text: bool = True,
+    ) -> "EvaluationDataset":
+        """Load evaluation data from ir_datasets benchmark.
+
+        Args:
+            ir_dataset (irds.Dataset): IR dataset to load.
+            lazy_load_text (bool, optional): Load text on-demand. Defaults to True.
+
+        Returns:
+            EvaluationDataset: Initialized dataset.
+        """
+        if not is_ir_datasets_available():
+            raise ImportError(
+                "ir_datasets is not available, please install ir_datasets to use this function"
+            )
+        data = initialise_irds_eval(ir_dataset)
+        return cls(data=data, corpus=ir_dataset, lazy_load_text=lazy_load_text)
+
+    @classmethod
+    def from_jsonl(
+        cls,
+        jsonl_file: str,
+        corpus: Union[Corpus, "irds.Dataset"],
+        query_id_key: str = "query_id",
+        positive_id_key: str = "doc_id_a",
+        negative_id_key: str = "doc_id_b",
+        relevance_label: int = 1,
+        include_negatives: bool = True,
+        dedupe_qrels: bool = True,
+        lazy_load_text: bool = True,
+    ) -> "EvaluationDataset":
+        """Build evaluation data from training-format JSONL file.
+
+        Creates both qrels and ranking DataFrame from positive/negative document pairs,
+        useful for validation during training.
+
+        Args:
+            jsonl_file (str): Path to JSONL training file.
+            corpus (Union[Corpus, irds.Dataset]): Corpus containing documents and queries.
+            query_id_key (str, optional): JSON key for query ID. Defaults to "query_id".
+            positive_id_key (str, optional): JSON key for positive doc ID. Defaults to "doc_id_a".
+            negative_id_key (str, optional): JSON key for negative doc ID. Defaults to "doc_id_b".
+            relevance_label (int, optional): Relevance score for positives. Defaults to 1.
+            include_negatives (bool, optional): Include negatives in ranking frame. Defaults to True.
+            dedupe_qrels (bool, optional): Remove duplicate qrels. Defaults to True.
+            lazy_load_text (bool, optional): Load text on-demand. Defaults to True.
+
+        Returns:
+            EvaluationDataset: Initialized dataset with pseudo-qrels from positives.
+        """
+        return cls(
+            corpus=corpus,
+            lazy_load_text=lazy_load_text,
+            jsonl_file=jsonl_file,
+            query_id_key=query_id_key,
+            positive_id_key=positive_id_key,
+            negative_id_key=negative_id_key,
+            relevance_label=relevance_label,
+            include_negatives=include_negatives,
+            dedupe_qrels=dedupe_qrels,
+        )
+
+    @classmethod
+    def from_qrels(
+        cls,
+        qrels_df: pd.DataFrame,
+        corpus: Union[Corpus, "irds.Dataset"],
+        lazy_load_text: bool = True,
+    ) -> "EvaluationDataset":
+        """Create evaluation dataset from qrels DataFrame.
+
+        Args:
+            qrels_df (pd.DataFrame): DataFrame with columns [query_id, doc_id, relevance].
+            corpus (Union[Corpus, irds.Dataset]): Corpus containing documents and queries.
+            lazy_load_text (bool, optional): Load text on-demand. Defaults to True.
+
+        Returns:
+            EvaluationDataset: Initialized dataset.
+        """
+        # Convert qrels to TREC format
+        data = qrels_df.rename(
+            columns={"query_id": "qid", "doc_id": "docno", "relevance": "score"}
+        )
+        return cls(data=data, corpus=corpus, lazy_load_text=lazy_load_text)
 
     def __len__(self):
-        # Number of rows in ranking DataFrame
-        return len(self.data.qid.unique())
-
-    def __getitem__(self, idx: int):
-        row = self.data.iloc[idx]
-        return row["qid"], row["query"], row["docno"], row["text"], row["label"]
+        return self.data.qid.nunique()

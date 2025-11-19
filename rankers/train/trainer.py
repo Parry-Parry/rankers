@@ -102,13 +102,16 @@ class RankerTrainer(Trainer):
     """
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
-        super(RankerTrainer, self).__init__(compute_metrics=self.compute_metrics, **kwargs)
+        # Only set compute_metrics if not already provided
+        if 'compute_metrics' not in kwargs:
+            kwargs['compute_metrics'] = self.compute_metrics
+        super(RankerTrainer, self).__init__(**kwargs)
         if isinstance(loss_fn, str):
             from .loss import LOSS_REGISTRY
 
-            if loss_fn not in LOSS_REGISTRY.availible:
+            if loss_fn not in LOSS_REGISTRY.available:
                 raise ValueError(
-                    f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.availible}"
+                    f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.available}"
                 )
             self.loss = LOSS_REGISTRY.get(loss_fn)
         else:
@@ -129,7 +132,7 @@ class RankerTrainer(Trainer):
             else:
                 from .loss import LOSS_REGISTRY
 
-                if self.args.regularization not in LOSS_REGISTRY.availible:
+                if self.args.regularization not in LOSS_REGISTRY.available:
                     raise ValueError(
                         f"Unknown regularization: {self.args.regularization}"
                     )
@@ -143,7 +146,9 @@ class RankerTrainer(Trainer):
             self.loss = CompoundLoss([self.loss, reg_loss])
             self.regularize_loss = True
 
-        self.tokenizer = self.data_collator.tokenizer
+        # Only set tokenizer if data_collator has one
+        if hasattr(self.data_collator, 'tokenizer'):
+            self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
     def compute_loss(
@@ -272,15 +277,26 @@ class RankerTrainer(Trainer):
         self,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         ignore_keys: Optional[List[str]] = None,
-        metric_key_prefix: str = "test",
+        metric_key_prefix: str = "eval",
         **kwargs,  # handle new arguments
     ) -> Dict[str, float]:
+        """Evaluate the model on the provided dataset.
+
+        Args:
+            eval_dataset: Dataset to evaluate on. If None, uses self.eval_dataset.
+            ignore_keys: Keys to ignore in the evaluation output.
+            metric_key_prefix: Prefix for metric names (default: "eval").
+            **kwargs: Additional arguments.
+
+        Returns:
+            Dictionary of evaluation metrics.
+        """
         if not is_ir_datasets_available():
             raise ImportError(
                 "Please install ir_datasets to use the evaluation features."
             )
 
-        # handle multipe eval datasets
+        # handle multiple eval datasets
         override = eval_dataset is not None
         eval_dataset = eval_dataset if override else self.eval_dataset
 
@@ -293,8 +309,6 @@ class RankerTrainer(Trainer):
         output = eval_loop(
             eval_dataset,
             description="Evaluation",
-            # No point gathering the predictions if there are no metrics, otherwise we defer to
-            # self.args.prediction_loss_only
             prediction_loss_only=None,
             ignore_keys=ignore_keys,
             metric_key_prefix=metric_key_prefix,
@@ -317,3 +331,35 @@ class RankerTrainer(Trainer):
         self._memory_tracker.stop_and_update_metrics(output.metrics)
 
         return output.metrics
+
+    def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
+        """
+        Evaluate the model and save the best model.
+
+        This method is called during training and properly integrates with HuggingFace's
+        best model selection when `use_best_model` is set to True.
+
+        Args:
+            tr_loss: Training loss.
+            model: Model to evaluate.
+            trial: Trial object (for hyperparameter search).
+            epoch: Current epoch.
+            ignore_keys_for_eval: Keys to ignore during evaluation.
+        """
+        if self.control.should_log:
+            logs = {}
+            tr_loss_scalar = tr_loss.item() if isinstance(tr_loss, torch.Tensor) else tr_loss
+            logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+            logs["learning_rate"] = self._get_learning_rate()
+            self._total_loss_scalar += tr_loss_scalar
+            self._globalstep_last_logged = self.state.global_step
+            self.state.log_history.append(self.state.get_state_dict())
+            self.log(logs)
+
+        eval_metrics = None
+        if self.control.should_evaluate:
+            eval_metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+            self._report_to_hp_search(trial, self.state.global_step, eval_metrics)
+
+        if self.control.should_save:
+            self._save_checkpoint(model, trial, metrics=eval_metrics)
