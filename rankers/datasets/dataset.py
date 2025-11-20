@@ -789,32 +789,32 @@ class EvaluationDataset(Dataset):
     def from_trec(
         cls,
         trec_file: str,
-        ir_dataset: "irds.Dataset",
+        corpus: Union[Corpus, "irds.Dataset"],
         lazy_load_text: bool = True,
     ) -> "EvaluationDataset":
         """Load evaluation data from TREC run file.
 
         Args:
             trec_file (str): Path to TREC format file.
-            ir_dataset (irds.Dataset): IR dataset for corpus.
+            corpus (Union[Corpus, irds.Dataset]): Corpus containing documents and queries.
             lazy_load_text (bool, optional): Load text on-demand. Defaults to True.
 
         Returns:
             EvaluationDataset: Initialized dataset.
         """
         data = read_trec(trec_file)
-        return cls(data=data, corpus=ir_dataset, lazy_load_text=lazy_load_text)
+        return cls(data=data, corpus=corpus, lazy_load_text=lazy_load_text)
 
     @classmethod
     def from_irds(
         cls,
-        ir_dataset: "irds.Dataset",
+        corpus: "irds.Dataset",
         lazy_load_text: bool = True,
     ) -> "EvaluationDataset":
         """Load evaluation data from ir_datasets benchmark.
 
         Args:
-            ir_dataset (irds.Dataset): IR dataset to load.
+            corpus (irds.Dataset): IR dataset to load.
             lazy_load_text (bool, optional): Load text on-demand. Defaults to True.
 
         Returns:
@@ -824,8 +824,8 @@ class EvaluationDataset(Dataset):
             raise ImportError(
                 "ir_datasets is not available, please install ir_datasets to use this function"
             )
-        data = initialise_irds_eval(ir_dataset)
-        return cls(data=data, corpus=ir_dataset, lazy_load_text=lazy_load_text)
+        data = initialise_irds_eval(corpus)
+        return cls(data=data, corpus=corpus, lazy_load_text=lazy_load_text)
 
     @classmethod
     def from_jsonl(
