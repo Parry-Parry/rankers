@@ -406,7 +406,17 @@ class RankerTrainer(Trainer):
             metrics=output.metrics,
         )
 
-    def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
+    def _maybe_log_save_evaluate(
+        self,
+        tr_loss,
+        grad_norm,
+        model,
+        trial,
+        epoch,
+        ignore_keys_for_eval,
+        start_time=None,
+        learning_rate=None,
+    ):
         """
         Evaluate the model and save the best model.
 
@@ -415,19 +425,32 @@ class RankerTrainer(Trainer):
 
         Args:
             tr_loss: Training loss.
+            grad_norm: Gradient norm.
             model: Model to evaluate.
             trial: Trial object (for hyperparameter search).
             epoch: Current epoch.
             ignore_keys_for_eval: Keys to ignore during evaluation.
+            start_time: Training start time.
+            learning_rate: Current learning rate.
         """
-        if self.control.should_log:
+        if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
             logs = {}
             tr_loss_scalar = tr_loss.item() if isinstance(tr_loss, torch.Tensor) else tr_loss
-            logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
-            logs["learning_rate"] = self._get_learning_rate()
+            logs["loss"] = round(
+                tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged),
+                4,
+            )
+            if grad_norm is not None:
+                logs["grad_norm"] = (
+                    grad_norm.item() if isinstance(grad_norm, torch.Tensor) else grad_norm
+                )
+            if learning_rate is not None:
+                logs["learning_rate"] = learning_rate
+            else:
+                logs["learning_rate"] = self._get_learning_rate()
+
             self._total_loss_scalar += tr_loss_scalar
             self._globalstep_last_logged = self.state.global_step
-            self.state.log_history.append(self.state.get_state_dict())
             self.log(logs)
 
         eval_metrics = None
