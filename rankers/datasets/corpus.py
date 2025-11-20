@@ -73,7 +73,7 @@ class Corpus:
 
             self.qrels = self.qrels[["query_id", "doc_id", "relevance"]]
 
-    def doc_store(self):
+    def docs_store(self):
         return self
 
     def get(self, doc_id):

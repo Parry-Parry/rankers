@@ -79,7 +79,7 @@ class LazyTextLoader:
         self.cache_size = cache_size
 
         if mode == "docs":
-            self.store = corpus.doc_store()
+            self.store = corpus.docs_store()
         elif mode == "queries":
             # For queries, try to build from iterator since most corpora don't have query store
             self._query_cache = {}
@@ -91,9 +91,9 @@ class LazyTextLoader:
                         self._query_cache[str(qid)] = text
             except Exception:
                 # Fallback to docstore if available
-                self.store = getattr(corpus, "doc_store", lambda: None)()
+                self.store = getattr(corpus, "docs_store", lambda: None)()
         else:
-            self.store = corpus.doc_store()
+            self.store = corpus.docs_store()
 
         # Create cached retrieval function with LRU cache
         self._get_cached = lru_cache(maxsize=cache_size)(self._get_single)
@@ -677,7 +677,7 @@ class EvaluationDataset(Dataset):
 
     def _build_qrels_from_jsonl(self) -> pd.DataFrame:
         """Build qrels DataFrame from JSONL positives only."""
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         with open(self.jsonl_file, "rb") as f:
             for raw in f:
                 if not raw.strip():
@@ -724,7 +724,7 @@ class EvaluationDataset(Dataset):
 
     def _build_data_from_jsonl(self) -> pd.DataFrame:
         """Build TREC-style ranking DataFrame from JSONL training format."""
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         with open(self.jsonl_file, "rb") as f:
             for raw in f:
                 if not raw.strip():
