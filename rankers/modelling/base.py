@@ -205,7 +205,7 @@ class Ranker(PreTrainedModel):
             "transformer_class must be set by subclasses, do you have pyterrier installed?"
         )
         return self.transformer_class.from_model(
-            self.model, self.tokenizer, text_field="text", batch_size=batch_size
+            self, self.tokenizer, text_field="text", batch_size=batch_size
         )
 
     def forward(self, loss, sequences, labels=None):
