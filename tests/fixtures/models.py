@@ -30,6 +30,24 @@ def create_tiny_bert_model():
     return BertModel(config)
 
 
+class ModelConfig:
+    """Simple config class for TinyDotModel."""
+
+    def __init__(self, group_size=2, hidden_size=64, vocab_size=1000):
+        """Initialize config."""
+        self.group_size = group_size
+        self.hidden_size = hidden_size
+        self.vocab_size = vocab_size
+
+    def to_dict(self):
+        """Convert config to dictionary."""
+        return {
+            "group_size": self.group_size,
+            "hidden_size": self.hidden_size,
+            "vocab_size": self.vocab_size,
+        }
+
+
 class TinyDotModel(nn.Module):
     """Tiny dot-product ranking model using BERT for testing.
 
@@ -46,11 +64,11 @@ class TinyDotModel(nn.Module):
         self.query_proj = nn.Linear(hidden_size, hidden_size)
         self.doc_proj = nn.Linear(hidden_size, hidden_size)
 
-        self.config = type("Config", (), {
-            "group_size": 2,
-            "hidden_size": hidden_size,
-            "vocab_size": 1000,
-        })()
+        self.config = ModelConfig(
+            group_size=2,
+            hidden_size=hidden_size,
+            vocab_size=1000,
+        )
 
     def forward(
         self,

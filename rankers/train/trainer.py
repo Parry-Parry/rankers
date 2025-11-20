@@ -332,6 +332,78 @@ class RankerTrainer(Trainer):
 
         return output.metrics
 
+    def predict(
+        self,
+        test_dataset: Dataset,
+        ignore_keys: Optional[List[str]] = None,
+        metric_key_prefix: str = "test",
+    ):
+        """Run prediction on test dataset and return predictions and metrics.
+
+        Prediction is identical to evaluation but uses test set prefix instead of
+        eval prefix. Like evaluation, this uses the PyTerrier transform interface
+        for ranking-specific predictions.
+
+        Args:
+            test_dataset: Dataset to run predictions on.
+            ignore_keys: Keys to ignore in model output.
+            metric_key_prefix: Prefix for metric names (default: "test").
+
+        Returns:
+            PredictionOutput with predictions, label_ids, and metrics.
+        """
+        if not is_ir_datasets_available():
+            raise ImportError(
+                "Please install ir_datasets to use the prediction features."
+            )
+
+        # memory metrics - must set up as early as possible
+        self._memory_tracker.start()
+
+        start_time = time.time()
+
+        # Temporarily set eval_dataset for compute_metrics if not already set
+        original_eval_dataset = self.eval_dataset
+        if self.eval_dataset is None:
+            self.eval_dataset = test_dataset
+
+        try:
+            # Use evaluation_loop which handles the ranking-specific logic
+            output = self.evaluation_loop(
+                test_dataset,
+                description="Prediction",
+                prediction_loss_only=None,
+                ignore_keys=ignore_keys,
+                metric_key_prefix=metric_key_prefix,
+            )
+        finally:
+            # Restore original eval_dataset
+            self.eval_dataset = original_eval_dataset
+
+        total_batch_size = self.args.eval_batch_size * self.args.world_size
+        output.metrics.update(
+            speed_metrics(
+                metric_key_prefix,
+                start_time,
+                num_samples=output.num_samples,
+                num_steps=math.ceil(output.num_samples / total_batch_size),
+            )
+        )
+
+        self.control = self.callback_handler.on_predict(
+            self.args, self.state, self.control, output.metrics
+        )
+        self._memory_tracker.stop_and_update_metrics(output.metrics)
+
+        # Return PredictionOutput compatible with HF Trainer
+        from transformers.trainer_utils import PredictionOutput
+
+        return PredictionOutput(
+            predictions=output.predictions,
+            label_ids=output.label_ids,
+            metrics=output.metrics,
+        )
+
     def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch, ignore_keys_for_eval):
         """
         Evaluate the model and save the best model.
