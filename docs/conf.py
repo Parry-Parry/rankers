@@ -12,7 +12,9 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 # ---- Docs-only: force eager imports and neutralize LazyModule proxies ----
-import os, sys, importlib
+import importlib
+import os
+import sys
 
 # 1) Tell rankers to avoid its own lazy wiring during docs
 os.environ["RANKERS_EAGER_IMPORTS"] = "1"

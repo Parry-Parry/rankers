@@ -1,7 +1,8 @@
 """Integration tests for RankerTrainer model checkpointing with best model selection."""
 
-import pytest
 import tempfile
+
+import pytest
 
 from rankers.train.trainer import RankerTrainer
 from rankers.train.training_arguments import RankerTrainingArguments

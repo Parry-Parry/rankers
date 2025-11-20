@@ -34,23 +34,22 @@ from typing import TYPE_CHECKING
 
 from transformers.utils import _LazyModule
 
-
-from ._optional import is_torch_available, is_pyterrier_available
+from ._optional import is_pyterrier_available, is_torch_available
 
 __version__ = "0.0.6"
 
 if os.getenv("RANKERS_EAGER_IMPORTS") == "1":
     # Import the subpackages you normally expose lazily
     from . import (
-        modelling,
-        datasets,
-        train,
-        pyterrier,
         _util,
+        datasets,
+        modelling,
+        pyterrier,
+        train,
     )  # adjust to your actual public surface
 
     # Advertise a concrete __all__ (must be a list of strings)
-    __all__ = ["modelling", "datasets", "train", "pyterrier", "_util"]
+    __all__ = ["_util", "datasets", "modelling", "pyterrier", "train"]
 
 _import_structure = {
     "train.trainer": ["RankerTrainer"],
@@ -101,41 +100,42 @@ if is_pyterrier_available():
 
 if TYPE_CHECKING:
     from ._util import (
-        seed_everything,
-        not_tested,
         load_json,
-        save_json,
+        not_tested,
         read_trec,
+        save_json,
+        seed_everything,
         write_trec,
     )
     from .datasets import (
-        Corpus,
-        TrainingDataset,
-        EvaluationDataset,
-        DotDataCollator,
         CatDataCollator,
+        Corpus,
+        DotDataCollator,
+        EvaluationDataset,
+        TrainingDataset,
     )
 
     if is_torch_available():
-        from .train.loss import (
-            LOSS_REGISTRY as LOSS_REGISTRY,
-            register_loss as register_loss,
-        )
-        from .train.loss.torch import BaseLoss as BaseLoss
-        from .train.loss.torch import *
-
         from .modelling.base import Ranker as Ranker
+        from .modelling.bge import BGE as BGE
         from .modelling.cat import Cat as Cat
         from .modelling.dot import Dot as Dot
         from .modelling.dot import DotConfig as DotConfig
-        from .modelling.sparse import Sparse as Sparse
-        from .modelling.bge import BGE as BGE
         from .modelling.seq2seq import Seq2Seq as Seq2Seq
+        from .modelling.sparse import Sparse as Sparse
+        from .train.loss import (
+            LOSS_REGISTRY as LOSS_REGISTRY,
+        )
+        from .train.loss import (
+            register_loss as register_loss,
+        )
+        from .train.loss.torch import *
+        from .train.loss.torch import BaseLoss as BaseLoss
 
     if is_pyterrier_available():
+        from .pyterrier.cat import CatTransformer as CatTransformer
         from .pyterrier.dot import DotTransformer as DotTransformer
         from .pyterrier.sparse import SparseTransformer as SparseTransformer
-        from .pyterrier.cat import CatTransformer as CatTransformer
 
 else:
     import sys

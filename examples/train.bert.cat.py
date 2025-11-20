@@ -1,14 +1,15 @@
-from rankers import (
-    RankerTrainingArguments,
-    RankerModelArguments,
-    RankerDataArguments,
-    RankerTrainer,
-    Cat,
-    TrainingDataset,
-    TestDataset,
-    CatDataCollator,
-)
 from transformers import HfArgumentParser
+
+from rankers import (
+    Cat,
+    CatDataCollator,
+    RankerDataArguments,
+    RankerModelArguments,
+    RankerTrainer,
+    RankerTrainingArguments,
+    TestDataset,
+    TrainingDataset,
+)
 
 
 def main():

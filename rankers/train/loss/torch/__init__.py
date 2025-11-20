@@ -6,9 +6,11 @@ global loss registry for easy access.
 """
 
 from abc import abstractmethod
-import torch.nn as nn
+
 import torch
+import torch.nn as nn
 from torch import Tensor
+
 from ..util import register_loss
 
 
@@ -447,11 +449,10 @@ def num_non_zero(a: Tensor):
 
 
 from . import listwise as listwise
-from . import pointwise as pointwise
 from . import pairwise as pairwise
-
+from . import pointwise as pointwise
 from .listwise import *
-from .pointwise import *
 from .pairwise import *
+from .pointwise import *
 
 __all__ = [*listwise.__all__, *pointwise.__all__, *pairwise.__all__]

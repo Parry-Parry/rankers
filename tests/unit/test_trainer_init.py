@@ -1,7 +1,8 @@
 """Unit tests for RankerTrainer initialization."""
 
-import pytest
 import tempfile
+
+import pytest
 
 from rankers.train.trainer import RankerTrainer
 from rankers.train.training_arguments import RankerTrainingArguments

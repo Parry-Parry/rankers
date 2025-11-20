@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field, fields, asdict
-from typing import Dict, Any
 import json
+from dataclasses import asdict, dataclass, field, fields
 from enum import Enum
-from typing import Optional
+from typing import Any, Dict, Optional
+
 import torch
+
 from .._optional import is_torch_available
 
 

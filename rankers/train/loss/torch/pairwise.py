@@ -1,6 +1,7 @@
 import torch
-from torch import Tensor
 import torch.nn.functional as F
+from torch import Tensor
+
 from ..util import register_loss
 from . import BaseLoss
 
@@ -90,9 +91,9 @@ class ContrastiveLoss(BaseLoss):
 
 
 __all__ = [
-    "MarginMSELoss",
-    "HingeLoss",
     "ClearLoss",
-    "LCELoss",
     "ContrastiveLoss",
+    "HingeLoss",
+    "LCELoss",
+    "MarginMSELoss",
 ]

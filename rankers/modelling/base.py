@@ -5,8 +5,9 @@ inherit from. It extends HuggingFace's PreTrainedModel and provides common funct
 for loading, saving, and using ranking models.
 """
 
-from transformers import PreTrainedModel, PreTrainedTokenizer, AutoConfig, AutoTokenizer
 from abc import abstractmethod
+
+from transformers import AutoConfig, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
 
 class Ranker(PreTrainedModel):

@@ -45,11 +45,7 @@ exclude = [
 ]
 
 [format]
-# Same line length as lint
-line-length = 100
 # Use double quotes
 quote-style = "double"
-# Indent with 4 spaces
-indent-width = 4
 # Don't skip magic trailing commas
 skip-magic-trailing-comma = false

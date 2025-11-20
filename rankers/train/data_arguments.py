@@ -1,15 +1,15 @@
-from dataclasses import dataclass, field, fields
-from typing import Dict, Any, Optional
 import json
+import logging
+from dataclasses import dataclass, field, fields
 from enum import Enum
+from typing import Any, Dict, Optional
+
 import torch
+
 from .._optional import (
     is_ir_datasets_available,
     is_torch_available,
-    is_pyterrier_available,
 )
-from .._util import read_trec
-import logging
 
 logging.basicConfig(level=logging.INFO)
 

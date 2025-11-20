@@ -4,8 +4,9 @@ This module provides a simple interface for managing document collections, queri
 and relevance judgments compatible with ir_datasets format.
 """
 
-import pandas as pd
 from types import SimpleNamespace
+
+import pandas as pd
 
 
 class Corpus:

@@ -6,7 +6,9 @@
       "Bash(make:*)",
       "Bash(python3:*)",
       "Bash(python:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ruff check:*)",
+      "Bash(ruff format:*)"
     ],
     "deny": [],
     "ask": []

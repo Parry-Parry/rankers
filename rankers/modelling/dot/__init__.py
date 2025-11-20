@@ -1,6 +1,8 @@
-from ..._optional import is_torch_available, is_flax_available
-from transformers.utils import _LazyModule, OptionalDependencyNotAvailable
 from typing import TYPE_CHECKING
+
+from transformers.utils import OptionalDependencyNotAvailable, _LazyModule
+
+from ..._optional import is_flax_available, is_torch_available
 
 _import_structure = {}
 

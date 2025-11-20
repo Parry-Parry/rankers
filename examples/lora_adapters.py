@@ -13,19 +13,20 @@ Examples cover:
 - Multi-task learning with adapters
 """
 
+from peft import LoraConfig, TaskType, get_peft_model
+from transformers import HfArgumentParser
+
 from rankers import (
-    RankerTrainingArguments,
-    RankerDataArguments,
-    RankerDotArguments,
-    RankerTrainer,
     Dot,
     DotConfig,
     DotDataCollator,
-    TrainingDataset,
     EvaluationDataset,
+    RankerDataArguments,
+    RankerDotArguments,
+    RankerTrainer,
+    RankerTrainingArguments,
+    TrainingDataset,
 )
-from transformers import HfArgumentParser
-from peft import LoraConfig, get_peft_model, TaskType
 
 
 # Example 1: Basic LoRA fine-tuning with default configuration
@@ -295,7 +296,6 @@ def multi_task_lora_example():
     - Switching between adapters
     - Task-specific fine-tuning
     """
-    from peft import PeftModel
 
     parser = HfArgumentParser(
         (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)

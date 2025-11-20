@@ -13,4 +13,4 @@ All models inherit from the base Ranker class and follow HuggingFace's
 PreTrainedModel interface for easy integration with the transformers ecosystem.
 """
 
-from . import base, cat, sparse, dot, bge, seq2seq
+from . import base, bge, cat, dot, seq2seq, sparse

@@ -4,16 +4,18 @@ This module provides a customized Trainer class built on HuggingFace's Trainer,
 with specialized support for ranking losses, regularization, and IR-specific evaluation.
 """
 
-import torch
 import logging
-from transformers import Trainer
 import math
 import time
+from typing import Optional, Union
+
 import pandas as pd
-from typing import Optional, Union, Dict, List
+import torch
 from datasets import Dataset
-from transformers.trainer_utils import EvalLoopOutput, speed_metrics
+from transformers import Trainer
 from transformers.integrations.deepspeed import deepspeed_init
+from transformers.trainer_utils import EvalLoopOutput, speed_metrics
+
 from .._optional import is_ir_datasets_available
 
 logger = logging.getLogger(__name__)
@@ -105,7 +107,7 @@ class RankerTrainer(Trainer):
         # Only set compute_metrics if not already provided
         if 'compute_metrics' not in kwargs:
             kwargs['compute_metrics'] = self.compute_metrics
-        super(RankerTrainer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if isinstance(loss_fn, str):
             from .loss import LOSS_REGISTRY
 
@@ -275,11 +277,11 @@ class RankerTrainer(Trainer):
 
     def evaluate(
         self,
-        eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
-        ignore_keys: Optional[List[str]] = None,
+        eval_dataset: Optional[Union[Dataset, dict[str, Dataset]]] = None,
+        ignore_keys: Optional[list[str]] = None,
         metric_key_prefix: str = "eval",
         **kwargs,  # handle new arguments
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Evaluate the model on the provided dataset.
 
         Args:
@@ -335,7 +337,7 @@ class RankerTrainer(Trainer):
     def predict(
         self,
         test_dataset: Dataset,
-        ignore_keys: Optional[List[str]] = None,
+        ignore_keys: Optional[list[str]] = None,
         metric_key_prefix: str = "test",
     ):
         """Run prediction on test dataset and return predictions and metrics.

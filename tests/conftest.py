@@ -1,15 +1,16 @@
 """Pytest configuration and shared fixtures for rankers tests."""
 
-import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
+
 from tests.fixtures.data import (
-    create_synthetic_jsonl,
-    create_synthetic_trec,
     create_synthetic_corpus,
+    create_synthetic_jsonl,
     create_synthetic_qrels,
+    create_synthetic_trec,
 )
 from tests.fixtures.models import TinyDotModel
 

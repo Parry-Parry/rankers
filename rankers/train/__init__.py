@@ -35,9 +35,9 @@ Examples:
 """
 
 from . import (
+    data_arguments,
     loss,
+    model_arguments,
     trainer,
     training_arguments,
-    model_arguments,
-    data_arguments,
 )

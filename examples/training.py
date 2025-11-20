@@ -5,20 +5,21 @@ This module demonstrates various training configurations and techniques using th
 Examples cover different loss functions, data loading patterns, and trainer configurations.
 """
 
+import torch
+from transformers import HfArgumentParser
+
 from rankers import (
-    RankerTrainingArguments,
-    RankerDataArguments,
-    RankerDotArguments,
-    RankerTrainer,
+    Cat,
+    CatDataCollator,
     Dot,
     DotConfig,
     DotDataCollator,
+    RankerDataArguments,
+    RankerDotArguments,
+    RankerTrainer,
+    RankerTrainingArguments,
     TrainingDataset,
-    Cat,
-    CatDataCollator,
 )
-from transformers import HfArgumentParser
-import torch
 
 
 # Example 1: Basic Dot-product model training with margin MSE loss

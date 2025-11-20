@@ -1,24 +1,26 @@
+from typing import Union
+
+import numpy as np
+import pandas as pd
 import pyterrier as pt
+import torch
+from more_itertools import chunked
 from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
+    AutoTokenizer,
+    PretrainedConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
-    AutoTokenizer,
-    AutoConfig,
-    PretrainedConfig,
-    AutoModelForCausalLM,
 )
-from typing import Union
-import torch
-import pandas as pd
-from more_itertools import chunked
-import numpy as np
+
 from ..._util import not_tested
 from ...modelling.seq2seq.seq2seq import (
-    Seq2SeqConfig,
-    DEFAULT_MONO_PROMPT,
     DEFAULT_DUO_PROMPT,
+    DEFAULT_MONO_PROMPT,
     CausalLMConfig,
+    Seq2SeqConfig,
 )
 
 

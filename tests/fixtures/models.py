@@ -1,6 +1,7 @@
 """Fixtures for creating actual BERT models for testing."""
 
 from typing import Optional
+
 import torch
 import torch.nn as nn
 from transformers import BertConfig, BertModel
@@ -89,10 +90,7 @@ class TinyDotModel(nn.Module):
             Dictionary with 'loss' key.
         """
         # Handle various input shapes
-        if query_ids is None:
-            batch_size = 1
-        else:
-            batch_size = query_ids.shape[0]
+        batch_size = 1 if query_ids is None else query_ids.shape[0]
 
         # Get dummy scores for testing
         logits = torch.randn(batch_size, 1)
@@ -149,7 +147,7 @@ class PyTerrierTransformer:
             # Generate deterministic scores based on docno for reproducibility
             result_df["score"] = (
                 result_df["docno"]
-                .str.extract("(\d+)", expand=False)
+                .str.extract(r"(\d+)", expand=False)
                 .astype(float)
             )
 

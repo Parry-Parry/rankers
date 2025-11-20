@@ -1,15 +1,10 @@
 from transformers import (
-    PreTrainedModel,
-    PretrainedConfig,
-    PreTrainedTokenizer,
-    AutoTokenizer,
     AutoConfig,
-    AutoModelForSeq2SeqLM,
     AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
+    PretrainedConfig,
 )
-import torch
-import pandas as pd
-import numpy as np
+
 from ..._util import not_tested
 from ..base import Ranker
 

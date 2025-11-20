@@ -1,14 +1,15 @@
 """Integration tests for RankerTrainer.predict() method."""
 
-import pytest
 import tempfile
 
+import pytest
+
 from rankers import RankerTrainer, RankerTrainingArguments
-from rankers.datasets import TrainingDataset, EvaluationDataset, Corpus
+from rankers.datasets import Corpus, EvaluationDataset, TrainingDataset
 from tests.fixtures.data import (
+    create_synthetic_corpus,
     create_synthetic_jsonl,
     create_synthetic_qrels,
-    create_synthetic_corpus,
 )
 
 
@@ -89,7 +90,7 @@ def test_predict_with_custom_metric_prefix(trainer_and_datasets):
     output = trainer.predict(test_dataset, metric_key_prefix="custom")
 
     # All metrics should have the custom prefix
-    for key in output.metrics.keys():
+    for key in output.metrics:
         assert key.startswith("custom_"), (
             f"Metric {key} doesn't start with 'custom_'"
         )
@@ -102,7 +103,7 @@ def test_predict_default_metric_prefix(trainer_and_datasets):
     output = trainer.predict(test_dataset)
 
     # All metrics should have the test prefix
-    for key in output.metrics.keys():
+    for key in output.metrics:
         assert key.startswith("test_"), (
             f"Metric {key} doesn't start with 'test_'"
         )
@@ -119,7 +120,7 @@ def test_predict_computes_ir_metrics(trainer_and_datasets):
     # Speed metrics are added
     assert any(
         "speed" in k or "time" in k.lower()
-        for k in output.metrics.keys()
+        for k in output.metrics
     )
 
 

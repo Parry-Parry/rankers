@@ -1,7 +1,9 @@
 from typing import Optional
+
 import torch
 from torch import Tensor
 from torch.nn import functional as F
+
 from ..util import register_loss
 from . import BaseLoss
 
@@ -234,11 +236,11 @@ class ApproxMRRLoss(BaseLoss):
 
 
 __all__ = [
-    "KL_DivergenceLoss",
-    "RankNetLoss",
+    "ApproxMRRLoss",
+    "ApproxNDCGLoss",
     "DistillRankNetLoss",
+    "KL_DivergenceLoss",
     "ListNetLoss",
     "Poly1SoftmaxLoss",
-    "ApproxNDCGLoss",
-    "ApproxMRRLoss",
+    "RankNetLoss",
 ]

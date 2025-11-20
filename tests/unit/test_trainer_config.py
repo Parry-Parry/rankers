@@ -1,6 +1,5 @@
 """Unit tests for RankerTrainer configuration."""
 
-import pytest
 import tempfile
 
 from rankers.train.training_arguments import RankerTrainingArguments

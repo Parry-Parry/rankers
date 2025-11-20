@@ -5,18 +5,20 @@ separately and their relevance is computed via dot product. This allows for effi
 retrieval through pre-computed document embeddings.
 """
 
-from copy import deepcopy
 import os
+from copy import deepcopy
+
 import torch
 from torch import nn
 from transformers import (
-    PreTrainedModel,
-    PreTrainedTokenizer,
-    PretrainedConfig,
+    AutoConfig,
     AutoModel,
     AutoTokenizer,
-    AutoConfig,
+    PretrainedConfig,
+    PreTrainedModel,
+    PreTrainedTokenizer,
 )
+
 from ..._optional import is_pyterrier_available
 from ...train.loss.torch import batched_dot_product, cross_dot_product
 from ..base import Ranker

@@ -1,18 +1,19 @@
+from typing import Union
+
+import numpy as np
+import pandas as pd
 import pyterrier as pt
+import torch
+import torch.nn.functional as F
+from more_itertools import chunked
 from transformers import (
-    PreTrainedModel,
-    PretrainedConfig,
-    PreTrainedTokenizer,
+    AutoConfig,
     AutoModelForSequenceClassification,
     AutoTokenizer,
-    AutoConfig,
+    PretrainedConfig,
+    PreTrainedModel,
+    PreTrainedTokenizer,
 )
-from typing import Union
-import torch
-import pandas as pd
-from more_itertools import chunked
-import numpy as np
-import torch.nn.functional as F
 
 
 class CatTransformer(pt.Transformer):

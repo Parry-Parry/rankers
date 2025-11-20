@@ -6,15 +6,15 @@ direct relevance score. This provides higher accuracy than bi-encoders at the
 cost of computational efficiency.
 """
 
-from transformers import (
-    PreTrainedModel,
-    PretrainedConfig,
-    PreTrainedTokenizer,
-    AutoModelForSequenceClassification,
-    AutoConfig,
-)
-import torch
 import torch.nn.functional as F
+from transformers import (
+    AutoConfig,
+    AutoModelForSequenceClassification,
+    PretrainedConfig,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
+
 from ..._optional import is_pyterrier_available
 from ..base import Ranker
 

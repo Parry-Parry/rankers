@@ -1,12 +1,12 @@
 """Integration tests for EvaluationDataset class."""
 
-from rankers.datasets import EvaluationDataset, Corpus
+from rankers.datasets import Corpus, EvaluationDataset
 from tests.fixtures.data import (
-    create_synthetic_jsonl,
-    create_synthetic_trec,
-    create_synthetic_corpus,
-    create_synthetic_qrels,
     cleanup_temp_files,
+    create_synthetic_corpus,
+    create_synthetic_jsonl,
+    create_synthetic_qrels,
+    create_synthetic_trec,
 )
 
 

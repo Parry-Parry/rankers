@@ -5,17 +5,18 @@ support for training with negatives, test evaluation, and efficient lazy loading
 of large corpora.
 """
 
-import os
 import json
 import mmap
+import os
 import random
-from typing import Union, Iterable, List, Dict, Any, Tuple, Optional
+from collections.abc import Iterable
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 from torch.utils.data import Dataset
 
-from .._util import load_json, initialise_irds_eval, read_trec
 from .._optional import is_ir_datasets_available
+from .._util import initialise_irds_eval, load_json, read_trec
 from .corpus import Corpus
 
 if is_ir_datasets_available():

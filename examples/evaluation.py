@@ -8,19 +8,19 @@ This module demonstrates various evaluation techniques including:
 - Model ranking and inference
 """
 
+import pandas as pd
+from transformers import HfArgumentParser
+
 from rankers import (
-    RankerTrainingArguments,
-    RankerDataArguments,
-    RankerTrainer,
     Dot,
     DotConfig,
     DotDataCollator,
-    TrainingDataset,
     EvaluationDataset,
-    Corpus,
+    RankerDataArguments,
+    RankerTrainer,
+    RankerTrainingArguments,
+    TrainingDataset,
 )
-from transformers import HfArgumentParser
-import pandas as pd
 
 
 # Example 1: Evaluate with IR metrics using ir_measures
@@ -33,7 +33,7 @@ def evaluate_with_ir_metrics_example():
     - Setting up IR metrics for evaluation
     - Computing evaluation metrics after training
     """
-    from ir_measures import nDCG, MRR, AP, Bpref
+    from ir_measures import AP, MRR, Bpref, nDCG
 
     parser = HfArgumentParser(
         (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
@@ -189,7 +189,6 @@ def custom_evaluation_example():
     - Running ranking/retrieval
     - Computing custom metrics
     """
-    from ir_measures import nDCG, MRR
 
     parser = HfArgumentParser(
         (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
@@ -331,7 +330,7 @@ def zero_shot_evaluation_example():
     - Baseline performance evaluation
     - Transfer learning assessment
     """
-    from ir_measures import nDCG, MRR
+    from ir_measures import MRR, nDCG
 
     parser = HfArgumentParser(
         (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)

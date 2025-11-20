@@ -11,11 +11,12 @@ These utilities support core functionality across the rankers package, particula
 for data handling, reproducibility, and evaluation tasks.
 """
 
-from collections import defaultdict
 import logging
-from typing import Optional, Any, Union
-import pandas as pd
+from collections import defaultdict
+from typing import Any, Optional, Union
+
 import ir_datasets as irds
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ def seed_everything(seed=42):
             # Now all random operations will be deterministic
     """
     import random
+
     import numpy as np
     import torch
 
@@ -195,8 +197,8 @@ def initialise_irds_eval(dataset: irds.Dataset):
 
 
 def load_json(file: str):
-    import json
     import gzip
+    import json
 
     """
     Load a JSON or JSONL (optionally compressed with gzip) file.
@@ -212,10 +214,10 @@ def load_json(file: str):
     ValueError: If the file extension is not recognized.
     """
     if file.endswith(".json"):
-        with open(file, "r") as f:
+        with open(file) as f:
             return json.load(f)
     elif file.endswith(".jsonl"):
-        with open(file, "r") as f:
+        with open(file) as f:
             return [json.loads(line) for line in f]
     elif file.endswith(".json.gz"):
         with gzip.open(file, "rt") as f:
@@ -228,8 +230,8 @@ def load_json(file: str):
 
 
 def save_json(data, file: str):
-    import json
     import gzip
+    import json
 
     """
     Save data to a JSON or JSONL file (optionally compressed with gzip).

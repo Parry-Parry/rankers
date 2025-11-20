@@ -34,8 +34,10 @@ Examples:
 """
 
 from typing import TYPE_CHECKING
-from ..._optional import is_torch_available, is_flax_available
+
 from transformers.utils import _LazyModule
+
+from ..._optional import is_flax_available, is_torch_available
 
 _import_structure = {
     "util": ["LossFunctionRegistry", "register_loss", "LOSS_REGISTRY"],
@@ -49,14 +51,18 @@ if is_torch_available():
 
 if TYPE_CHECKING:
     from .util import (
-        LossFunctionRegistry as LossFunctionRegistry,
-        register_loss as register_loss,
         LOSS_REGISTRY as LOSS_REGISTRY,
+    )
+    from .util import (
+        LossFunctionRegistry as LossFunctionRegistry,
+    )
+    from .util import (
+        register_loss as register_loss,
     )
 
     if is_torch_available():
-        from .torch import BaseLoss as BaseLoss
         from . import torch as torch
+        from .torch import BaseLoss as BaseLoss
 
 else:
     import sys

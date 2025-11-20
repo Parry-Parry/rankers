@@ -26,9 +26,11 @@ Examples:
         batch = collator(dataset[:4])
 """
 
-from .._optional import is_torch_available, is_flax_available
-from transformers.utils import _LazyModule
 from typing import TYPE_CHECKING
+
+from transformers.utils import _LazyModule
+
+from .._optional import is_flax_available, is_torch_available
 
 _import_structure = {
     "corpus": ["Corpus"],
@@ -54,24 +56,40 @@ if is_flax_available():
 if TYPE_CHECKING:
     if is_torch_available():
         from .loader import (
-            DotDataCollator as DotDataCollator,
             CatDataCollator as CatDataCollator,
-            PairDataCollator as PairDataCollator,
-            PromptDataCollator as PromptDataCollator,
+        )
+        from .loader import (
+            DotDataCollator as DotDataCollator,
+        )
+        from .loader import (
             ListWisePromptDataCollator as ListWisePromptDataCollator,
+        )
+        from .loader import (
+            PairDataCollator as PairDataCollator,
+        )
+        from .loader import (
+            PromptDataCollator as PromptDataCollator,
         )
     if is_flax_available():
         from .flaxloader import (
-            FlaxDotDataCollator as FlaxDotDataCollator,
             FlaxCatDataCollator as FlaxCatDataCollator,
+        )
+        from .flaxloader import (
+            FlaxDotDataCollator as FlaxDotDataCollator,
+        )
+        from .flaxloader import (
             FlaxPairDataCollator as FlaxPairDataCollator,
+        )
+        from .flaxloader import (
             FlaxPromptDataCollator as FlaxPromptDataCollator,
         )
 
     from .corpus import Corpus as Corpus
     from .dataset import (
-        TrainingDataset as TrainingDataset,
         EvaluationDataset as EvaluationDataset,
+    )
+    from .dataset import (
+        TrainingDataset as TrainingDataset,
     )
 else:
     import sys

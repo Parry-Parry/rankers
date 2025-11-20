@@ -5,18 +5,20 @@ representations. Unlike dense models, sparse models produce interpretable, spars
 vectors in vocabulary space, combining the benefits of neural and lexical matching.
 """
 
-from rankers.modelling.dot import Pooler
 import torch
+from torch.nn import functional as F
 from transformers import (
-    AutoModel,
     AutoConfig,
+    AutoModel,
+    AutoModelForMaskedLM,
     PreTrainedModel,
     PreTrainedTokenizer,
-    AutoModelForMaskedLM,
 )
-from ..dot import DotConfig, Dot
+
+from rankers.modelling.dot import Pooler
+
 from ..._optional import is_pyterrier_available
-from torch.nn import functional as F
+from ..dot import Dot, DotConfig
 
 
 class SparseConfig(DotConfig):

@@ -1,15 +1,17 @@
-import re
 import base64
-import string
-import numpy as np
-from contextlib import ExitStack
 import itertools
-from more_itertools import chunked
-import torch
+import re
+import string
+from contextlib import ExitStack
+
+import numpy as np
 import pandas as pd
 import pyterrier as pt
-from transformers import AutoTokenizer
+import torch
+from more_itertools import chunked
 from pyterrier.model import add_ranks
+from transformers import AutoTokenizer
+
 from ...modelling import Sparse
 
 """
@@ -167,7 +169,7 @@ class SparseTransformer(pt.Transformer):
         elif self.text_field in inp.columns:
             return self.doc_encoder()(inp)
         raise ValueError(
-            f'unsupported columns: {inp.columns}; expecting "query", {repr(self.text_field)}, or both.'
+            f'unsupported columns: {inp.columns}; expecting "query", {self.text_field!r}, or both.'
         )
 
 

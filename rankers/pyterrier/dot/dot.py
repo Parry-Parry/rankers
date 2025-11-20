@@ -1,17 +1,19 @@
+from typing import Union
+
+import numpy as np
+import pandas as pd
+import pyterrier as pt
+import torch
+from more_itertools import chunked
 from transformers import (
+    AutoModel,
+    AutoTokenizer,
     PretrainedConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
-    AutoModel,
-    AutoTokenizer,
 )
-from ...modelling.dot import Pooler, Dot, DotConfig
-from typing import Union
-import torch
-import pandas as pd
-from more_itertools import chunked
-import numpy as np
-import pyterrier as pt
+
+from ...modelling.dot import Dot, DotConfig, Pooler
 
 
 class DotTransformer(pt.Transformer):
@@ -198,7 +200,7 @@ class BiQuerymodel(pt.Transformer):
         return inp.assign(query_vec=[enc[i] for i in inv])
 
     def __repr__(self):
-        return f"{repr(self.bi_model)}.query_model()"
+        return f"{self.bi_model!r}.query_model()"
 
 
 class BiDocmodel(pt.Transformer):
@@ -223,7 +225,7 @@ class BiDocmodel(pt.Transformer):
         return inp.assign(doc_vec=list(self.encode(it)))
 
     def __repr__(self):
-        return f"{repr(self.bi_model)}.doc_model()"
+        return f"{self.bi_model!r}.doc_model()"
 
 
 class BiScorer(pt.Transformer):
@@ -260,7 +262,7 @@ class BiScorer(pt.Transformer):
         return pt.model.add_ranks(outp)
 
     def __repr__(self):
-        return f"{repr(self.bi_model)}.scorer()"
+        return f"{self.bi_model!r}.scorer()"
 
 
 __all__ = ["DotTransformer"]
