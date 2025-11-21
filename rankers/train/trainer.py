@@ -459,4 +459,4 @@ class RankerTrainer(Trainer):
             self._report_to_hp_search(trial, self.state.global_step, eval_metrics)
 
         if self.control.should_save:
-            self._save_checkpoint(model, trial, metrics=eval_metrics)
+            self._save_checkpoint(model, trial)
