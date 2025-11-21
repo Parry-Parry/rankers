@@ -21,11 +21,26 @@ select = [
 
 # Ignore specific rules
 ignore = [
+    "E402",   # Module level import not at top of file (docs need special handling)
     "E501",   # Line too long (handled by formatter)
     "E203",   # Whitespace before ':'
     "W293",   # Blank line contains whitespace
     "ARG001", # Unused function argument
     "ARG002", # Unused method argument
+    "F401",   # Imported but unused (some imports are for public API)
+    "F403",   # Star imports (used in __init__ files)
+    "F841",   # Local variable assigned but never used (common in tests)
+    "N801",   # Class name should use CapWords (some legacy names)
+    "N812",   # Lowercase imported as non-lowercase (F for functional is convention)
+    "RUF002", # Ambiguous unicode in docstring (minor)
+    "RUF012", # Mutable class attributes (registry pattern needs this)
+    "RUF013", # Implicit Optional (equivalent to Optional[T] = None)
+    "SIM105", # Use contextlib.suppress (often unnecessarily verbose)
+    "SIM108", # Use ternary operator (sometimes reduces clarity)
+    "SIM115", # Use context manager for files (sometimes unnecess ary)
+    "SIM117", # Combine with statements (often reduces readability in tests)
+    "UP006",  # Use dict/list in type hints (py310+ only, we support py39+)
+    "UP035",  # Use dict/list from builtins (py310+ only, we support py39+)
 ]
 
 # Exclude directories from linting

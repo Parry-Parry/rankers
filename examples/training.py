@@ -16,6 +16,7 @@ from rankers import (
     DotDataCollator,
     RankerDataArguments,
     RankerDotArguments,
+    RankerModelArguments,
     RankerTrainer,
     RankerTrainingArguments,
     TrainingDataset,
