@@ -181,7 +181,7 @@ class RankerTrainer(Trainer):
             self.log(to_log)
         return (loss, outputs) if return_outputs else loss
 
-    def compute_metrics(self, result_frame: pd.DataFrame):
+    def compute_metrics(self, result_frame: pd.DataFrame, qrels_frame: pd.DataFrame) -> dict:
         """Compute IR metrics for evaluation.
 
         Uses qrels from the validation dataset to ensure consistency between
@@ -200,11 +200,11 @@ class RankerTrainer(Trainer):
         )
 
         # Use qrels from validation dataset - ensures consistency with result_frame
-        qrels = self.eval_dataset.qrels
+
         metrics = (
             self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG @ 10]
         )
-        _evaluator = evaluator(metrics, qrels)
+        _evaluator = evaluator(metrics, qrels_frame)
         output = _evaluator.calc_aggregate(result_frame)
         output = {str(k): v for k, v in output.items()}
         return output
@@ -265,7 +265,7 @@ class RankerTrainer(Trainer):
         try:
             eval_model = model.to_pyterrier(batch_size=batch_size)
             result_frame = eval_model.transform(dataset.data)
-            metrics = self.compute_metrics(result_frame)
+            metrics = self.compute_metrics(result_frame, dataset.qrels)
 
             num_samples = len(dataset)
             metrics = {
