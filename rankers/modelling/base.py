@@ -177,35 +177,38 @@ class Ranker(PreTrainedModel):
             self.architecture_class.from_pretrained(model_dir).state_dict()
         )
 
-    def to_pyterrier(self, batch_size=None):
+    def to_pyterrier(self, batch_size=None, device=None):
         """Convert the ranker to a PyTerrier transformer.
 
         Creates a PyTerrier-compatible transformer that wraps this ranker for use
-        in PyTerrier pipelines.
+        in PyTerrier pipelines. A separate copy of the model is used so that
+        evaluation cannot mutate the training model.
 
         Args:
             batch_size (int, optional): Batch size for inference. If None, uses default.
+            device (str or torch.device, optional): Device for the evaluation copy.
+                If None, uses the current device of this model.
 
         Returns:
-            Transformer: PyTerrier transformer wrapping this model.
-
-        Raises:
-            AssertionError: If transformer_class is not set or PyTerrier is not installed.
-
-        Examples:
-            Using a ranker in PyTerrier::
-
-                import pyterrier as pt
-                pt.init()
-
-                ranker = model.to_pyterrier(batch_size=32)
-                pipeline = pt.BatchRetrieve(index) >> ranker
+            Transformer: PyTerrier transformer wrapping a copy of this model.
         """
         assert self.transformer_class is not None, (
             "transformer_class must be set by subclasses, do you have pyterrier installed?"
         )
+
+        # infer device from current parameters if not provided
+        if device is None:
+            try:
+                device = next(self.parameters()).device
+            except StopIteration:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+
         return self.transformer_class.from_model(
-            self, self.tokenizer, text_field="text", batch_size=batch_size
+            self,
+            self.tokenizer,
+            text_field="text",
+            batch_size=batch_size,
+            device=device,
         )
 
     def forward(self, loss, sequences, labels=None):
