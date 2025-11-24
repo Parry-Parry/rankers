@@ -240,7 +240,11 @@ class Dot(Ranker):
         else:
             self.pooler = lambda x, y=True: x
 
-        self.inbatch_loss_fn = config.inbatch_loss
+        if config.inbatch_loss is not None:
+            from rankers.train.loss import LOSS_REGISTRY
+            self.inbatch_loss_fn = LOSS_REGISTRY.get(config.inbatch_loss)
+        else:
+            self.inbatch_loss_fn = None
 
         if is_pyterrier_available():
             from ...pyterrier.dot import DotTransformer
