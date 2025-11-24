@@ -8,7 +8,8 @@
       "Bash(python:*)",
       "Bash(find:*)",
       "Bash(ruff check:*)",
-      "Bash(ruff format:*)"
+      "Bash(ruff format:*)",
+      "Bash(timeout 180 python -m pytest:*)"
     ],
     "deny": [],
     "ask": []

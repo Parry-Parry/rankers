@@ -39,6 +39,11 @@ class ModelConfig:
         self.group_size = group_size
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
+        # Add required fields for HF Trainer compatibility
+        self.eos_token_id = 102
+        self.bos_token_id = 101
+        self.pad_token_id = 0
+        self.model_type = "tiny_dot"
 
     def to_dict(self):
         """Convert config to dictionary."""
@@ -46,6 +51,10 @@ class ModelConfig:
             "group_size": self.group_size,
             "hidden_size": self.hidden_size,
             "vocab_size": self.vocab_size,
+            "eos_token_id": self.eos_token_id,
+            "bos_token_id": self.bos_token_id,
+            "pad_token_id": self.pad_token_id,
+            "model_type": self.model_type,
         }
 
 
@@ -71,35 +80,47 @@ class TinyDotModel(nn.Module):
             vocab_size=1000,
         )
 
-    def forward(
-        self,
-        query_ids: Optional[torch.Tensor] = None,
-        doc_ids: Optional[torch.Tensor] = None,
-        loss_fn=None,
-        **kwargs
-    ):
+    def forward(self, loss_fn=None, **kwargs):
         """Forward pass.
 
         Args:
-            query_ids: Query input IDs (batch_size, seq_len).
-            doc_ids: Document input IDs (batch_size, num_docs, seq_len) or (batch_size, seq_len).
             loss_fn: Loss function to apply.
-            **kwargs: Additional arguments.
+            **kwargs: Additional arguments including query_ids, doc_ids,
+                     labels.
 
         Returns:
             Dictionary with 'loss' key.
         """
-        # Handle various input shapes
-        batch_size = 1 if query_ids is None else query_ids.shape[0]
+        # Get batch size and device from any available input
+        query_ids = kwargs.get("query_ids")
+        doc_ids = kwargs.get("doc_ids")
+        batch_size = 1
+        device = self.encoder.device  # Get device from model
+        if query_ids is not None:
+            batch_size = query_ids.shape[0]
+            device = query_ids.device
+        elif doc_ids is not None:
+            batch_size = doc_ids.shape[0]
+            device = doc_ids.device
 
-        # Get dummy scores for testing
-        logits = torch.randn(batch_size, 1)
+        # Create logits by using model projections (ensures gradients flow)
+        # Use dummy embeddings to test gradient flow
+        dummy_embedding = torch.randn(batch_size, 64, device=device,
+                                      requires_grad=True)
+        # Apply projection layers to ensure parameters are used
+        proj_output = self.query_proj(dummy_embedding)
+        logits = proj_output[:, :2]  # Shape (batch_size, 2)
 
-        output = {"logits": logits}
+        output = {"logits": logits, "to_log": {}}
 
         if loss_fn is not None:
-            # Compute loss
-            labels = kwargs.get("labels", torch.ones_like(logits))
+            # Compute loss - provide proper shape labels
+            labels = kwargs.get("labels")
+            if labels is None:
+                # Create dummy labels matching group_size (1 positive + 1
+                # negative)
+                labels = torch.zeros(batch_size, 2, device=logits.device)
+                labels[:, 0] = 1  # First doc is relevant
             output["loss"] = loss_fn(logits, labels).mean()
 
         return output

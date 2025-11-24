@@ -279,8 +279,6 @@ class RankerTrainer(Trainer):
                 num_samples=num_samples,
             )
         finally:
-            # Restore model to training mode if it was training before
-            # This is critical for gradient flow during training
             if model_was_training and hasattr(model, "train"):
                 model.train()
 
