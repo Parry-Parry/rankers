@@ -227,6 +227,7 @@ class RankerTrainer(Trainer):
         if self.is_deepspeed_enabled and self.deepspeed is None:
             _, _ = deepspeed_init(self, num_training_steps=0, inference=True)
         model = self.model
+        model_was_training = model.training
         if len(self.accelerator._models) == 0 and model is self.model:
             start_time = time.time()
             model = (
@@ -261,19 +262,27 @@ class RankerTrainer(Trainer):
         logger.info(f"  Num queries = {len(dataset)}")
         logger.info(f"  Batch size = {batch_size}")
 
-        eval_model = model.to_pyterrier(batch_size=batch_size)
-        result_frame = eval_model.transform(dataset.data)
-        metrics = self.compute_metrics(result_frame)
+        try:
+            eval_model = model.to_pyterrier(batch_size=batch_size)
+            result_frame = eval_model.transform(dataset.data)
+            metrics = self.compute_metrics(result_frame)
 
-        num_samples = len(dataset)
-        metrics = {f"{metric_key_prefix}_{k}": v for k, v in metrics.items()}
+            num_samples = len(dataset)
+            metrics = {
+                f"{metric_key_prefix}_{k}": v for k, v in metrics.items()
+            }
 
-        return EvalLoopOutput(
-            predictions=result_frame,
-            label_ids=None,
-            metrics=metrics,
-            num_samples=num_samples,
-        )
+            return EvalLoopOutput(
+                predictions=result_frame,
+                label_ids=None,
+                metrics=metrics,
+                num_samples=num_samples,
+            )
+        finally:
+            # Restore model to training mode if it was training before
+            # This is critical for gradient flow during training
+            if model_was_training and hasattr(model, "train"):
+                model.train()
 
     def evaluate(
         self,
