@@ -164,18 +164,12 @@ class Ranker(PreTrainedModel):
         self.model.save_pretrained(model_dir)
         self.tokenizer.save_pretrained(model_dir)
 
-    def load_state_dict(self, model_dir):
-        """Load model state dictionary from a directory.
-
-        Args:
-            model_dir (str): Directory containing the saved model.
-
-        Returns:
-            dict: Result of loading the state dictionary.
-        """
-        return self.model.load_state_dict(
-            self.architecture_class.from_pretrained(model_dir).state_dict()
-        )
+    def load_state_dict(self, state_dict, strict=False, **kwargs):
+        if isinstance(state_dict, str):
+            loaded = self.architecture_class.from_pretrained(state_dict).state_dict()
+            return self.model.load_state_dict(loaded, strict=strict)
+    
+        return self.model.load_state_dict(state_dict, strict=strict)
 
     def to_pyterrier(self, batch_size=None, device=None):
         """Convert the ranker to a PyTerrier transformer.
