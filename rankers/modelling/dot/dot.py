@@ -347,7 +347,7 @@ class Dot(Ranker):
             to_log = {
                 "loss": loss_value.item(),
             }
-        to_log["inbatch_loss"] = inbatch_loss
+        to_log["inbatch_loss"] = inbatch_loss.item() if isinstance(inbatch_loss, torch.Tensor) else inbatch_loss
         loss_value += inbatch_loss
         return (loss_value, to_log, pred)
 
