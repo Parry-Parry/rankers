@@ -102,6 +102,7 @@ class DotTransformer(pt.Transformer):
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 64,
         device: Union[str, torch.device, None] = None,
+        text_field: str = "text",
         verbose: bool = False,
     ) -> "DotTransformer":
         """
@@ -127,6 +128,7 @@ class DotTransformer(pt.Transformer):
             config=model_copy.config,
             batch_size=batch_size,
             device=device,
+            text_field=text_field,
             verbose=verbose,
         )
 
