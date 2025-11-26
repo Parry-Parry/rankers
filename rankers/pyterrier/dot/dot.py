@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Union
 
 import numpy as np
@@ -100,18 +101,33 @@ class DotTransformer(pt.Transformer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 64,
-        text_field: str = "text",
+        device: Union[str, torch.device, None] = None,
         verbose: bool = False,
-    ):
-        config = model.config
+    ) -> "DotTransformer":
+        """
+        Build a PyTerrier wrapper from an *evaluation copy* of the model.
+
+        A deepcopy is used so that any `.eval()` / `.to(device)` calls and other
+        mutations inside the transformer do not affect the training model that
+        HuggingFace Trainer/Accelerate is optimising.
+        """
+        # work on a detached copy so we never mutate the training instance
+        model_copy = deepcopy(model)
+
+        # choose device for the eval copy
+        if device is None:
+            try:
+                device = next(model_copy.parameters()).device
+            except StopIteration:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+
         return cls(
-            model.eval(),
-            tokenizer,
-            config,
-            batch_size,
-            text_field,
-            model.device,
-            verbose,
+            model=model_copy,
+            tokenizer=tokenizer,
+            config=model_copy.config,
+            batch_size=batch_size,
+            device=device,
+            verbose=verbose,
         )
 
     def encode_queries(self, texts, batch_size=None) -> np.ndarray:
