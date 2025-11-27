@@ -697,8 +697,22 @@ class EvaluationDataset(Dataset):
             self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
         # Enrich with text and query fields
-        self.data["text"] = self.data["docno"].map(self.docs)
-        self.data["query"] = self.data["qid"].map(self.queries)
+        try:
+            self.data["text"] = self.data["docno"].map(self.docs)
+        except KeyError as e:
+            raise KeyError(
+                f"Document ID not found in corpus: {e}. "
+                "Ensure all documents referenced in the data exist in the corpus."
+            ) from e
+
+        try:
+            self.data["query"] = self.data["qid"].map(self.queries)
+        except KeyError as e:
+            raise KeyError(
+                f"Query ID not found in corpus: {e}. "
+                "Ensure all queries referenced in the data exist in the corpus. "
+                "You may need to use a corpus that includes all queries from your evaluation set."
+            ) from e
 
     def _build_from_jsonl(self):
         """Build data and qrels DataFrames from JSONL training format."""
