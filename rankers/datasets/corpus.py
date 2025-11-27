@@ -93,16 +93,17 @@ class Corpus:
 
     def queries_iter(self):
         for queryid, text in self.queries.items():
-            yield {"query_id": queryid, "text": text}
+            yield SimpleNamespace(query_id=queryid, text=text)
 
     def docs_iter(self):
         for docid, text in self.documents.items():
-            yield {"doc_id": docid, "text": text}
+            yield SimpleNamespace(doc_id=docid, text=text)
 
     def qrels_iter(self):
         for queryid, docid, relevance in self.qrels.itertuples(index=False):
-            yield {"query_id": queryid, "doc_id": docid, "relevance": relevance}
-
+            yield SimpleNamespace(
+                query_id=queryid, doc_id=docid, relevance=relevance
+            )
     def __call__(self, maybe_idx):
         if isinstance(maybe_idx, int):
             return self.get(maybe_idx)
