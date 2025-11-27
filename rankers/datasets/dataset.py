@@ -83,18 +83,14 @@ class LazyTextLoader:
         elif mode == "queries":
             # For queries, try to build from iterator since most corpora don't have query store
             self._query_cache = {}
-            try:
-                for q in corpus.queries_iter():
-                    qid = q.get("query_id") or q.get("qid")
-                    if not qid:
-                        raise KeyError("Query record missing both 'query_id' and 'qid' fields")
-                    if "text" not in q:
-                        raise KeyError(f"Query {qid} missing required 'text' field")
-                    text = q["text"]
-                    self._query_cache[str(qid)] = text
-            except Exception:
-                # Fallback to docstore if available
-                self.store = getattr(corpus, "docs_store", lambda: None)()
+            for q in corpus.queries_iter():
+                qid = q.get("query_id")
+                if not qid:
+                    raise KeyError("Query record missing both 'query_id' and 'qid' fields")
+                if "text" not in q:
+                    raise KeyError(f"Query {qid} missing required 'text' field")
+                text = q["text"]
+                self._query_cache[str(qid)] = text
         else:
             self.store = corpus.docs_store()
 
