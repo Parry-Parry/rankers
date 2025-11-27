@@ -674,12 +674,12 @@ class EvaluationDataset(Dataset):
         # Load text loaders
         if not self.lazy_load_text:
             self.docs = (
-                pd.DataFrame([vars(item) for item in self.corpus.docs_iter()])
+                pd.DataFrame(self.corpus.docs_iter())
                 .set_index("doc_id")["text"]
                 .to_dict()
             )
             self.queries = (
-                pd.DataFrame([vars(item) for item in self.corpus.queries_iter()])
+                pd.DataFrame(self.corpus.queries_iter())
                 .set_index("query_id")["text"]
                 .to_dict()
             )
