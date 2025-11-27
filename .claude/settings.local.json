@@ -9,7 +9,8 @@
       "Bash(find:*)",
       "Bash(ruff check:*)",
       "Bash(ruff format:*)",
-      "Bash(timeout 180 python -m pytest:*)"
+      "Bash(timeout 180 python -m pytest:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

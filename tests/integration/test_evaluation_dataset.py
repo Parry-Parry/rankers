@@ -310,3 +310,178 @@ class TestEvaluationDatasetCommon:
             assert dataset is not None
         finally:
             cleanup_temp_files([jsonl_file])
+
+
+class TestIDCasting:
+    """Tests for ID casting with different ID types (int, float, string)."""
+
+    def test_integer_ids_are_cast_to_strings(self):
+        """Test that integer IDs are properly cast to strings during evaluation."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        # Create JSONL with integer IDs
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False
+        ) as f:
+            jsonl_file = f.name
+            # Write records with integer IDs
+            f.write(
+                json.dumps(
+                    {
+                        "query_id": 1,
+                        "doc_id_a": 101,
+                        "doc_id_b": 102,
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "query_id": 2,
+                        "doc_id_a": 103,
+                        "doc_id_b": 104,
+                    }
+                )
+                + "\n"
+            )
+
+        try:
+            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
+            # Create corpus with integer ID keys for docs
+            corpus_dict["documents"] = {
+                101: "doc 101",
+                102: "doc 102",
+                103: "doc 103",
+                104: "doc 104",
+                **{
+                    i: f"doc {i}"
+                    for i in range(200)
+                    if i not in [101, 102, 103, 104]
+                },
+            }
+            corpus_dict["queries"] = {
+                1: "query 1",
+                2: "query 2",
+                **{i: f"query {i}" for i in range(10) if i not in [1, 2]},
+            }
+
+            corpus = Corpus(
+                documents=corpus_dict["documents"],
+                queries=corpus_dict["queries"],
+            )
+
+            # Should handle integer IDs and convert to strings
+            dataset = EvaluationDataset.from_jsonl(jsonl_file, corpus)
+
+            assert dataset is not None
+            assert len(dataset.qrels) > 0
+            # All IDs in qrels should be strings
+            assert all(isinstance(qid, str) for qid in dataset.qrels["query_id"])
+            assert all(isinstance(did, str) for did in dataset.qrels["doc_id"])
+        finally:
+            Path(jsonl_file).unlink(missing_ok=True)
+
+    def test_float_ids_are_cast_to_strings(self):
+        """Test that float IDs are properly cast to strings."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        # Create JSONL with float IDs
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False
+        ) as f:
+            jsonl_file = f.name
+            f.write(
+                json.dumps(
+                    {
+                        "query_id": 1.5,
+                        "doc_id_a": 101.5,
+                        "doc_id_b": 102.5,
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "query_id": 2.5,
+                        "doc_id_a": 103.5,
+                        "doc_id_b": 104.5,
+                    }
+                )
+                + "\n"
+            )
+
+        try:
+            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
+            corpus = Corpus(
+                documents=corpus_dict["documents"],
+                queries=corpus_dict["queries"],
+            )
+
+            # Should handle float IDs and convert to strings
+            dataset = EvaluationDataset.from_jsonl(jsonl_file, corpus)
+
+            assert dataset is not None
+            assert len(dataset.qrels) > 0
+            # All IDs should be strings
+            assert all(isinstance(qid, str) for qid in dataset.qrels["query_id"])
+            assert all(isinstance(did, str) for did in dataset.qrels["doc_id"])
+        finally:
+            Path(jsonl_file).unlink(missing_ok=True)
+
+    def test_string_ids_remain_strings(self):
+        """Test that string IDs are properly handled (no double-conversion)."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        # Create JSONL with string IDs
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False
+        ) as f:
+            jsonl_file = f.name
+            f.write(
+                json.dumps(
+                    {
+                        "query_id": "q1",
+                        "doc_id_a": "d1",
+                        "doc_id_b": "d2",
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "query_id": "q2",
+                        "doc_id_a": "d3",
+                        "doc_id_b": "d4",
+                    }
+                )
+                + "\n"
+            )
+
+        try:
+            corpus_dict = create_synthetic_corpus(num_docs=30, num_queries=10)
+            corpus = Corpus(
+                documents=corpus_dict["documents"],
+                queries=corpus_dict["queries"],
+            )
+
+            dataset = EvaluationDataset.from_jsonl(jsonl_file, corpus)
+
+            assert dataset is not None
+            assert len(dataset.qrels) > 0
+            # All IDs should be strings
+            assert all(isinstance(qid, str) for qid in dataset.qrels["query_id"])
+            assert all(isinstance(did, str) for did in dataset.qrels["doc_id"])
+            # Should have expected string IDs
+            assert "q1" in dataset.qrels["query_id"].values
+            assert "d1" in dataset.qrels["doc_id"].values
+        finally:
+            Path(jsonl_file).unlink(missing_ok=True)

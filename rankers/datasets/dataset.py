@@ -107,6 +107,7 @@ class LazyTextLoader:
         Returns:
             str: Item text.
         """
+        item_id = str(item_id)
         # If using query cache, check it first
         if self.mode == "queries" and hasattr(self, "_query_cache"):
             return self._query_cache.get(item_id, "")
@@ -444,7 +445,7 @@ class TrainingDataset(Dataset):
         return self.teacher[query_id][doc_id]
 
     def _precomputed_get(self, data: Dict[str, Any]):
-        query_id = data[self.query_id_key]
+        query_id = str(data[self.query_id_key])
         query_text = data[self.query_field]
         positive_id = data[self.positive_id_key] if not self.no_positive else None
         positive_text = (
@@ -462,9 +463,15 @@ class TrainingDataset(Dataset):
         )
 
     def _standard_get(self, data: Dict[str, Any]):
-        query_id = data[self.query_id_key]
-        positive_id = data[self.positive_id_key] if not self.no_positive else None
+        query_id = str(data[self.query_id_key])
+        positive_id = str(data[self.positive_id_key]) if not self.no_positive else None
         negative_id = data[self.negative_id_key]
+        # Cast negative_id to string if it's a single value
+        if not isinstance(negative_id, list):
+            negative_id = str(negative_id)
+        else:
+            # Cast all IDs in the list to strings
+            negative_id = [str(nid) for nid in negative_id]
 
         query_text = self.queries[str(query_id)]
         positive_text = [self.docs[str(positive_id)]] if not self.no_positive else []
