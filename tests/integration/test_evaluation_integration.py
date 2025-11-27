@@ -146,7 +146,10 @@ class TestEvaluationMetrics:
                 "score": [1.0, 0.5, 0.2],
             })
 
-            metrics = trainer.compute_metrics(result_frame)
+            # Get qrels from eval_dataset
+            qrels_frame = eval_dataset.qrels
+
+            metrics = trainer.compute_metrics(result_frame, qrels_frame)
 
             assert metrics is not None
             assert isinstance(metrics, dict)
