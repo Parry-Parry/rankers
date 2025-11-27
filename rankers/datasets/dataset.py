@@ -87,7 +87,7 @@ class LazyTextLoader:
                 qid = q.query_id
                 if not qid:
                     raise KeyError("Query record missing both 'query_id' and 'qid' fields")
-                if "text" not in q:
+                if not hasattr(q, "text"):
                     raise KeyError(f"Query {qid} missing required 'text' field")
                 text = q.text
                 self._query_cache[str(qid)] = text
