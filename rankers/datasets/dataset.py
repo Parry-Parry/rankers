@@ -690,7 +690,7 @@ class EvaluationDataset(Dataset):
 
         # Load qrels if not already built from JSONL
         if not hasattr(self, "qrels"):
-            self.qrels = pd.DataFrame([vars(item) for item in self.corpus.qrels_iter()])
+            self.qrels = pd.DataFrame(self.corpus.qrels_iter())
 
         # Enrich with text and query fields
         try:
