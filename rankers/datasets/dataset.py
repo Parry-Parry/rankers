@@ -181,7 +181,7 @@ class TrainingDataset(Dataset):
         corpus (Union[Corpus, irds.Dataset]): Document corpus for text retrieval.
         teacher_file (str, optional): Path to teacher scores file. Defaults to None.
         group_size (int, optional): Number of documents per query (1 positive + negatives).
-            Defaults to 2.
+            Use -1 to include all available negatives from data. Defaults to -1.
         no_positive (bool, optional): Whether to exclude positive documents. Defaults to False.
         lazy_load_text (bool, optional): Load document text on-demand. Defaults to True.
         top_k_group (bool, optional): Select top-k documents from group. Defaults to False.
@@ -193,15 +193,24 @@ class TrainingDataset(Dataset):
         query_field (str, optional): Field name for query text. Defaults to "text".
 
     Examples:
-        Basic training dataset::
+        Basic training dataset (uses all negatives by default)::
 
             from rankers.datasets import TrainingDataset, Corpus
 
             corpus = Corpus.from_ir_datasets("msmarco-passage")
+            # Uses all available negatives per query
+            dataset = TrainingDataset(
+                training_dataset_file="train.jsonl",
+                corpus=corpus
+            )
+
+        With fixed group size::
+
+            # Use specific group size (1 positive + 7 negatives)
             dataset = TrainingDataset(
                 training_dataset_file="train.jsonl",
                 corpus=corpus,
-                group_size=8  # 1 positive + 7 negatives
+                group_size=8
             )
 
         With teacher distillation::
@@ -223,7 +232,7 @@ class TrainingDataset(Dataset):
         training_dataset_file: str,
         corpus: Union[Corpus, "irds.Dataset"],
         teacher_file: str = None,
-        group_size: int = 2,
+        group_size: int = -1,
         no_positive: bool = False,
         lazy_load_text: bool = True,
         top_k_group: bool = False,
@@ -244,7 +253,10 @@ class TrainingDataset(Dataset):
         self.group_size = group_size
         self.no_positive = no_positive
         self.lazy_load_text = lazy_load_text
-        self.n_neg = self.group_size - 1 if not self.no_positive else self.group_size
+        # If group_size is -1, use all negatives available in data
+        self.n_neg = (
+            self.group_size - 1 if not self.no_positive else self.group_size
+        ) if self.group_size > 0 else -1
         self.top_k_group = top_k_group
         self.precomputed = precomputed
         self.query_id_key = query_id_key
@@ -398,9 +410,11 @@ class TrainingDataset(Dataset):
         total_negs = (
             len(first_entry[self.negative_id_key]) if self.multi_negatives else 1
         )
-        assert self.n_neg <= total_negs, (
-            f"Only found {total_negs} negatives, cannot take {self.n_neg} negatives"
-        )
+        # If n_neg is -1, use all negatives; otherwise validate requested amount
+        if self.n_neg > 0:
+            assert self.n_neg <= total_negs, (
+                f"Only found {total_negs} negatives, cannot take {self.n_neg} negatives"
+            )
 
     def __len__(self):
         return len(self.line_offsets)
@@ -517,9 +531,9 @@ class TrainingDataset(Dataset):
             else:
                 negative_score = [self._teacher(str(query_id), str(negative_id))]
 
-            # Downsample negatives if more than needed
+            # Downsample negatives if more than needed (unless n_neg is -1 for all)
             n_negs_present = len(negative_id) if self.multi_negatives else 1
-            if n_negs_present > self.n_neg:
+            if self.n_neg > 0 and n_negs_present > self.n_neg:
                 if self.top_k_group:
                     texts, scores = zip(
                         *sorted(
@@ -549,7 +563,7 @@ class TrainingDataset(Dataset):
         else:
             # No labels path
             n_total_negs = len(negative_text) if isinstance(negative_text, list) else 1
-            if n_total_negs > self.n_neg:
+            if self.n_neg > 0 and n_total_negs > self.n_neg:
                 if isinstance(negative_text, list):
                     negative_text = random.sample(negative_text, self.n_neg)
                 else:

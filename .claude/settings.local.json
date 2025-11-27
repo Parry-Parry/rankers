@@ -10,7 +10,8 @@
       "Bash(ruff check:*)",
       "Bash(ruff format:*)",
       "Bash(timeout 180 python -m pytest:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: ensure all ID lookups cast to strings in TrainingDataset and EvaluationDataset\n\n- Fixed TrainingDataset._standard_get to cast negative_id to string for single and list values\n- Verified EvaluationDataset._build_qrels_from_jsonl and _build_data_from_jsonl properly cast all IDs\n- Added 3 new ID casting tests for EvaluationDataset (integer, float, string IDs)\n- Added 4 new ID casting tests for TrainingDataset (integer, float, string, mixed IDs)\n- All 7 new tests pass, ensuring consistent string conversion across all ID lookups\n\nThis ensures robustness when IDs are provided as integers, floats, or strings from various sources.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
