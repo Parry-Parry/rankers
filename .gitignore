@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 docs/.DS_Store
 .DS_Store
+.claude/settings.local.json
