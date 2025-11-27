@@ -86,9 +86,12 @@ class LazyTextLoader:
             try:
                 for q in corpus.queries_iter():
                     qid = q.get("query_id") or q.get("qid")
-                    text = q.get("text", "")
-                    if qid:
-                        self._query_cache[str(qid)] = text
+                    if not qid:
+                        raise KeyError("Query record missing both 'query_id' and 'qid' fields")
+                    if "text" not in q:
+                        raise KeyError(f"Query {qid} missing required 'text' field")
+                    text = q["text"]
+                    self._query_cache[str(qid)] = text
             except Exception:
                 # Fallback to docstore if available
                 self.store = getattr(corpus, "docs_store", lambda: None)()
@@ -106,19 +109,25 @@ class LazyTextLoader:
 
         Returns:
             str: Item text.
+
+        Raises:
+            KeyError: If item ID is not found in corpus.
         """
         item_id = str(item_id)
         # If using query cache, check it first
         if self.mode == "queries" and hasattr(self, "_query_cache"):
-            return self._query_cache.get(item_id, "")
+            if item_id not in self._query_cache:
+                raise KeyError(f"Query ID {item_id} not found in corpus")
+            return self._query_cache[item_id]
 
         # Otherwise use the store
-        try:
-            result = self.store.get(item_id)
-            # Handle both object with .text attribute and direct string return
-            return result.text if hasattr(result, "text") else result
-        except (AttributeError, KeyError):
-            return ""
+        if self.store is None:
+            raise KeyError(f"Item ID {item_id} not found: no corpus store available")
+        result = self.store.get(item_id)
+        if result is None:
+            raise KeyError(f"Item ID {item_id} not found in corpus")
+        # Handle both object with .text attribute and direct string return
+        return result.text if hasattr(result, "text") else result
 
     def __getitem__(self, item_id):
         """Load item text by ID with caching.

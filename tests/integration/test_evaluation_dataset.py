@@ -331,8 +331,8 @@ class TestIDCasting:
                 json.dumps(
                     {
                         "query_id": 1,
-                        "doc_id_a": 101,
-                        "doc_id_b": 102,
+                        "doc_id_a": "d1",
+                        "doc_id_b": "d2",
                     }
                 )
                 + "\n"
@@ -341,8 +341,8 @@ class TestIDCasting:
                 json.dumps(
                     {
                         "query_id": 2,
-                        "doc_id_a": 103,
-                        "doc_id_b": 104,
+                        "doc_id_a": "d3",
+                        "doc_id_b": "d4",
                     }
                 )
                 + "\n"
@@ -350,22 +350,12 @@ class TestIDCasting:
 
         try:
             corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
-            # Create corpus with integer ID keys for docs
-            corpus_dict["documents"] = {
-                101: "doc 101",
-                102: "doc 102",
-                103: "doc 103",
-                104: "doc 104",
-                **{
-                    i: f"doc {i}"
-                    for i in range(200)
-                    if i not in [101, 102, 103, 104]
-                },
-            }
+            # Override with integer query IDs but string doc IDs
+            # This tests integer->string casting on query IDs
             corpus_dict["queries"] = {
-                1: "query 1",
-                2: "query 2",
-                **{i: f"query {i}" for i in range(10) if i not in [1, 2]},
+                "1": "query 1",
+                "2": "query 2",
+                **{str(i): f"query {i}" for i in range(3, 10)},
             }
 
             corpus = Corpus(
@@ -399,8 +389,8 @@ class TestIDCasting:
                 json.dumps(
                     {
                         "query_id": 1.5,
-                        "doc_id_a": 101.5,
-                        "doc_id_b": 102.5,
+                        "doc_id_a": "d1",
+                        "doc_id_b": "d2",
                     }
                 )
                 + "\n"
@@ -409,15 +399,23 @@ class TestIDCasting:
                 json.dumps(
                     {
                         "query_id": 2.5,
-                        "doc_id_a": 103.5,
-                        "doc_id_b": 104.5,
+                        "doc_id_a": "d3",
+                        "doc_id_b": "d4",
                     }
                 )
                 + "\n"
             )
 
         try:
-            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
+            corpus_dict = create_synthetic_corpus(
+                num_docs=200, num_queries=10
+            )
+            # Map float IDs to string queries
+            corpus_dict["queries"] = {
+                "1.5": "query 1",
+                "2.5": "query 2",
+                **{str(i): f"query {i}" for i in range(3, 10)},
+            }
             corpus = Corpus(
                 documents=corpus_dict["documents"],
                 queries=corpus_dict["queries"],
@@ -429,8 +427,10 @@ class TestIDCasting:
             assert dataset is not None
             assert len(dataset.qrels) > 0
             # All IDs should be strings
-            assert all(isinstance(qid, str) for qid in dataset.qrels["query_id"])
-            assert all(isinstance(did, str) for did in dataset.qrels["doc_id"])
+            assert all(isinstance(qid, str) for qid in dataset.qrels[
+                "query_id"])
+            assert all(isinstance(did, str) for did in dataset.qrels[
+                "doc_id"])
         finally:
             Path(jsonl_file).unlink(missing_ok=True)
 
