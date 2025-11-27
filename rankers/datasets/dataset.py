@@ -674,12 +674,12 @@ class EvaluationDataset(Dataset):
         # Load text loaders
         if not self.lazy_load_text:
             self.docs = (
-                pd.DataFrame(self.corpus.docs_iter())
+                pd.DataFrame([vars(item) for item in self.corpus.docs_iter()])
                 .set_index("doc_id")["text"]
                 .to_dict()
             )
             self.queries = (
-                pd.DataFrame(self.corpus.queries_iter())
+                pd.DataFrame([vars(item) for item in self.corpus.queries_iter()])
                 .set_index("query_id")["text"]
                 .to_dict()
             )
@@ -690,7 +690,7 @@ class EvaluationDataset(Dataset):
 
         # Load qrels if not already built from JSONL
         if not hasattr(self, "qrels"):
-            self.qrels = pd.DataFrame(self.corpus.qrels_iter())
+            self.qrels = pd.DataFrame([vars(item) for item in self.corpus.qrels_iter()])
 
         # Enrich with text and query fields
         try:
