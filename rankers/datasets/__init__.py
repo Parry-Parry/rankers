@@ -34,7 +34,10 @@ from .._optional import is_flax_available, is_torch_available
 
 _import_structure = {
     "corpus": ["Corpus"],
-    "dataset": ["TrainingDataset", "EvaluationDataset"],
+    "lazy_text_loader": ["LazyTextLoader"],
+    "training_dataset": ["TrainingDataset"],
+    "evaluation_dataset": ["EvaluationDataset"],
+    "distillation_dataset": ["DistillationDataset"],
 }
 
 if is_torch_available():
@@ -62,7 +65,7 @@ if TYPE_CHECKING:
             DotDataCollator as DotDataCollator,
         )
         from .loader import (
-            ListWisePromptDataCollator as ListWisePromptDataCollator,
+            ListwisePromptDataCollator as ListwisePromptDataCollator,
         )
         from .loader import (
             PairDataCollator as PairDataCollator,
@@ -85,10 +88,16 @@ if TYPE_CHECKING:
         )
 
     from .corpus import Corpus as Corpus
-    from .dataset import (
+    from .distillation_dataset import (
+        DistillationDataset as DistillationDataset,
+    )
+    from .evaluation_dataset import (
         EvaluationDataset as EvaluationDataset,
     )
-    from .dataset import (
+    from .lazy_text_loader import (
+        LazyTextLoader as LazyTextLoader,
+    )
+    from .training_dataset import (
         TrainingDataset as TrainingDataset,
     )
 else:
