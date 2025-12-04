@@ -69,7 +69,7 @@ class TestRankerTrainerCheckpointing:
             trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
             # Verify the method exists (for HF trainer integration)
-            assert hasattr(trainer, '_maybe_log_save_evaluate')
+            assert hasattr(trainer, "_maybe_log_save_evaluate")
 
     def test_checkpoint_frequency_configuration(self):
         """Test checkpoint frequency configuration."""

@@ -37,11 +37,7 @@ class CatTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = (
-            device
-            if device is not None
-            else "cuda"
-            if torch.cuda.is_available()
-            else "cpu"
+            device if device is not None else "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.model = self.model.to(self.device)
         self.verbose = verbose
@@ -57,14 +53,8 @@ class CatTransformer(pt.Transformer):
         verbose: bool = False,
         **kwargs,
     ):
-        config = (
-            cls.cls_config.from_pretrained(model_name_or_path)
-            if config is None
-            else config
-        )
-        model = cls.cls_architecture.from_pretrained(
-            model_name_or_path, config=config, **kwargs
-        )
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
+        model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
@@ -78,9 +68,7 @@ class CatTransformer(pt.Transformer):
         verbose: bool = False,
     ):
         config = model.config
-        return cls(
-            model, tokenizer, config, batch_size, text_field, model.device, verbose
-        )
+        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         scores = []
@@ -95,10 +83,7 @@ class CatTransformer(pt.Transformer):
                 )
                 inps = {k: v.to(self.model.device) for k, v in inps.items()}
                 scores.append(
-                    F.log_softmax(self.model(**inps).logits, dim=-1)[:, 1]
-                    .cpu()
-                    .detach()
-                    .numpy()
+                    F.log_softmax(self.model(**inps).logits, dim=-1)[:, 1].cpu().detach().numpy()
                 )
         res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(["qid", "score"], ascending=[True, False])
@@ -126,11 +111,7 @@ class PairTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = (
-            device
-            if device is not None
-            else "cuda"
-            if torch.cuda.is_available()
-            else "cpu"
+            device if device is not None else "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.verbose = verbose
 
@@ -144,9 +125,7 @@ class PairTransformer(pt.Transformer):
         verbose: bool = False,
     ):
         config = model.config
-        return cls(
-            model, tokenizer, config, batch_size, text_field, model.device, verbose
-        )
+        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
 
     @classmethod
     def from_pretrained(
@@ -159,15 +138,9 @@ class PairTransformer(pt.Transformer):
         verbose: bool = False,
         **kwargs,
     ):
-        config = (
-            cls.cls_config.from_pretrained(model_name_or_path)
-            if config is None
-            else config
-        )
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
         model = (
-            cls.cls_architecture.from_pretrained(
-                model_name_or_path, config=config, **kwargs
-            )
+            cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
             .cuda()
             .eval()
         )

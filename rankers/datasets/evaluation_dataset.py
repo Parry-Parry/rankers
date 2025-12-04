@@ -89,15 +89,11 @@ class EvaluationDataset(Dataset):
 
         # If loading from JSONL, build data and qrels
         if jsonl_file is not None:
-            assert jsonl_file.endswith("jsonl"), (
-                "JSONL file should not be compressed"
-            )
+            assert jsonl_file.endswith("jsonl"), "JSONL file should not be compressed"
             self._build_from_jsonl()
         else:
             # Standard TREC/ir_datasets mode
-            assert data is not None, (
-                "Either 'data' or 'jsonl_file' must be provided"
-            )
+            assert data is not None, "Either 'data' or 'jsonl_file' must be provided"
             self.data = data
 
         self.__post_init__()
@@ -106,21 +102,13 @@ class EvaluationDataset(Dataset):
         # Validate required columns
         for column in ("qid", "docno"):
             if column not in self.data.columns:
-                raise ValueError(
-                    f"Column '{column}' not found in dataframe"
-                )
+                raise ValueError(f"Column '{column}' not found in dataframe")
 
         # Load text loaders
         if not self.lazy_load_text:
-            self.docs = (
-                pd.DataFrame(self.corpus.docs_iter())
-                .set_index("doc_id")["text"]
-                .to_dict()
-            )
+            self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
             self.queries = (
-                pd.DataFrame(self.corpus.queries_iter())
-                .set_index("query_id")["text"]
-                .to_dict()
+                pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
             )
         else:
             # Use lazy loading with caching
@@ -205,9 +193,9 @@ class EvaluationDataset(Dataset):
             df = pd.DataFrame(columns=["query_id", "doc_id", "relevance"])
 
         if self.dedupe_qrels and not df.empty:
-            df = df.drop_duplicates(
-                subset=["query_id", "doc_id"], keep="first"
-            ).reset_index(drop=True)
+            df = df.drop_duplicates(subset=["query_id", "doc_id"], keep="first").reset_index(
+                drop=True
+            )
         return df
 
     def _build_data_from_jsonl(self) -> pd.DataFrame:
@@ -380,9 +368,7 @@ class EvaluationDataset(Dataset):
             EvaluationDataset: Initialized dataset.
         """
         # Convert qrels to TREC format
-        data = qrels_df.rename(
-            columns={"query_id": "qid", "doc_id": "docno", "relevance": "score"}
-        )
+        data = qrels_df.rename(columns={"query_id": "qid", "doc_id": "docno", "relevance": "score"})
         return cls(data=data, corpus=corpus, lazy_load_text=lazy_load_text)
 
     def __len__(self):

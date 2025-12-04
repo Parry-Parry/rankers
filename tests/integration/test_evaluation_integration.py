@@ -80,9 +80,7 @@ class TestEvaluationMetrics:
             # Call evaluation_loop directly
             from datasets import Dataset
 
-            eval_result = trainer.evaluation_loop(
-                eval_dataset, description="Test Evaluation"
-            )
+            eval_result = trainer.evaluation_loop(eval_dataset, description="Test Evaluation")
 
             # Check that we got metrics
             assert eval_result.metrics is not None
@@ -115,9 +113,7 @@ class TestEvaluationMetrics:
             assert isinstance(metrics, dict)
             assert all(k.startswith("eval_") for k in metrics)
 
-    def test_compute_metrics_on_result_frame(
-        self, simple_model, training_eval_setup
-    ):
+    def test_compute_metrics_on_result_frame(self, simple_model, training_eval_setup):
         """Test compute_metrics method directly on result frame."""
         train_dataset, eval_dataset, _ = training_eval_setup
 
@@ -140,11 +136,13 @@ class TestEvaluationMetrics:
             # Create a dummy result frame
             import pandas as pd
 
-            result_frame = pd.DataFrame({
-                "qid": ["q0", "q1", "q2"],
-                "docno": ["d0", "d1", "d2"],
-                "score": [1.0, 0.5, 0.2],
-            })
+            result_frame = pd.DataFrame(
+                {
+                    "qid": ["q0", "q1", "q2"],
+                    "docno": ["d0", "d1", "d2"],
+                    "score": [1.0, 0.5, 0.2],
+                }
+            )
 
             # Get qrels from eval_dataset
             qrels_frame = eval_dataset.qrels
@@ -194,21 +192,15 @@ class TestGradientFlow:
 
             # After evaluation, model MUST be restored to training mode
             # This is the bug we're fixing
-            assert (
-                simple_model.training
-            ), "Model not restored to training mode after evaluation - gradients will not flow"
+            assert simple_model.training, (
+                "Model not restored to training mode after evaluation - gradients will not flow"
+            )
 
             # Verify parameters are still trainable (requires_grad=True)
-            has_trainable_params = any(
-                p.requires_grad for p in simple_model.parameters()
-            )
-            assert (
-                has_trainable_params
-            ), "Model parameters are not trainable after evaluation"
+            has_trainable_params = any(p.requires_grad for p in simple_model.parameters())
+            assert has_trainable_params, "Model parameters are not trainable after evaluation"
 
-    def test_model_in_train_mode_after_evaluation(
-        self, simple_model, training_eval_setup
-    ):
+    def test_model_in_train_mode_after_evaluation(self, simple_model, training_eval_setup):
         """Test that model returns to training mode after evaluation."""
         train_dataset, eval_dataset, _ = training_eval_setup
 
@@ -239,9 +231,9 @@ class TestGradientFlow:
             # (HuggingFace Trainer handles this automatically)
             # If it's in eval mode, the next training step will fail with gradients
             # This is the critical bug we're catching
-            assert (
-                simple_model.training or not was_training
-            ), "Model should return to training mode after evaluation"
+            assert simple_model.training or not was_training, (
+                "Model should return to training mode after evaluation"
+            )
 
 
 class TestModelCheckpointing:
@@ -323,9 +315,7 @@ class TestModelCheckpointing:
             assert os.path.exists(tmpdir), "Output directory must exist"
             assert args.output_dir == tmpdir
 
-    def test_metric_for_best_model_configuration(
-        self, simple_model, training_eval_setup
-    ):
+    def test_metric_for_best_model_configuration(self, simple_model, training_eval_setup):
         """Test that metric_for_best_model is properly configured."""
         train_dataset, eval_dataset, _ = training_eval_setup
 
@@ -379,9 +369,7 @@ class TestEvaluationDuringTraining:
             assert hasattr(trainer, "_maybe_log_save_evaluate")
             assert callable(trainer._maybe_log_save_evaluate)
 
-    def test_evaluate_respects_eval_strategy_no(
-        self, simple_model, training_eval_setup
-    ):
+    def test_evaluate_respects_eval_strategy_no(self, simple_model, training_eval_setup):
         """Test that eval_strategy='no' disables evaluation."""
         train_dataset, eval_dataset, _ = training_eval_setup
 
@@ -492,20 +480,14 @@ class TestIntegrationEndToEnd:
                 trainer.evaluate()
 
                 # After each evaluation, model should be in training mode
-                assert (
-                    simple_model.training
-                ), (
-                    f"Model not in training mode after evaluation {i+1} "
+                assert simple_model.training, (
+                    f"Model not in training mode after evaluation {i + 1} "
                     "- gradients will not flow in next training step"
                 )
 
                 # Verify parameters can be trained
-                has_trainable = any(
-                    p.requires_grad for p in simple_model.parameters()
-                )
-                assert (
-                    has_trainable
-                ), f"No trainable parameters after evaluation {i+1}"
+                has_trainable = any(p.requires_grad for p in simple_model.parameters())
+                assert has_trainable, f"No trainable parameters after evaluation {i + 1}"
 
     def test_predict_and_evaluate_both_work(self, simple_model, training_eval_setup):
         """Test that both predict and evaluate work in sequence."""
@@ -535,9 +517,7 @@ class TestIntegrationEndToEnd:
             assert pred_output is not None
             assert pred_output.metrics is not None
 
-    def test_load_best_model_at_end_configuration(
-        self, simple_model, training_eval_setup
-    ):
+    def test_load_best_model_at_end_configuration(self, simple_model, training_eval_setup):
         """Test that load_best_model_at_end configuration is properly supported.
 
         This verifies the second issue: that saved models can be configured
@@ -577,9 +557,7 @@ class TestIntegrationEndToEnd:
             assert args.eval_strategy == "no"
             assert args.load_best_model_at_end is False
 
-    def test_model_state_dict_can_be_saved(
-        self, simple_model, training_eval_setup
-    ):
+    def test_model_state_dict_can_be_saved(self, simple_model, training_eval_setup):
         """Test that model state can be saved via state_dict.
 
         This verifies that models can be checkpointed during training

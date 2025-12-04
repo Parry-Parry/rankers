@@ -10,16 +10,13 @@ from .._optional import is_torch_available
 
 @dataclass
 class RankerModelArguments:
-    model_name_or_path: str = field(
-        metadata={"help": "Huggingface model name or path to model"}
-    )
+    model_name_or_path: str = field(metadata={"help": "Huggingface model name or path to model"})
 
     def __str__(self):
         self_as_dict = asdict(self)
 
         self_as_dict = {
-            k: f"<{k.upper()}>" if k.endswith("_token") else v
-            for k, v in self_as_dict.items()
+            k: f"<{k.upper()}>" if k.endswith("_token") else v for k, v in self_as_dict.items()
         }
 
         attrs_as_str = [f"{k}={v},\n" for k, v in sorted(self_as_dict.items())]
@@ -33,11 +30,7 @@ class RankerModelArguments:
         the token values by removing their value.
         """
         # filter out fields that are defined as field(init=False)
-        d = {
-            field.name: getattr(self, field.name)
-            for field in fields(self)
-            if field.init
-        }
+        d = {field.name: getattr(self, field.name) for field in fields(self) if field.init}
 
         for k, v in d.items():
             if isinstance(v, Enum):
@@ -76,9 +69,7 @@ class RankerDotArguments(RankerModelArguments):
     )
     model_tied: Optional[bool] = field(
         default=False,
-        metadata={
-            "help": "Whether to tie the weights of the query and document encoder"
-        },
+        metadata={"help": "Whether to tie the weights of the query and document encoder"},
     )
     in_batch_loss: Optional[str] = field(
         default=None, metadata={"help": "Loss function to use for in-batch negatives"}
@@ -93,9 +84,9 @@ class RankerDotArguments(RankerModelArguments):
             "none",
             "late_interaction",
         ], "Pooling must be one of 'cls', 'mean', 'late_interaction' or 'none'"
-        assert (
-            self.in_batch_loss is None or self.in_batch_loss in LOSS_REGISTRY.available
-        ), f"In-batch loss must be one of {LOSS_REGISTRY.available}"
+        assert self.in_batch_loss is None or self.in_batch_loss in LOSS_REGISTRY.available, (
+            f"In-batch loss must be one of {LOSS_REGISTRY.available}"
+        )
 
 
 RankerCatArguments = RankerModelArguments

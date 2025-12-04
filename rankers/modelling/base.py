@@ -115,9 +115,7 @@ class Ranker(PreTrainedModel):
         return self.model.get_adapter_state_dict(adapter_name)
 
     @classmethod
-    def from_pretrained(
-        cls, model_name_or_path: str, config=None, **kwargs
-    ) -> "Ranker":
+    def from_pretrained(cls, model_name_or_path: str, config=None, **kwargs) -> "Ranker":
         """Load a pretrained ranker model.
 
         Loads a model from a HuggingFace model hub identifier or local directory.
@@ -138,11 +136,7 @@ class Ranker(PreTrainedModel):
 
                 model = Dot.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
         """
-        config = (
-            cls.config_class.from_pretrained(model_name_or_path)
-            if config is None
-            else config
-        )
+        config = cls.config_class.from_pretrained(model_name_or_path) if config is None else config
         model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config)
@@ -198,6 +192,8 @@ class Ranker(PreTrainedModel):
 
         # infer device from current parameters if not provided
         if device is None:
+            import torch
+
             try:
                 device = next(self.parameters()).device
             except StopIteration:

@@ -83,9 +83,7 @@ class ContrastiveLoss(BaseLoss):
         labels = (
             labels.argmax(dim=1)
             if labels is not None
-            else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(
-                -1, 1
-            )
+            else torch.zeros(pred.size(0), dtype=torch.long, device=pred.device).view(-1, 1)
         )
         return F.nll_loss(softmax_scores, labels, reduction=self.reduction)
 

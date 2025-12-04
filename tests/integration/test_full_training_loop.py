@@ -37,6 +37,7 @@ def get_data_collator():
 def real_model():
     """Provide a model for full training tests."""
     from tests.fixtures.models import TinyDotModel
+
     return TinyDotModel()
 
 
@@ -144,10 +145,13 @@ class TestFullTrainingLoop:
             # Verify model parameters changed during training
             params_changed = False
             for name, param in real_model.named_parameters():
-                if param.requires_grad and name in initial_params:
-                    if not torch.allclose(param, initial_params[name]):
-                        params_changed = True
-                        break
+                if (
+                    param.requires_grad
+                    and name in initial_params
+                    and not torch.allclose(param, initial_params[name])
+                ):
+                    params_changed = True
+                    break
 
             assert params_changed, "Model parameters did not change during training"
 

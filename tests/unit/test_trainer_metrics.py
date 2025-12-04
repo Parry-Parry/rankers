@@ -19,7 +19,7 @@ class TestRankerTrainerMetrics:
             trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
             # Test that compute_metrics method exists and is callable
-            assert hasattr(trainer, 'compute_metrics')
+            assert hasattr(trainer, "compute_metrics")
             assert callable(trainer.compute_metrics)
 
     def test_trainer_has_loss_function(self):

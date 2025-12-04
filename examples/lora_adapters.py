@@ -40,9 +40,7 @@ def train_with_lora_basic_example():
     - Training with LoRA adapters
     - Memory-efficient fine-tuning
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Load base model
@@ -101,9 +99,7 @@ def train_with_lora_custom_config_example():
     - Targeting specific attention modules
     - Fine-tuning attention layers only
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     model_config = DotConfig.from_pretrained(model_args.model_name_or_path)
@@ -150,9 +146,7 @@ def train_lora_with_evaluation_example():
     """
     from ir_measures import nDCG
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Configure evaluation
@@ -211,9 +205,7 @@ def load_and_merge_lora_example():
     """
     from peft import PeftModel
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Load base model
@@ -245,9 +237,7 @@ def train_lora_layer_config_example():
     - Fine-grained control over which layers get LoRA
     - Custom module targeting for rankers
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     model_config = DotConfig.from_pretrained(model_args.model_name_or_path)
@@ -297,9 +287,7 @@ def multi_task_lora_example():
     - Task-specific fine-tuning
     """
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Load base model
@@ -348,9 +336,7 @@ def train_lora_distributed_example():
     - Memory-efficient multi-GPU training
     - Scaling LoRA training across devices
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Configure distributed training
@@ -400,9 +386,7 @@ def compare_lora_vs_base_example():
     from ir_measures import nDCG
     from peft import PeftModel
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     training_args.eval_ir_metrics = [nDCG @ 10]

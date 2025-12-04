@@ -36,9 +36,7 @@ def evaluate_with_ir_metrics_example():
     """
     from ir_measures import AP, MRR, Bpref, nDCG
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Configure IR metrics for evaluation
@@ -97,9 +95,7 @@ def evaluate_from_jsonl_example():
     - Automatically generating qrels from positive examples
     - Custom relevance label mapping
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     model_config = DotConfig.from_pretrained(model_args.model_name_or_path)
@@ -141,9 +137,7 @@ def evaluate_from_qrels_example():
     - Creating evaluation dataset from existing qrels
     - Working with structured relevance judgments
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     model_config = DotConfig.from_pretrained(model_args.model_name_or_path)
@@ -191,9 +185,7 @@ def custom_evaluation_example():
     - Computing custom metrics
     """
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Load pretrained model
@@ -239,9 +231,7 @@ def evaluate_checkpoints_example():
     """
     from ir_measures import nDCG
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Configure for checkpoint evaluation
@@ -271,9 +261,7 @@ def evaluate_checkpoints_example():
 
     # Load and evaluate from best checkpoint
     if training_args.load_best_model_at_end:
-        best_model = Dot.from_pretrained(
-            training_args.output_dir, config=model_config
-        )
+        best_model = Dot.from_pretrained(training_args.output_dir, config=model_config)
         print(f"Best model loaded from: {training_args.output_dir}")
 
 
@@ -287,9 +275,7 @@ def batch_evaluation_example():
     - Efficient evaluation of large test sets
     - Memory-efficient processing
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     model_config = DotConfig.from_pretrained(model_args.model_name_or_path)
@@ -333,9 +319,7 @@ def zero_shot_evaluation_example():
     """
     from ir_measures import MRR, nDCG
 
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Configure metrics

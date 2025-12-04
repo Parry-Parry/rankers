@@ -18,9 +18,7 @@ def trainer_and_datasets(simple_model):
     """Create a trainer with training and test datasets."""
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create synthetic training data
-        train_file, _ = create_synthetic_jsonl(
-            num_queries=5, num_docs_per_query=5
-        )
+        train_file, _ = create_synthetic_jsonl(num_queries=5, num_docs_per_query=5)
 
         # Create corpus for training and evaluation
         corpus_dict = create_synthetic_corpus(num_docs=50, num_queries=10)
@@ -43,9 +41,7 @@ def trainer_and_datasets(simple_model):
             queries=corpus_dict["queries"],
             qrels=test_qrels,
         )
-        test_dataset = EvaluationDataset.from_qrels(
-            test_qrels, corpus=test_corpus
-        )
+        test_dataset = EvaluationDataset.from_qrels(test_qrels, corpus=test_corpus)
 
         # Create training args with minimal config
         training_args = RankerTrainingArguments(
@@ -91,9 +87,7 @@ def test_predict_with_custom_metric_prefix(trainer_and_datasets):
 
     # All metrics should have the custom prefix
     for key in output.metrics:
-        assert key.startswith("custom_"), (
-            f"Metric {key} doesn't start with 'custom_'"
-        )
+        assert key.startswith("custom_"), f"Metric {key} doesn't start with 'custom_'"
 
 
 def test_predict_default_metric_prefix(trainer_and_datasets):
@@ -104,9 +98,7 @@ def test_predict_default_metric_prefix(trainer_and_datasets):
 
     # All metrics should have the test prefix
     for key in output.metrics:
-        assert key.startswith("test_"), (
-            f"Metric {key} doesn't start with 'test_'"
-        )
+        assert key.startswith("test_"), f"Metric {key} doesn't start with 'test_'"
 
 
 def test_predict_computes_ir_metrics(trainer_and_datasets):
@@ -118,10 +110,7 @@ def test_predict_computes_ir_metrics(trainer_and_datasets):
     # Should have speed metrics and IR metrics
     assert len(output.metrics) > 0
     # Speed metrics are added
-    assert any(
-        "speed" in k or "time" in k.lower()
-        for k in output.metrics
-    )
+    assert any("speed" in k or "time" in k.lower() for k in output.metrics)
 
 
 def test_predict_with_ignore_keys(trainer_and_datasets):

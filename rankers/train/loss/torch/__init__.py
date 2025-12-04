@@ -46,7 +46,7 @@ class BaseLoss(nn.Module):
     name = "base"
 
     def __init__(self, reduction: str = "mean") -> None:
-        super(BaseLoss, self).__init__()
+        super().__init__()
         self.reduction = reduction
 
     def _reduce(self, a: torch.Tensor):
@@ -90,7 +90,7 @@ class RegularizationLoss(BaseLoss):
         q_weight (float, optional): Initial query regularization weight. Defaults to 0.08.
         d_weight (float, optional): Initial document regularization weight. Defaults to 0.1.
         t (int, optional): Initial timestep. Defaults to 0.
-        T (int, optional): Warmup steps. Defaults to 1000.
+        warmup_steps (int, optional): Warmup steps. Defaults to 1000.
         reduction (str, optional): Reduction method. Defaults to "mean".
 
     Attributes:
@@ -107,22 +107,22 @@ class RegularizationLoss(BaseLoss):
             reg_loss = FLOPSLoss(
                 q_weight=0.001,
                 d_weight=0.001,
-                T=5000  # Warmup over 5000 steps
+                warmup_steps=5000  # Warmup over 5000 steps
             )
 
     Note:
-        Weights increase quadratically: weight * (t/T)^2 until t >= T.
+        Weights increase quadratically: weight * (t/warmup_steps)^2 until t >= warmup_steps.
         Call step() after each training step to update weights.
     """
 
     def __init__(
-        self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
+        self, q_weight=0.08, d_weight=0.1, t=0, warmup_steps=1000, reduction: str = "mean"
     ) -> None:
         super().__init__(reduction)
         self.q_weight = q_weight
         self.d_weight = d_weight
         self.t = t
-        self.T = T
+        self.T = warmup_steps
 
     def step_q(self):
         """Update query weight for one training step."""
@@ -218,9 +218,9 @@ class FLOPSLoss(RegularizationLoss):
     """
 
     def __init__(
-        self, q_weight=0.08, d_weight=0.1, t=0, T=1000, reduction: str = "mean"
+        self, q_weight=0.08, d_weight=0.1, t=0, warmup_steps=1000, reduction: str = "mean"
     ) -> None:
-        super(FLOPSLoss, self).__init__(q_weight, d_weight, t, T, reduction)
+        super().__init__(q_weight, d_weight, t, warmup_steps, reduction)
 
     def reg(self, reps, weight=0):
         """Compute FLOPS regularization.
@@ -253,7 +253,7 @@ class L1Loss(BaseLoss):
     """
 
     def __init__(self, reduction: str = "mean") -> None:
-        super(L1Loss, self).__init__(reduction)
+        super().__init__(reduction)
 
     def reg(self, reps, weight=0):
         """Compute L1 regularization.
@@ -270,7 +270,7 @@ class L1Loss(BaseLoss):
 
 class CompoundLoss(BaseLoss):
     def __init__(self, losses: list, alphas: list = None):
-        super(CompoundLoss, self).__init__()
+        super().__init__()
         self.losses = losses
         self.alphas = alphas if alphas is not None else [1] * len(losses)
 

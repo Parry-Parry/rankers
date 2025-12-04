@@ -14,9 +14,7 @@ from rankers import (
 
 
 def main():
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     model_config = DotConfig.from_pretrained(

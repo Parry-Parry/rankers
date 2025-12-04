@@ -20,9 +20,7 @@ def get_loss(loss_fn: str):
 
     if isinstance(loss_fn, str):
         if loss_fn not in LOSS_REGISTRY.available:
-            raise ValueError(
-                f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.available}"
-            )
+            raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.available}")
         return LOSS_REGISTRY.get(loss_fn)
     else:
         return loss_fn
@@ -33,21 +31,13 @@ class RankerTrainingArguments(TrainingArguments):
     save_total_limit: Optional[int] = field(
         default=10, metadata={"help": "Limit the total amount of checkpoints."}
     )
-    group_size: Optional[int] = field(
-        default=2, metadata={"help": "Number of documents per query"}
-    )
+    group_size: Optional[int] = field(default=2, metadata={"help": "Number of documents per query"})
     eval_metrics: Optional[List[str]] = field(
         default_factory=lambda: [], metadata={"help": "Evaluation metrics"}
     )
-    wandb_project: Optional[str] = field(
-        default=None, metadata={"help": "Wandb project name"}
-    )
-    loss_fn: Optional[str] = field(
-        default="lce", metadata={"help": "Loss function to use"}
-    )
-    regularization: Optional[str] = field(
-        default=None, metadata={"help": "Regularization to use"}
-    )
+    wandb_project: Optional[str] = field(default=None, metadata={"help": "Wandb project name"})
+    loss_fn: Optional[str] = field(default="lce", metadata={"help": "Loss function to use"})
+    regularization: Optional[str] = field(default=None, metadata={"help": "Regularization to use"})
     q_regularization_weight: Optional[float] = field(
         default=0.08, metadata={"help": "Regularization weight for queries"}
     )

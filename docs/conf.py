@@ -22,15 +22,19 @@ os.environ["RANKERS_EAGER_IMPORTS"] = "1"
 # 2) If transformers' LazyModule gets used to wrap *your* modules, replace it with an eager shim
 try:
     import transformers.utils as _tf_utils
+
     class _EagerLazyModule:
         def __init__(self, name, module_file=None, import_structure=None, module_spec=None):
             # Import the real module immediately; keep a reference
             self.__name__ = name
             self.__dict__["_target"] = importlib.import_module(name)
+
         def __getattr__(self, item):
             return getattr(self.__dict__["_target"], item)
+
         def __dir__(self):
             return dir(self.__dict__["_target"])
+
     # Monkeypatch only if present
     if hasattr(_tf_utils, "LazyModule"):
         _tf_utils.LazyModule = _EagerLazyModule

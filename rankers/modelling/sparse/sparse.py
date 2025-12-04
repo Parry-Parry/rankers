@@ -202,14 +202,10 @@ class Sparse(Dot):
         super().__init__(model, tokenizer, config, model_d, pooler)
 
         self.query_processing = (
-            splade_max
-            if config.query_processing == "splade_max"
-            else lambda x, y: x.logits
+            splade_max if config.query_processing == "splade_max" else lambda x, _y: x.logits
         )
         self.doc_processing = (
-            splade_max
-            if config.doc_processing == "splade_max"
-            else lambda x, y: x.logits
+            splade_max if config.doc_processing == "splade_max" else lambda x, _y: x.logits
         )
 
         if is_pyterrier_available():
@@ -238,13 +234,9 @@ class Sparse(Dot):
         labels = labels.to(self.model_d.device) if labels is not None else None
 
         query_reps = self._encode_q(**queries) if queries is not None else None
-        docs_batch_reps = (
-            self._encode_d(**docs_batch) if docs_batch is not None else None
-        )
+        docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
 
-        pred, labels, inbatch_pred = self.prepare_outputs(
-            query_reps, docs_batch_reps, labels
-        )
+        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
         inbatch_loss = (
             self.inbatch_loss_fn(
                 inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)

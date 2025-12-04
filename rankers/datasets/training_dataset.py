@@ -109,8 +109,10 @@ class TrainingDataset(Dataset):
         self.lazy_load_text = lazy_load_text
         # If group_size is -1, use all negatives available in data
         self.n_neg = (
-            self.group_size - 1 if not self.no_positive else self.group_size
-        ) if self.group_size > 0 else -1
+            (self.group_size - 1 if not self.no_positive else self.group_size)
+            if self.group_size > 0
+            else -1
+        )
         self.top_k_group = top_k_group
         self.precomputed = precomputed
         self.query_id_key = query_id_key
@@ -137,11 +139,7 @@ class TrainingDataset(Dataset):
             return
         self._close()
         self._fh = open(self.training_dataset_file, "rb")
-        self._mm = (
-            mmap.mmap(self._fh.fileno(), 0, access=mmap.ACCESS_READ)
-            if use_mmap
-            else None
-        )
+        self._mm = mmap.mmap(self._fh.fileno(), 0, access=mmap.ACCESS_READ) if use_mmap else None
         self._opened_in_pid = pid
 
     def _close(self):
@@ -220,21 +218,15 @@ class TrainingDataset(Dataset):
             if not self.lazy_load_text:
                 # Load both docs and queries into memory
                 self.docs = (
-                    pd.DataFrame(self.corpus.docs_iter())
-                    .set_index("doc_id")["text"]
-                    .to_dict()
+                    pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
                 )
                 self.queries = (
-                    pd.DataFrame(self.corpus.queries_iter())
-                    .set_index("query_id")["text"]
-                    .to_dict()
+                    pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
                 )
             else:
                 # Use lazy loading with caching for both docs and queries
                 self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
-                self.queries = LazyTextLoader(
-                    self.corpus, cache_size=5000, mode="queries"
-                )
+                self.queries = LazyTextLoader(self.corpus, cache_size=5000, mode="queries")
 
         if self.teacher_file:
             self.teacher = load_json(self.teacher_file)
@@ -261,9 +253,7 @@ class TrainingDataset(Dataset):
         )
 
         self.multi_negatives = isinstance(first_entry[self.negative_id_key], list)
-        total_negs = (
-            len(first_entry[self.negative_id_key]) if self.multi_negatives else 1
-        )
+        total_negs = len(first_entry[self.negative_id_key]) if self.multi_negatives else 1
         # If n_neg is -1, use all negatives; otherwise validate requested amount
         if self.n_neg > 0:
             assert self.n_neg <= total_negs, (
@@ -316,9 +306,7 @@ class TrainingDataset(Dataset):
         query_id = str(data[self.query_id_key])
         query_text = data[self.query_field]
         positive_id = data[self.positive_id_key] if not self.no_positive else None
-        positive_text = (
-            data[f"{self.positive_id_key}_text"] if not self.no_positive else None
-        )
+        positive_text = data[f"{self.positive_id_key}_text"] if not self.no_positive else None
         negative_id = data[self.negative_id_key]
         negative_text = data[f"{self.negative_id_key}_text"]
         return (
@@ -351,9 +339,7 @@ class TrainingDataset(Dataset):
                 negative_text = self.docs[negative_id]  # LazyTextLoader handles list
         else:
             negative_text = (
-                [self.docs[str(negative_id)]]
-                if not self.lazy_load_text
-                else self.docs[negative_id]
+                [self.docs[str(negative_id)]] if not self.lazy_load_text else self.docs[negative_id]
             )
 
         return (
@@ -368,20 +354,16 @@ class TrainingDataset(Dataset):
     def __getitem__(self, idx: int):
         item = self._get_line_by_index(idx)
 
-        query_id, query_text, positive_id, positive_text, negative_id, negative_text = (
-            self._get(item)
+        query_id, query_text, positive_id, positive_text, negative_id, negative_text = self._get(
+            item
         )
 
         if self.labels:
             positive_score = (
-                [self._teacher(str(query_id), str(positive_id))]
-                if not self.no_positive
-                else []
+                [self._teacher(str(query_id), str(positive_id))] if not self.no_positive else []
             )
             if self.multi_negatives:
-                negative_score = [
-                    self._teacher(str(query_id), str(doc)) for doc in negative_id
-                ]
+                negative_score = [self._teacher(str(query_id), str(doc)) for doc in negative_id]
             else:
                 negative_score = [self._teacher(str(query_id), str(negative_id))]
 

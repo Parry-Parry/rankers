@@ -50,7 +50,7 @@ class TestRankerTrainerEvaluation:
 
             trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
-            assert hasattr(trainer, 'compute_metrics')
+            assert hasattr(trainer, "compute_metrics")
             assert callable(trainer.compute_metrics)
 
     def test_trainer_model_has_to_pyterrier(self):
@@ -61,7 +61,7 @@ class TestRankerTrainerEvaluation:
 
             trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
-            assert hasattr(model, 'to_pyterrier')
+            assert hasattr(model, "to_pyterrier")
             assert callable(model.to_pyterrier)
 
     def test_trainer_eval_dataset_handling(self):
@@ -73,4 +73,4 @@ class TestRankerTrainerEvaluation:
             trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
             # Trainer should be able to have eval_dataset set
-            assert hasattr(trainer, 'eval_dataset')
+            assert hasattr(trainer, "eval_dataset")

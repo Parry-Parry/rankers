@@ -41,11 +41,14 @@ def seed_everything(seed=42):
     import random
 
     import numpy as np
-    import torch
+
+    from ._optional import is_torch_available
 
     random.seed(seed)
     np.random.seed(seed)
     if is_torch_available():
+        import torch
+
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
@@ -149,9 +152,7 @@ def get_teacher_scores(
     if ir_dataset:
         dataset = irds.load(ir_dataset)
         docs = pd.DataFrame(dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
-        queries = (
-            pd.DataFrame(dataset.queries_iter()).set_index("query_id")["text"].to_dict()
-        )
+        queries = pd.DataFrame(dataset.queries_iter()).set_index("query_id")["text"].to_dict()
         corpus = pd.DataFrame(dataset.docpairs_iter())
         if negatives:
             corpus = corpus[["query_id", "doc_id_a"]]
@@ -207,7 +208,7 @@ def load_json(file: str):
     file (str): The path to the file to load.
 
     Returns:
-    dict or list: The loaded JSON content. Returns a list for JSONL files, 
+    dict or list: The loaded JSON content. Returns a list for JSONL files,
                   and a dict for JSON files.
 
     Raises:

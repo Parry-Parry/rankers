@@ -130,11 +130,7 @@ class DistillationDataset(Dataset):
             return
         self._close()
         self._fh = open(self.training_dataset_file, "rb")
-        self._mm = (
-            mmap.mmap(self._fh.fileno(), 0, access=mmap.ACCESS_READ)
-            if use_mmap
-            else None
-        )
+        self._mm = mmap.mmap(self._fh.fileno(), 0, access=mmap.ACCESS_READ) if use_mmap else None
         self._opened_in_pid = pid
 
     def _close(self):
@@ -217,21 +213,15 @@ class DistillationDataset(Dataset):
             if not self.lazy_load_text:
                 # Load both docs and queries into memory
                 self.docs = (
-                    pd.DataFrame(self.corpus.docs_iter())
-                    .set_index("doc_id")["text"]
-                    .to_dict()
+                    pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
                 )
                 self.queries = (
-                    pd.DataFrame(self.corpus.queries_iter())
-                    .set_index("query_id")["text"]
-                    .to_dict()
+                    pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
                 )
             else:
                 # Use lazy loading with caching for both docs and queries
                 self.docs = LazyTextLoader(self.corpus, cache_size=10000, mode="docs")
-                self.queries = LazyTextLoader(
-                    self.corpus, cache_size=5000, mode="queries"
-                )
+                self.queries = LazyTextLoader(self.corpus, cache_size=5000, mode="queries")
 
         # Validate first entry without triggering full mmap initialization
         with open(self.training_dataset_file, "rb") as f:

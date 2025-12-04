@@ -13,9 +13,7 @@ from rankers import (
 
 
 def main():
-    parser = HfArgumentParser(
-        (RankerModelArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerModelArguments, RankerDataArguments, RankerTrainingArguments))
 
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 

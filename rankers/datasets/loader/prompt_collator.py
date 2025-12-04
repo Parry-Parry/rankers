@@ -25,9 +25,7 @@ class PromptDataCollator:
                 continue
             batch_scores.extend(args[0])
 
-        sequences = [
-            self.prompt(query=q, doc=d) for q, d in zip(batch_queries, batch_docs)
-        ]
+        sequences = [self.prompt(query=q, doc=d) for q, d in zip(batch_queries, batch_docs)]
 
         tokenized_sequences = self.tokenizer(
             sequences,

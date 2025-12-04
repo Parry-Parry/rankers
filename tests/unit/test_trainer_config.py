@@ -17,9 +17,7 @@ class TestRankerTrainingArguments:
     def test_custom_group_size(self):
         """Test custom group size."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            args = RankerTrainingArguments(
-                output_dir=tmpdir, group_size=8
-            )
+            args = RankerTrainingArguments(output_dir=tmpdir, group_size=8)
             assert args.group_size == 8
 
     def test_eval_strategy_steps(self):

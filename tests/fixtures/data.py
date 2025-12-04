@@ -30,8 +30,7 @@ def create_synthetic_jsonl(
         query_id = f"{query_prefix}{qid}"
         positive_id = f"{doc_prefix}{qid * num_docs_per_query}"
         negative_ids = [
-            f"{doc_prefix}{qid * num_docs_per_query + i + 1}"
-            for i in range(num_docs_per_query - 1)
+            f"{doc_prefix}{qid * num_docs_per_query + i + 1}" for i in range(num_docs_per_query - 1)
         ]
 
         record = {
@@ -42,9 +41,7 @@ def create_synthetic_jsonl(
         records.append(record)
 
     # Write to temporary file
-    tmp_file = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".jsonl", delete=False
-    )
+    tmp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
     for record in records:
         tmp_file.write(json.dumps(record) + "\n")
     tmp_file.close()
@@ -91,9 +88,7 @@ def create_synthetic_trec(
     df = pd.DataFrame(rows)
 
     # Write to temporary file
-    tmp_file = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".trec", delete=False
-    )
+    tmp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".trec", delete=False)
     for _, row in df.iterrows():
         line = (
             f"{row['qid']} {row['Q0']} {row['docno']} {row['rank']} "
@@ -123,14 +118,11 @@ def create_synthetic_corpus(
         Dictionary with 'documents' and 'queries' keys.
     """
     documents = {
-        f"{doc_prefix}{i}": f"Document {i} text content about topic "
-        f"{i % num_queries}"
+        f"{doc_prefix}{i}": f"Document {i} text content about topic {i % num_queries}"
         for i in range(num_docs)
     }
 
-    queries = {
-        f"{query_prefix}{i}": f"Query {i} about topic {i}" for i in range(num_queries)
-    }
+    queries = {f"{query_prefix}{i}": f"Query {i} about topic {i}" for i in range(num_queries)}
 
     return {"documents": documents, "queries": queries}
 

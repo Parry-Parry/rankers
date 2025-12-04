@@ -49,11 +49,7 @@ class Seq2SeqTransformer(pt.Transformer):
         self.batch_size = batch_size
         self.text_field = text_field
         self.device = (
-            device
-            if device is not None
-            else "cuda"
-            if torch.cuda.is_available()
-            else "cpu"
+            device if device is not None else "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.pos_token = self.tokenizer.encode(pos_token)[0]
         self.neg_token = self.tokenizer.encode(neg_token)[0]
@@ -72,9 +68,7 @@ class Seq2SeqTransformer(pt.Transformer):
         **kwargs,
     ):
         model = (
-            cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
-            .to(device)
-            .eval()
+            cls.architecture_class.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
@@ -117,12 +111,8 @@ class Seq2SeqTransformer(pt.Transformer):
         with torch.no_grad():
             for chunk in chunked(it, self.batch_size):
                 queries, texts = map(list, zip(*chunk))
-                prompts = [
-                    self.prompt.format(query=q, text=t) for q, t in zip(queries, texts)
-                ]
-                inps = self.tokenizer(
-                    prompts, return_tensors="pt", padding=True, truncation=True
-                )
+                prompts = [self.prompt.format(query=q, text=t) for q, t in zip(queries, texts)]
+                inps = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
                 inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(
                     self.model(**inps)
@@ -183,9 +173,7 @@ class Seq2SeqDuoTransformer(Seq2SeqTransformer):
                     for q, t1, t2 in zip(queries, texts, texts)
                     if t1 != t2
                 ]
-                inps = self.tokenizer(
-                    prompts, return_tensors="pt", padding=True, truncation=True
-                )
+                inps = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
                 inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(
                     self.model(**inps)
@@ -217,9 +205,7 @@ class CausalLMTransformer(Seq2SeqTransformer):
         verbose: bool = False,
     ) -> None:
         raise NotImplementedError("Incomplete, do not use")
-        super().__init__(
-            model, tokenizer, config, batch_size, text_field, device, prompt, verbose
-        )
+        super().__init__(model, tokenizer, config, batch_size, text_field, device, prompt, verbose)
 
     @classmethod
     def from_pretrained(
@@ -233,15 +219,9 @@ class CausalLMTransformer(Seq2SeqTransformer):
         verbose: bool = False,
         **kwargs,
     ):
-        config = (
-            cls.config_class.from_pretrained(model_name_or_path)
-            if config is None
-            else config
-        )
+        config = cls.config_class.from_pretrained(model_name_or_path) if config is None else config
         model = (
-            cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
-            .to(device)
-            .eval()
+            cls.architecture_class.from_pretrained(model_name_or_path, **kwargs).to(device).eval()
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         return cls(
@@ -283,12 +263,8 @@ class CausalLMTransformer(Seq2SeqTransformer):
         with torch.no_grad():
             for chunk in chunked(it, self.batch_size):
                 queries, texts = map(list, zip(*chunk))
-                prompts = [
-                    self.prompt.format(query=q, text=t) for q, t in zip(queries, texts)
-                ]
-                inps = self.tokenizer(
-                    prompts, return_tensors="pt", padding=True, truncation=True
-                )
+                prompts = [self.prompt.format(query=q, text=t) for q, t in zip(queries, texts)]
+                inps = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
                 inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(self.model(**inps).logits[:, 0].cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))

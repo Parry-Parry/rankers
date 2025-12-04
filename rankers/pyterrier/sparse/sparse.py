@@ -143,10 +143,7 @@ class SparseTransformer(pt.Transformer):
             if topk is not None:
                 col = col[:topk]
                 w = w[:topk]
-            d = {
-                self.all_tokens[k]: v
-                for k, v in zip(col.cpu().tolist(), w.cpu().tolist())
-            }
+            d = {self.all_tokens[k]: v for k, v in zip(col.cpu().tolist(), w.cpu().tolist())}
             rtr.append(d)
         return rtr
 
@@ -174,9 +171,7 @@ class SparseTransformer(pt.Transformer):
 
 
 class SparseQueryEncoder(pt.Transformer):
-    def __init__(
-        self, transformer: SparseTransformer, matchop=False, sparse=True, topk=None
-    ):
+    def __init__(self, transformer: SparseTransformer, matchop=False, sparse=True, topk=None):
         self.transformer = transformer
         if not sparse:
             assert not matchop, "matchop only supported when sparse=True"
@@ -202,9 +197,7 @@ class SparseQueryEncoder(pt.Transformer):
 
 
 class SparseDocEncoder(pt.Transformer):
-    def __init__(
-        self, transformer: SparseTransformer, text_field, sparse=True, topk=None
-    ):
+    def __init__(self, transformer: SparseTransformer, text_field, sparse=True, topk=None):
         self.transformer = transformer
         self.text_field = text_field
         self.sparse = sparse
@@ -231,20 +224,12 @@ class SparseScorer(pt.Transformer):
 
     def score(self, query_texts, doc_texts):
         q, inv_q = np.unique(
-            (
-                query_texts.values
-                if isinstance(query_texts, pd.Series)
-                else np.array(query_texts)
-            ),
+            (query_texts.values if isinstance(query_texts, pd.Series) else np.array(query_texts)),
             return_inverse=True,
         )
         q = self.transformer.encode_queries(q, out_fmt="np")[inv_q]
         d, inv_d = np.unique(
-            (
-                doc_texts.values
-                if isinstance(doc_texts, pd.Series)
-                else np.array(doc_texts)
-            ),
+            (doc_texts.values if isinstance(doc_texts, pd.Series) else np.array(doc_texts)),
             return_inverse=True,
         )
         d = self.transformer.encode_docs(d, out_fmt="np")[inv_d]
@@ -255,9 +240,7 @@ class SparseScorer(pt.Transformer):
         return add_ranks(res)
 
 
-_alphnum_exp = re.compile(
-    "^[" + re.escape(string.ascii_letters + string.digits) + "]+$"
-)
+_alphnum_exp = re.compile("^[" + re.escape(string.ascii_letters + string.digits) + "]+$")
 
 
 def _matchop(d):

@@ -18,9 +18,7 @@ class TestRankerTrainerInit:
             args = RankerTrainingArguments(output_dir=tmpdir)
             model = TinyDotModel()
 
-            trainer = RankerTrainer(
-                model=model, args=args, loss_fn="margin_mse"
-            )
+            trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
             assert trainer.loss is not None
             assert trainer.args.output_dir == tmpdir
@@ -34,9 +32,7 @@ class TestRankerTrainerInit:
             def custom_loss(logits, labels):
                 return (logits - labels).pow(2).mean()
 
-            trainer = RankerTrainer(
-                model=model, args=args, loss_fn=custom_loss
-            )
+            trainer = RankerTrainer(model=model, args=args, loss_fn=custom_loss)
 
             assert trainer.loss == custom_loss
 
@@ -47,9 +43,7 @@ class TestRankerTrainerInit:
             model = TinyDotModel()
 
             with pytest.raises(ValueError, match="Unknown loss"):
-                RankerTrainer(
-                    model=model, args=args, loss_fn="nonexistent_loss"
-                )
+                RankerTrainer(model=model, args=args, loss_fn="nonexistent_loss")
 
     def test_init_without_regularization(self):
         """Test initialization without regularization."""
@@ -60,9 +54,7 @@ class TestRankerTrainerInit:
             )
             model = TinyDotModel()
 
-            trainer = RankerTrainer(
-                model=model, args=args, loss_fn="margin_mse"
-            )
+            trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
 
             assert trainer.regularize_loss is False
             assert trainer.loss is not None
@@ -79,9 +71,7 @@ class TestRankerTrainerInit:
     def test_init_sets_group_size_in_config(self):
         """Test that group_size is properly set in model config."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            args = RankerTrainingArguments(
-                output_dir=tmpdir, group_size=8
-            )
+            args = RankerTrainingArguments(output_dir=tmpdir, group_size=8)
             model = TinyDotModel()
 
             trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")

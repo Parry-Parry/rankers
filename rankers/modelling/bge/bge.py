@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from transformers import PretrainedConfig, PreTrainedModel, PreTrainedTokenizer
 
 from ..._util import not_tested
@@ -106,9 +108,7 @@ class BGE(Dot):
         if encoder_d:
             self.encoder_d = encoder_d
         else:
-            self.encoder_d = (
-                self.encoder if config.encoder_tied else deepcopy(self.encoder)
-            )
+            self.encoder_d = self.encoder if config.encoder_tied else deepcopy(self.encoder)
         self.pooling = {
             "mean": self._mean,
             "cls": self._cls,
@@ -118,11 +118,13 @@ class BGE(Dot):
         if config.use_pooler:
             self.pooler = Pooler(config) if pooler is None else pooler
         else:
-            self.pooler = lambda x, y=True: x
+            self.pooler = lambda x, _y=True: x
 
         if config.inbatch_loss is not None:
-            if config.inbatch_loss not in loss.__all__:
+            from ...train import loss as loss_module
+
+            if config.inbatch_loss not in loss_module.__all__:
                 raise ValueError(f"Unknown loss: {config.inbatch_loss}")
-            self.inbatch_loss_fn = getattr(loss, config.inbatch_loss)()
+            self.inbatch_loss_fn = getattr(loss_module, config.inbatch_loss)()
         else:
             self.inbatch_loss_fn = None

@@ -105,16 +105,14 @@ class RankerTrainer(Trainer):
 
     def __init__(self, loss_fn=None, **kwargs) -> None:
         # Only set compute_metrics if not already provided
-        if 'compute_metrics' not in kwargs:
-            kwargs['compute_metrics'] = self.compute_metrics
+        if "compute_metrics" not in kwargs:
+            kwargs["compute_metrics"] = self.compute_metrics
         super().__init__(**kwargs)
         if isinstance(loss_fn, str):
             from .loss import LOSS_REGISTRY
 
             if loss_fn not in LOSS_REGISTRY.available:
-                raise ValueError(
-                    f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.available}"
-                )
+                raise ValueError(f"Unknown loss: {loss_fn}, choices are {LOSS_REGISTRY.available}")
             self.loss = LOSS_REGISTRY.get(loss_fn)
         else:
             self.loss = loss_fn
@@ -135,9 +133,7 @@ class RankerTrainer(Trainer):
                 from .loss import LOSS_REGISTRY
 
                 if self.args.regularization not in LOSS_REGISTRY.available:
-                    raise ValueError(
-                        f"Unknown regularization: {self.args.regularization}"
-                    )
+                    raise ValueError(f"Unknown regularization: {self.args.regularization}")
                 reg_func = LOSS_REGISTRY.get(self.args.regularization)
                 reg_loss = reg_func(
                     self.args.q_regularization_weight,
@@ -149,7 +145,7 @@ class RankerTrainer(Trainer):
             self.regularize_loss = True
 
         # Only set tokenizer if data_collator has one
-        if hasattr(self.data_collator, 'tokenizer'):
+        if hasattr(self.data_collator, "tokenizer"):
             self.tokenizer = self.data_collator.tokenizer
         self.model.config.group_size = self.args.group_size
 
@@ -173,9 +169,7 @@ class RankerTrainer(Trainer):
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
         loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
         to_log = (
-            outputs["to_log"]
-            if isinstance(outputs, dict) and "to_log" in outputs
-            else outputs[1]
+            outputs["to_log"] if isinstance(outputs, dict) and "to_log" in outputs else outputs[1]
         )
         if len(to_log) > 0:
             self.log(to_log)
@@ -195,15 +189,11 @@ class RankerTrainer(Trainer):
         """
         from ir_measures import evaluator, nDCG
 
-        result_frame = result_frame.rename(
-            columns={"qid": "query_id", "docno": "doc_id"}
-        )
+        result_frame = result_frame.rename(columns={"qid": "query_id", "docno": "doc_id"})
 
         # Use qrels from validation dataset - ensures consistency with result_frame
 
-        metrics = (
-            self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG @ 10]
-        )
+        metrics = self.args.eval_ir_metrics if self.args.eval_ir_metrics else [nDCG @ 10]
         _evaluator = evaluator(metrics, qrels_frame)
         output = _evaluator.calc_aggregate(result_frame)
         output = {str(k): v for k, v in output.items()}
@@ -268,9 +258,7 @@ class RankerTrainer(Trainer):
             metrics = self.compute_metrics(result_frame, dataset.qrels)
 
             num_samples = len(dataset)
-            metrics = {
-                f"{metric_key_prefix}_{k}": v for k, v in metrics.items()
-            }
+            metrics = {f"{metric_key_prefix}_{k}": v for k, v in metrics.items()}
 
             return EvalLoopOutput(
                 predictions=result_frame,
@@ -301,9 +289,7 @@ class RankerTrainer(Trainer):
             Dictionary of evaluation metrics.
         """
         if not is_ir_datasets_available():
-            raise ImportError(
-                "Please install ir_datasets to use the evaluation features."
-            )
+            raise ImportError("Please install ir_datasets to use the evaluation features.")
 
         # handle multiple eval datasets
         override = eval_dataset is not None
@@ -362,9 +348,7 @@ class RankerTrainer(Trainer):
             PredictionOutput with predictions, label_ids, and metrics.
         """
         if not is_ir_datasets_available():
-            raise ImportError(
-                "Please install ir_datasets to use the prediction features."
-            )
+            raise ImportError("Please install ir_datasets to use the prediction features.")
 
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()

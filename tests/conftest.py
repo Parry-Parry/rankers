@@ -64,16 +64,20 @@ def mock_eval_dataset():
     import pandas as pd
 
     dataset = Mock()
-    dataset.data = pd.DataFrame({
-        "qid": ["q0", "q0", "q1", "q1"],
-        "docno": ["d0", "d1", "d2", "d3"],
-        "score": [10.0, 5.0, 8.0, 3.0],
-    })
-    dataset.qrels = pd.DataFrame({
-        "query_id": ["q0", "q1"],
-        "doc_id": ["d0", "d2"],
-        "relevance": [2, 2],
-    })
+    dataset.data = pd.DataFrame(
+        {
+            "qid": ["q0", "q0", "q1", "q1"],
+            "docno": ["d0", "d1", "d2", "d3"],
+            "score": [10.0, 5.0, 8.0, 3.0],
+        }
+    )
+    dataset.qrels = pd.DataFrame(
+        {
+            "query_id": ["q0", "q1"],
+            "doc_id": ["d0", "d2"],
+            "relevance": [2, 2],
+        }
+    )
     return dataset
 
 
@@ -82,9 +86,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: Unit tests")
     config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "slow: Slow running tests")
-    config.addinivalue_line(
-        "markers", "requires_ir_datasets: Requires ir_datasets package"
-    )
+    config.addinivalue_line("markers", "requires_ir_datasets: Requires ir_datasets package")
 
 
 def pytest_collection_modifyitems(config, items):

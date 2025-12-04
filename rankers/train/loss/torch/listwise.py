@@ -124,9 +124,7 @@ class Poly1SoftmaxLoss(BaseLoss):
 
     def forward(self, pred: Tensor, labels: Tensor, **kwargs) -> Tensor:
         labels_for_softmax = torch.divide(labels, labels.sum(dim=1))
-        expansion = (
-            labels_for_softmax * F.softmax(pred / self.temperature, dim=1)
-        ).sum(dim=-1)
+        expansion = (labels_for_softmax * F.softmax(pred / self.temperature, dim=1)).sum(dim=-1)
         ce = self.ce(pred / self.temperature, labels_for_softmax)
         return self._reduce(ce + (1 - expansion) * self.epsilon)
 
@@ -175,9 +173,7 @@ def get_ndcg(
         optimal_labels = labels
     dcg = get_dcg(ranks, labels, k, scale_gains)
     sorted_labels, _ = labels.sort(descending=True)
-    ideal_ranks = torch.arange(
-        1, labels.size(-1) + 1, device=labels.device, dtype=labels.dtype
-    )
+    ideal_ranks = torch.arange(1, labels.size(-1) + 1, device=labels.device, dtype=labels.dtype)
     idcg = get_dcg(ideal_ranks, sorted_labels, k=k, scale_gains=scale_gains)
     ndcg = dcg / (idcg.clamp(min=1e-12))
     return ndcg
@@ -193,9 +189,7 @@ def process_labels(pred: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
 class ApproxNDCGLoss(BaseLoss):
     name = "ApproxNDCG"
 
-    def __init__(
-        self, reduction: str = "mean", temperature=1.0, scale_gains: bool = True
-    ) -> None:
+    def __init__(self, reduction: str = "mean", temperature=1.0, scale_gains: bool = True) -> None:
         super().__init__(reduction)
         self.temperature = temperature
         self.scale_gains = scale_gains
@@ -208,9 +202,7 @@ class ApproxNDCGLoss(BaseLoss):
         return self._reduce(loss)
 
 
-def get_mrr(
-    ranks: torch.Tensor, labels: torch.Tensor, k: Optional[int] = None
-) -> torch.Tensor:
+def get_mrr(ranks: torch.Tensor, labels: torch.Tensor, k: Optional[int] = None) -> torch.Tensor:
     labels = labels.clamp(None, 1)
     reciprocal_ranks = 1 / ranks
     mrr = reciprocal_ranks * labels

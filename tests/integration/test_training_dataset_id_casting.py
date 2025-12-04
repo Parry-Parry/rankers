@@ -14,9 +14,7 @@ class TestTrainingDatasetIDCasting:
     def test_integer_ids_are_cast_to_strings(self):
         """Test that integer IDs are properly cast to strings during training."""
         # Create JSONL with integer query IDs
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             f.write(
                 json.dumps(
@@ -40,9 +38,7 @@ class TestTrainingDatasetIDCasting:
             )
 
         try:
-            corpus_dict = create_synthetic_corpus(
-                num_docs=200, num_queries=10
-            )
+            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
             # Map integer query IDs to string keys in corpus
             corpus_dict["queries"] = {
                 "1": "query 1",
@@ -56,9 +52,7 @@ class TestTrainingDatasetIDCasting:
             )
 
             # Should handle integer IDs and convert to strings
-            dataset = TrainingDataset(
-                jsonl_file, corpus=corpus, group_size=2
-            )
+            dataset = TrainingDataset(jsonl_file, corpus=corpus, group_size=2)
 
             assert dataset is not None
             assert len(dataset) > 0
@@ -87,9 +81,7 @@ class TestTrainingDatasetIDCasting:
     def test_float_ids_are_cast_to_strings(self):
         """Test that float IDs are properly cast to strings in training."""
         # Create JSONL with float query IDs
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             f.write(
                 json.dumps(
@@ -113,9 +105,7 @@ class TestTrainingDatasetIDCasting:
             )
 
         try:
-            corpus_dict = create_synthetic_corpus(
-                num_docs=200, num_queries=10
-            )
+            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
             # Map float query IDs to string keys in corpus
             corpus_dict["queries"] = {
                 "1.5": "query 1",
@@ -129,9 +119,7 @@ class TestTrainingDatasetIDCasting:
             )
 
             # Should handle float IDs and convert to strings
-            dataset = TrainingDataset(
-                jsonl_file, corpus=corpus, group_size=2
-            )
+            dataset = TrainingDataset(jsonl_file, corpus=corpus, group_size=2)
 
             assert dataset is not None
             assert len(dataset) > 0
@@ -160,9 +148,7 @@ class TestTrainingDatasetIDCasting:
     def test_string_ids_remain_strings(self):
         """Test that string IDs are properly handled in training."""
         # Create JSONL with string IDs
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             f.write(
                 json.dumps(
@@ -186,17 +172,13 @@ class TestTrainingDatasetIDCasting:
             )
 
         try:
-            corpus_dict = create_synthetic_corpus(
-                num_docs=30, num_queries=10
-            )
+            corpus_dict = create_synthetic_corpus(num_docs=30, num_queries=10)
             corpus = Corpus(
                 documents=corpus_dict["documents"],
                 queries=corpus_dict["queries"],
             )
 
-            dataset = TrainingDataset(
-                jsonl_file, corpus=corpus, group_size=2
-            )
+            dataset = TrainingDataset(jsonl_file, corpus=corpus, group_size=2)
 
             assert dataset is not None
             assert len(dataset) > 0
@@ -229,9 +211,7 @@ class TestTrainingDatasetIDCasting:
     def test_mixed_numeric_string_ids(self):
         """Test that mixed numeric and string IDs are all cast to strings."""
         # Create JSONL with mixed ID types
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             f.write(
                 json.dumps(
@@ -255,9 +235,7 @@ class TestTrainingDatasetIDCasting:
             )
 
         try:
-            corpus_dict = create_synthetic_corpus(
-                num_docs=200, num_queries=10
-            )
+            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
             # Map integer query ID 1 to string key
             corpus_dict["queries"] = {
                 "1": "query 1",
@@ -275,9 +253,7 @@ class TestTrainingDatasetIDCasting:
             )
 
             # Should handle mixed ID types and convert all to strings
-            dataset = TrainingDataset(
-                jsonl_file, corpus=corpus, group_size=2
-            )
+            dataset = TrainingDataset(jsonl_file, corpus=corpus, group_size=2)
 
             assert dataset is not None
             assert len(dataset) > 0

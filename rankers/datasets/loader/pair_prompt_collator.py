@@ -48,7 +48,5 @@ class PairPromptDataCollator:
 
         return {
             "sequences": dict(tokenized_sequences),
-            "labels": (
-                torch.tensor(batch_scores).squeeze() if len(batch_scores) > 0 else None
-            ),
+            "labels": (torch.tensor(batch_scores).squeeze() if len(batch_scores) > 0 else None),
         }

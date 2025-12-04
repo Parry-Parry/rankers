@@ -238,10 +238,11 @@ class Dot(Ranker):
         if config.use_pooler:
             self.pooler = Pooler(config) if pooler is None else pooler
         else:
-            self.pooler = lambda x, y=True: x
+            self.pooler = lambda x, _y=True: x
 
         if config.inbatch_loss is not None:
             from rankers.train.loss import LOSS_REGISTRY
+
             self.inbatch_loss_fn = LOSS_REGISTRY.get(config.inbatch_loss)
         else:
             self.inbatch_loss_fn = None
@@ -325,13 +326,9 @@ class Dot(Ranker):
         labels = labels.to(self.model_d.device) if labels is not None else None
 
         query_reps = self._encode_q(**queries) if queries is not None else None
-        docs_batch_reps = (
-            self._encode_d(**docs_batch) if docs_batch is not None else None
-        )
+        docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
 
-        pred, labels, inbatch_pred = self.prepare_outputs(
-            query_reps, docs_batch_reps, labels
-        )
+        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
         inbatch_loss = (
             self.inbatch_loss_fn(
                 inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)
@@ -347,7 +344,9 @@ class Dot(Ranker):
             to_log = {
                 "loss": loss_value.item(),
             }
-        to_log["inbatch_loss"] = inbatch_loss.item() if isinstance(inbatch_loss, torch.Tensor) else inbatch_loss
+        to_log["inbatch_loss"] = (
+            inbatch_loss.item() if isinstance(inbatch_loss, torch.Tensor) else inbatch_loss
+        )
         loss_value += inbatch_loss
         return (loss_value, to_log, pred)
 
@@ -376,20 +375,14 @@ class Dot(Ranker):
     def load_state_dict(self, model_dir):
         """Load state dict from a directory"""
         self.config = DotConfig.from_pretrained(model_dir)
-        self.model.load_state_dict(
-            self.architecture_class.from_pretrained(model_dir).state_dict()
-        )
+        self.model.load_state_dict(self.architecture_class.from_pretrained(model_dir).state_dict())
         if not self.config.model_tied:
             self.model_d.load_state_dict(
-                self.architecture_class.from_pretrained(
-                    model_dir + "/model_d"
-                ).state_dict()
+                self.architecture_class.from_pretrained(model_dir + "/model_d").state_dict()
             )
         if self.config.use_pooler:
             self.pooler.load_state_dict(
-                self.architecture_class.from_pretrained(
-                    model_dir + "/pooler"
-                ).state_dict()
+                self.architecture_class.from_pretrained(model_dir + "/pooler").state_dict()
             )
 
     @classmethod
@@ -424,9 +417,7 @@ class Dot(Ranker):
         """
         if os.path.isdir(model_name_or_path):
             config = (
-                cls.config_class.from_pretrained(model_name_or_path)
-                if config is None
-                else config
+                cls.config_class.from_pretrained(model_name_or_path) if config is None else config
             )
             model = cls.architecture_class.from_pretrained(model_name_or_path, **kwargs)
             tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -444,9 +435,7 @@ class Dot(Ranker):
             )
 
             return cls(model, tokenizer, config, model_d, pooler)
-        config = (
-            cls.config_class(model_name_or_path, **kwargs) if config is None else config
-        )
+        config = cls.config_class(model_name_or_path, **kwargs) if config is None else config
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         model = cls.architecture_class.from_pretrained(model_name_or_path)
         return cls(model, tokenizer, config)

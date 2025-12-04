@@ -37,10 +37,7 @@ class ListwisePromptDataCollator:
                 for q, dx, score in zip(batch_queries, batch_docs, batch_scores)
             ]
         else:
-            sequences = [
-                self.prompt(query=q, docs=dx)
-                for q, dx in zip(batch_queries, batch_docs)
-            ]
+            sequences = [self.prompt(query=q, docs=dx) for q, dx in zip(batch_queries, batch_docs)]
 
         tokenized_sequences = self.tokenizer(
             sequences,

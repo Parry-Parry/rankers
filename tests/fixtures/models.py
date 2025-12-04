@@ -105,8 +105,7 @@ class TinyDotModel(nn.Module):
 
         # Create logits by using model projections (ensures gradients flow)
         # Use dummy embeddings to test gradient flow
-        dummy_embedding = torch.randn(batch_size, 64, device=device,
-                                      requires_grad=True)
+        dummy_embedding = torch.randn(batch_size, 64, device=device, requires_grad=True)
         # Apply projection layers to ensure parameters are used
         proj_output = self.query_proj(dummy_embedding)
         logits = proj_output[:, :2]  # Shape (batch_size, 2)
@@ -167,9 +166,7 @@ class PyTerrierTransformer:
         if "score" not in result_df.columns:
             # Generate deterministic scores based on docno for reproducibility
             result_df["score"] = (
-                result_df["docno"]
-                .str.extract(r"(\d+)", expand=False)
-                .astype(float)
+                result_df["docno"].str.extract(r"(\d+)", expand=False).astype(float)
             )
 
         return result_df[["qid", "docno", "score"]]

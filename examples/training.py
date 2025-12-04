@@ -35,9 +35,7 @@ def train_dot_basic_example():
     - Training and saving the model
     """
     # Parse arguments from command line
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Create model config with custom settings
@@ -88,9 +86,7 @@ def train_with_custom_loss_example():
     - Training with margin MSE loss
     - Accessing loss registry
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Override loss function
@@ -131,9 +127,7 @@ def train_cat_example():
     - Using Cat-specific data collator
     - Training with default loss function
     """
-    parser = HfArgumentParser(
-        (RankerModelArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerModelArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Load Cat model
@@ -170,9 +164,7 @@ def train_with_optimization_example():
     - Mixed precision training for memory efficiency
     - Custom learning rate and warmup settings
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Set optimization parameters
@@ -211,9 +203,7 @@ def train_with_regularization_example():
     - Adding regularization loss (e.g., FLOPs regularization)
     - Fine-tuning pre-trained models
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Set group size and regularization
@@ -256,9 +246,7 @@ def train_with_checkpointing_example():
     - Loading the best checkpoint based on evaluation metrics
     - Custom save and eval strategy
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Configure checkpointing
@@ -299,9 +287,7 @@ def train_distributed_example():
     - Distributed data parallel setup
     - Using torch.distributed launcher
     """
-    parser = HfArgumentParser(
-        (RankerDotArguments, RankerDataArguments, RankerTrainingArguments)
-    )
+    parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Set distributed training parameters

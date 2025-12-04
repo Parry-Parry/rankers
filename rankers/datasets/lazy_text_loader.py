@@ -65,7 +65,7 @@ class LazyTextLoader:
             self._query_cache = {}
             for q in corpus.queries_iter():
                 # Handle both Corpus (returns dicts) and ir_datasets (returns namedtuples)
-                if hasattr(q, '_asdict'):
+                if hasattr(q, "_asdict"):
                     # ir_datasets namedtuple - convert to dict
                     q = q._asdict()
 

@@ -72,9 +72,7 @@ class TestEvaluationDatasetFromJsonl:
                 qrels=qrels_df,
             )
 
-            dataset = EvaluationDataset.from_jsonl(
-                jsonl_file, corpus, relevance_label=3
-            )
+            dataset = EvaluationDataset.from_jsonl(jsonl_file, corpus, relevance_label=3)
 
             # All positive docs should have relevance_label=3
             assert (dataset.qrels["relevance"] == 3).all()
@@ -94,9 +92,7 @@ class TestEvaluationDatasetFromJsonl:
                 qrels=qrels_df,
             )
 
-            dataset = EvaluationDataset.from_jsonl(
-                jsonl_file, corpus, include_negatives=True
-            )
+            dataset = EvaluationDataset.from_jsonl(jsonl_file, corpus, include_negatives=True)
 
             # Data should include both positives and negatives
             assert "score" in dataset.data.columns
@@ -118,9 +114,7 @@ class TestEvaluationDatasetFromJsonl:
                 qrels=qrels_df,
             )
 
-            dataset = EvaluationDataset.from_jsonl(
-                jsonl_file, corpus, include_negatives=False
-            )
+            dataset = EvaluationDataset.from_jsonl(jsonl_file, corpus, include_negatives=False)
 
             # Data should include only positives
             # Should have only 5 rows (one per query)
@@ -272,15 +266,11 @@ class TestEvaluationDatasetCommon:
             )
 
             # With lazy loading
-            dataset_lazy = EvaluationDataset.from_jsonl(
-                jsonl_file, corpus, lazy_load_text=True
-            )
+            dataset_lazy = EvaluationDataset.from_jsonl(jsonl_file, corpus, lazy_load_text=True)
             assert dataset_lazy.lazy_load_text is True
 
             # Without lazy loading
-            dataset_eager = EvaluationDataset.from_jsonl(
-                jsonl_file, corpus, lazy_load_text=False
-            )
+            dataset_eager = EvaluationDataset.from_jsonl(jsonl_file, corpus, lazy_load_text=False)
             assert dataset_eager.lazy_load_text is False
         finally:
             cleanup_temp_files([jsonl_file])
@@ -322,9 +312,7 @@ class TestIDCasting:
         from pathlib import Path
 
         # Create JSONL with integer IDs
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             # Write records with integer IDs
             f.write(
@@ -381,9 +369,7 @@ class TestIDCasting:
         from pathlib import Path
 
         # Create JSONL with float IDs
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             f.write(
                 json.dumps(
@@ -407,9 +393,7 @@ class TestIDCasting:
             )
 
         try:
-            corpus_dict = create_synthetic_corpus(
-                num_docs=200, num_queries=10
-            )
+            corpus_dict = create_synthetic_corpus(num_docs=200, num_queries=10)
             # Map float IDs to string queries
             corpus_dict["queries"] = {
                 "1.5": "query 1",
@@ -427,10 +411,8 @@ class TestIDCasting:
             assert dataset is not None
             assert len(dataset.qrels) > 0
             # All IDs should be strings
-            assert all(isinstance(qid, str) for qid in dataset.qrels[
-                "query_id"])
-            assert all(isinstance(did, str) for did in dataset.qrels[
-                "doc_id"])
+            assert all(isinstance(qid, str) for qid in dataset.qrels["query_id"])
+            assert all(isinstance(did, str) for did in dataset.qrels["doc_id"])
         finally:
             Path(jsonl_file).unlink(missing_ok=True)
 
@@ -441,9 +423,7 @@ class TestIDCasting:
         from pathlib import Path
 
         # Create JSONL with string IDs
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             jsonl_file = f.name
             f.write(
                 json.dumps(

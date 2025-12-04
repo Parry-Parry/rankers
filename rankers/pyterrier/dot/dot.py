@@ -33,11 +33,7 @@ class DotTransformer(pt.Transformer):
     ) -> None:
         super().__init__()
         self.device = (
-            device
-            if device is not None
-            else "cuda"
-            if torch.cuda.is_available()
-            else "cpu"
+            device if device is not None else "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.model = model.eval().to(self.device)
         self.tokenizer = tokenizer
@@ -64,11 +60,7 @@ class DotTransformer(pt.Transformer):
         verbose: bool = False,
         **kwargs,
     ):
-        config = (
-            cls.cls_config.from_pretrained(model_name_or_path)
-            if config is None
-            else config
-        )
+        config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
         config.pooling_type = pooling
         pooler = (
             None
@@ -78,9 +70,7 @@ class DotTransformer(pt.Transformer):
         model_d = (
             None
             if config.model_tied
-            else cls.cls_architecture.from_pretrained(
-                model_name_or_path + "/model_d", **kwargs
-            )
+            else cls.cls_architecture.from_pretrained(model_name_or_path + "/model_d", **kwargs)
         )
         model_q = cls.cls_architecture.from_pretrained(model_name_or_path, **kwargs)
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -204,9 +194,7 @@ class BiQuerymodel(pt.Transformer):
         self.batch_size = batch_size if batch_size is not None else bi_model.batch_size
 
     def encode(self, texts, batch_size=None) -> np.array:
-        return self.bi_model.encode_queries(
-            texts, batch_size=batch_size or self.batch_size
-        )
+        return self.bi_model.encode_queries(texts, batch_size=batch_size or self.batch_size)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         assert all(c in inp.columns for c in ["query"])
@@ -222,18 +210,14 @@ class BiQuerymodel(pt.Transformer):
 
 
 class BiDocmodel(pt.Transformer):
-    def __init__(
-        self, bi_model: DotTransformer, verbose=None, batch_size=None, text_field=None
-    ):
+    def __init__(self, bi_model: DotTransformer, verbose=None, batch_size=None, text_field=None):
         self.bi_model = bi_model
         self.verbose = verbose if verbose is not None else bi_model.verbose
         self.batch_size = batch_size if batch_size is not None else bi_model.batch_size
         self.text_field = text_field if text_field is not None else bi_model.text_field
 
     def encode(self, texts, batch_size=None) -> np.array:
-        return self.bi_model.encode_docs(
-            texts, batch_size=batch_size or self.batch_size
-        )
+        return self.bi_model.encode_docs(texts, batch_size=batch_size or self.batch_size)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         assert all(c in inp.columns for c in [self.text_field])
@@ -247,9 +231,7 @@ class BiDocmodel(pt.Transformer):
 
 
 class BiScorer(pt.Transformer):
-    def __init__(
-        self, bi_model: DotTransformer, verbose=None, batch_size=None, text_field=None
-    ):
+    def __init__(self, bi_model: DotTransformer, verbose=None, batch_size=None, text_field=None):
         self.bi_model = bi_model
         self.verbose = verbose if verbose is not None else bi_model.verbose
         self.batch_size = batch_size if batch_size is not None else bi_model.batch_size
@@ -261,15 +243,15 @@ class BiScorer(pt.Transformer):
         if "query_vec" in inp.columns:
             query_vec = inp["query_vec"]
         else:
-            query_vec = self.bi_model.query_model(
-                batch_size=self.batch_size, verbose=self.verbose
-            )(inp)["query_vec"]
+            query_vec = self.bi_model.query_model(batch_size=self.batch_size, verbose=self.verbose)(
+                inp
+            )["query_vec"]
         if "doc_vec" in inp.columns:
             doc_vec = inp["doc_vec"]
         else:
-            doc_vec = self.bi_model.doc_model(
-                batch_size=self.batch_size, verbose=self.verbose
-            )(inp)["doc_vec"]
+            doc_vec = self.bi_model.doc_model(batch_size=self.batch_size, verbose=self.verbose)(
+                inp
+            )["doc_vec"]
             if self.bi_model.config.pooling_type == "late_interaction":
                 scores = doc_vec @ query_vec.permute(0, 2, 1)
                 scores = scores.max(1).values
