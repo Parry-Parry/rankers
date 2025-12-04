@@ -252,10 +252,12 @@ class Dot(Ranker):
 
             self.transformer_class = DotTransformer
 
-    def prepare_outputs(self, query_reps, docs_batch_reps, labels=None):
+    def prepare_outputs(self, query_reps, docs_batch_reps, labels=None, group_size=-1):
+        if group_size == -1:
+            group_size = 1
         batch_size = query_reps.size(0)
         emb_q = query_reps.reshape(batch_size, 1, -1)
-        emb_d = docs_batch_reps.reshape(batch_size, self.config.group_size, -1)
+        emb_d = docs_batch_reps.reshape(batch_size, group_size, -1)
         if self.pooling_type == "late_interaction":
             pred = emb_q @ emb_d.permute(0, 2, 1)
             pred = pred.max(1).values
@@ -276,7 +278,7 @@ class Dot(Ranker):
             inbatch_pred = None
 
         if labels is not None:
-            labels = labels.reshape(batch_size, self.config.group_size)
+            labels = labels.reshape(batch_size, group_size)
 
         return pred, labels, inbatch_pred
 
@@ -292,7 +294,7 @@ class Dot(Ranker):
     def _encode_q(self, **text):
         return self.pooling(self.model(**text).last_hidden_state)
 
-    def forward(self, loss=None, queries=None, docs_batch=None, labels=None):
+    def forward(self, loss=None, queries=None, docs_batch=None, labels=None, group_size=-1):
         """Forward pass computing ranking loss.
 
         Encodes queries and documents separately, computes dot-product scores, and
@@ -303,6 +305,7 @@ class Dot(Ranker):
             queries (dict, optional): Tokenized query inputs (input_ids, attention_mask, etc.).
             docs_batch (dict, optional): Tokenized document inputs.
             labels (torch.Tensor, optional): Relevance labels.
+            group_size (int, optional): Number of documents per query in the batch.
 
         Returns:
             tuple: Contains:
@@ -328,7 +331,9 @@ class Dot(Ranker):
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
 
-        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        pred, labels, inbatch_pred = self.prepare_outputs(
+            query_reps, docs_batch_reps, labels, group_size=group_size
+        )
         inbatch_loss = (
             self.inbatch_loss_fn(
                 inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)
@@ -364,12 +369,12 @@ class Dot(Ranker):
             The document encoder is saved to model_dir/model_d if not tied.
             The pooler is saved to model_dir/pooler if used.
         """
-        self.config.save_pretrained(model_dir)
         self.model.save_pretrained(model_dir)
         if not self.config.model_tied:
             self.model_d.save_pretrained(model_dir + "/model_d")
         if self.config.use_pooler:
             self.pooler.save_pretrained(model_dir + "/pooler")
+        self.config.save_pretrained(model_dir)
         self.tokenizer.save_pretrained(model_dir)
 
     def load_state_dict(self, model_dir):

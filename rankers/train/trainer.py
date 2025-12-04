@@ -147,7 +147,6 @@ class RankerTrainer(Trainer):
         # Only set tokenizer if data_collator has one
         if hasattr(self.data_collator, "tokenizer"):
             self.tokenizer = self.data_collator.tokenizer
-        self.model.config.group_size = self.args.group_size
 
     def compute_loss(
         self,
@@ -156,7 +155,7 @@ class RankerTrainer(Trainer):
         return_outputs=False,
         **kwargs,  # handle new arguments
     ):
-        outputs = model(self.loss, **inputs)
+        outputs = model(self.loss, **inputs, group_size=self.args.group_size)
         # Save past state if it exists
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
