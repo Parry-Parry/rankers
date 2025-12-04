@@ -2,6 +2,9 @@
 
 import tempfile
 
+import pytest
+import torch
+
 from rankers.train.training_arguments import RankerTrainingArguments
 
 
@@ -106,6 +109,7 @@ class TestRankerTrainingArguments:
             assert args.num_train_epochs == 3
             assert args.per_device_train_batch_size == 32
 
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required for fp16")
     def test_fp16_config(self):
         """Test fp16 precision configuration."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -115,6 +119,7 @@ class TestRankerTrainingArguments:
             )
             assert args.fp16 is True
 
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required for bf16")
     def test_bf16_config(self):
         """Test bf16 precision configuration."""
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -47,6 +47,8 @@ class RankerTrainingArguments(TrainingArguments):
     regularization_warmup_steps: Optional[int] = field(
         default=1000, metadata={"help": "Number of steps before regularization starts"}
     )
+    fp16: bool = field(default=False, metadata={"help": "Use fp16 mixed precision training"})
+    bf16: bool = field(default=False, metadata={"help": "Use bf16 mixed precision training"})
 
     def __post_init__(self):
         super().__post_init__()
