@@ -129,7 +129,7 @@ class EvaluationDataset(Dataset):
 
         # Load qrels if not already built from JSONL
         if not hasattr(self, "qrels"):
-            # Corpus qrels_iter always returns dicts
+            # qrels_iter returns dicts (Corpus) or namedtuples (ir_datasets) - pandas handles both
             qrels_list = list(self.corpus.qrels_iter())
             if qrels_list:
                 self.qrels = pd.DataFrame(qrels_list)

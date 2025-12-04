@@ -64,7 +64,12 @@ class LazyTextLoader:
             # For queries, try to build from iterator since most corpora don't have query store
             self._query_cache = {}
             for q in corpus.queries_iter():
-                # queries_iter always returns dicts
+                # Handle both Corpus (returns dicts) and ir_datasets (returns namedtuples)
+                if hasattr(q, '_asdict'):
+                    # ir_datasets namedtuple - convert to dict
+                    q = q._asdict()
+
+                # Now q is always a dict
                 qid = q.get("query_id") or q.get("qid")
                 text = q.get("text")
 
