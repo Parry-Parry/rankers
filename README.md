@@ -1,6 +1,6 @@
 # Rankers
 
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](./LICENSE)
 [![Transformers](https://img.shields.io/badge/Transformers-Compatible-orange)](https://huggingface.co/transformers/)
 [![PyTerrier](https://img.shields.io/badge/PyTerrier-Compatible-orange)](https://github.com/terrier-org/pyterrier)
