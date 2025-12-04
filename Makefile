@@ -23,8 +23,7 @@ help:
 install:
 	@echo "Installing package and dependencies..."
 	python -m pip install --upgrade pip
-	pip install ruff pytest
-	pip install -e ".[docs]"
+	pip install -e ".[dev,docs]"
 	@echo "✓ Installation complete"
 
 # Linting (read-only check - matches python-package.yml)
