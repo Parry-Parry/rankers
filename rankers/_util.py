@@ -15,8 +15,12 @@ import logging
 from collections import defaultdict
 from typing import Any, Optional, Union
 
-import ir_datasets as irds
 import pandas as pd
+
+from ._optional import is_ir_datasets_available
+
+if is_ir_datasets_available():
+    import ir_datasets as irds
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +154,13 @@ def get_teacher_scores(
         for column in ["query", "text"]:
             assert column in corpus.columns, f"{column} not found in corpus"
     if ir_dataset:
+        if not is_ir_datasets_available():
+            raise ImportError(
+                "ir_datasets is required for this function. "
+                "Install it with: pip install ir-datasets"
+            )
+        import ir_datasets as irds
+
         dataset = irds.load(ir_dataset)
         docs = pd.DataFrame(dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
         queries = pd.DataFrame(dataset.queries_iter()).set_index("query_id")["text"].to_dict()
@@ -171,7 +182,7 @@ def get_teacher_scores(
     return lookup
 
 
-def initialise_irds_eval(dataset: irds.Dataset):
+def initialise_irds_eval(dataset: "irds.Dataset"):
     """Initialize evaluation DataFrame from an ir_datasets Dataset.
 
     Converts an ir_datasets Dataset's qrels into a pivoted DataFrame format
