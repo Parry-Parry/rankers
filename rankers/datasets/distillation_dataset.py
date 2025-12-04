@@ -315,7 +315,7 @@ class DistillationDataset(Dataset):
     def __getitem__(self, idx: int):
         item = self._get_line_by_index(idx)
 
-        query_id, query_text, ranked_id, ranked_text = self._get(item)
+        _, query_text, ranked_id, ranked_text = self._get(item)
 
         # Generate scores based on rank position
         scores = [self.score_function(rank) for rank in range(len(ranked_text))]

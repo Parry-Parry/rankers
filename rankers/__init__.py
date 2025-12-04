@@ -71,10 +71,16 @@ _import_structure = {
     "train.training_arguments": ["RankerTrainingArguments"],
     "datasets": [
         "Corpus",
+        "LazyTextLoader",
         "TrainingDataset",
         "EvaluationDataset",
+        "DistillationDataset",
         "DotDataCollator",
         "CatDataCollator",
+        "PairDataCollator",
+        "PromptDataCollator",
+        "PairPromptDataCollator",
+        "ListwisePromptDataCollator",
     ],
     "modelling.cat": [],
     "modelling.dot": [],
@@ -110,8 +116,14 @@ if TYPE_CHECKING:
     from .datasets import (
         CatDataCollator,
         Corpus,
+        DistillationDataset,
         DotDataCollator,
         EvaluationDataset,
+        LazyTextLoader,
+        ListwisePromptDataCollator,
+        PairDataCollator,
+        PairPromptDataCollator,
+        PromptDataCollator,
         TrainingDataset,
     )
 

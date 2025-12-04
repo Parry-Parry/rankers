@@ -46,6 +46,7 @@ if is_torch_available():
         "CatDataCollator",
         "PairDataCollator",
         "PromptDataCollator",
+        "PairPromptDataCollator",
         "ListwisePromptDataCollator",
     ]
 
@@ -69,6 +70,9 @@ if TYPE_CHECKING:
         )
         from .loader import (
             PairDataCollator as PairDataCollator,
+        )
+        from .loader import (
+            PairPromptDataCollator as PairPromptDataCollator,
         )
         from .loader import (
             PromptDataCollator as PromptDataCollator,
