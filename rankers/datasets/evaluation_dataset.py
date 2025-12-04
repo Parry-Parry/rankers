@@ -129,14 +129,8 @@ class EvaluationDataset(Dataset):
 
         # Load qrels if not already built from JSONL
         if not hasattr(self, "qrels"):
-            # Convert SimpleNamespace objects to dicts for DataFrame construction
-            qrels_list = []
-            for qrel in self.corpus.qrels_iter():
-                if isinstance(qrel, dict):
-                    qrels_list.append(qrel)
-                else:
-                    # Convert SimpleNamespace to dict
-                    qrels_list.append(vars(qrel))
+            # Corpus qrels_iter always returns dicts
+            qrels_list = list(self.corpus.qrels_iter())
             if qrels_list:
                 self.qrels = pd.DataFrame(qrels_list)
             else:

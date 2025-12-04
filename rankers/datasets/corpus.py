@@ -101,9 +101,7 @@ class Corpus:
 
     def qrels_iter(self):
         for queryid, docid, relevance in self.qrels.itertuples(index=False):
-            yield SimpleNamespace(
-                query_id=queryid, doc_id=docid, relevance=relevance
-            )
+            yield {"query_id": queryid, "doc_id": docid, "relevance": relevance}
     def __call__(self, maybe_idx):
         if isinstance(maybe_idx, int):
             return self.get(maybe_idx)

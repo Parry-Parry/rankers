@@ -64,13 +64,9 @@ class LazyTextLoader:
             # For queries, try to build from iterator since most corpora don't have query store
             self._query_cache = {}
             for q in corpus.queries_iter():
-                # Handle both dict and object formats
-                if isinstance(q, dict):
-                    qid = q.get("query_id") or q.get("qid")
-                    text = q.get("text")
-                else:
-                    qid = getattr(q, "query_id", None) or getattr(q, "qid", None)
-                    text = getattr(q, "text", None)
+                # queries_iter always returns dicts
+                qid = q.get("query_id") or q.get("qid")
+                text = q.get("text")
 
                 if not qid:
                     raise KeyError("Query record missing both 'query_id' and 'qid' fields")
