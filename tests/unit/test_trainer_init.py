@@ -68,16 +68,6 @@ class TestRankerTrainerInit:
             trainer = RankerTrainer(model=model, args=args)
             assert trainer.loss is None
 
-    def test_init_sets_group_size_in_config(self):
-        """Test that group_size is properly set in model config."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = RankerTrainingArguments(output_dir=tmpdir, group_size=8)
-            model = TinyDotModel()
-
-            trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
-
-            assert model.config.group_size == 8
-
     def test_init_requires_output_dir(self):
         """Test that initialization requires output directory."""
         model = TinyDotModel()

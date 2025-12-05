@@ -47,19 +47,6 @@ class TestRankerTrainerMetrics:
             assert args.eval_ir_metrics is not None
             assert len(args.eval_ir_metrics) == 2
 
-    def test_trainer_model_config_group_size(self):
-        """Test that model config group size is set from args."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = RankerTrainingArguments(
-                output_dir=tmpdir,
-                group_size=4,
-            )
-            model = TinyDotModel()
-
-            trainer = RankerTrainer(model=model, args=args, loss_fn="margin_mse")
-
-            assert model.config.group_size == 4
-
     def test_trainer_default_metrics_list(self):
         """Test that default eval metrics list is empty."""
         with tempfile.TemporaryDirectory() as tmpdir:

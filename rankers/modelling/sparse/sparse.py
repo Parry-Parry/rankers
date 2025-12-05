@@ -219,7 +219,7 @@ class Sparse(Dot):
     def _encode_q(self, **text):
         return self.query_processing(self.model(**text), text["attention_mask"])
 
-    def forward(self, loss=None, queries=None, docs_batch=None, labels=None):
+    def forward(self, loss=None, queries=None, docs_batch=None, labels=None, group_size=-1):
         """Compute the loss given (queries, docs, labels)"""
         queries = (
             {k: v.to(self.model.device) for k, v in queries.items()}
@@ -236,7 +236,9 @@ class Sparse(Dot):
         query_reps = self._encode_q(**queries) if queries is not None else None
         docs_batch_reps = self._encode_d(**docs_batch) if docs_batch is not None else None
 
-        pred, labels, inbatch_pred = self.prepare_outputs(query_reps, docs_batch_reps, labels)
+        pred, labels, inbatch_pred = self.prepare_outputs(
+            query_reps, docs_batch_reps, labels, group_size=group_size
+        )
         inbatch_loss = (
             self.inbatch_loss_fn(
                 inbatch_pred, torch.eye(inbatch_pred.shape[0]).to(inbatch_pred.device)
