@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rankers"
-version = "0.0.6"
+version = "0.1.0"
 dependencies = [
   "torch",
   "transformers",
@@ -14,7 +14,7 @@ dependencies = [
   "pandas",
   "more_itertools",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
   {name = "Andrew Parry", email = "0andrewparry@gmail.com"}
 ]

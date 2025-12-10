@@ -36,7 +36,7 @@ from transformers.utils import _LazyModule
 
 from ._optional import is_pyterrier_available, is_torch_available
 
-__version__ = "0.0.6"
+__version__ = "0.1.0"
 
 if os.getenv("RANKERS_EAGER_IMPORTS") == "1":
     # Import the subpackages you normally expose lazily
