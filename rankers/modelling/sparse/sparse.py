@@ -219,7 +219,7 @@ class Sparse(Dot):
     def _encode_q(self, **text):
         return self.query_processing(self.model(**text), text["attention_mask"])
 
-    def forward(self, loss=None, queries=None, docs_batch=None, labels=None, group_size=-1):
+    def forward(self, loss=None, queries=None, docs_batch=None, labels=None, group_size=2):
         """Compute the loss given (queries, docs, labels)"""
         queries = (
             {k: v.to(self.model.device) for k, v in queries.items()}

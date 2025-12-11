@@ -49,9 +49,9 @@ def train_dot_basic_example():
     model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
 
     # Load training dataset
+    # group_size is inferred from the dataset's first entry
     dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
         corpus=data_args.ir_dataset,
         no_positive=data_args.no_positive,
         teacher_file=data_args.teacher_file,
@@ -98,9 +98,9 @@ def train_with_custom_loss_example():
     )
     model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
 
+    # group_size is inferred from the dataset's first entry
     dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
     )
 
     collate_fn = DotDataCollator(model.tokenizer)
@@ -133,9 +133,9 @@ def train_cat_example():
     # Load Cat model
     model = Cat.from_pretrained(model_args.model_name_or_path)
 
+    # group_size is inferred from the dataset's first entry
     dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
         corpus=data_args.ir_dataset,
     )
 
@@ -199,15 +199,14 @@ def train_with_regularization_example():
     Training with custom group size and regularization loss.
 
     This demonstrates:
-    - Custom group size for triplet sampling
+    - Explicit group size for training (overriding dataset inference)
     - Adding regularization loss (e.g., FLOPs regularization)
     - Fine-tuning pre-trained models
     """
     parser = HfArgumentParser((RankerDotArguments, RankerDataArguments, RankerTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    # Set group size and regularization
-    training_args.group_size = 8  # 1 positive + 7 negatives per query
+    # Set regularization
     training_args.regularization = "flops_reg"
     training_args.regularization_weight = 0.01
 
@@ -217,9 +216,10 @@ def train_with_regularization_example():
     )
     model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
 
+    # Specify group_size=8 to use 1 positive + 7 negatives per query
     dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
+        group_size=8,
     )
 
     collate_fn = DotDataCollator(model.tokenizer)

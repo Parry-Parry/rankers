@@ -126,7 +126,7 @@ class Cat(Ranker):
         """
         return super().from_pretrained(model_name_or_path, config, num_labels=num_labels, **kwargs)
 
-    def prepare_outputs(self, logits, labels=None, group_size=-1):
+    def prepare_outputs(self, logits, labels=None, group_size=2):
         """Prepare model outputs for loss computation.
 
         Applies log-softmax to classification logits and extracts relevance scores.

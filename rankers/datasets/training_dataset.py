@@ -254,6 +254,14 @@ class TrainingDataset(Dataset):
 
         self.multi_negatives = isinstance(first_entry[self.negative_id_key], list)
         total_negs = len(first_entry[self.negative_id_key]) if self.multi_negatives else 1
+
+        # Infer group_size from first entry if not explicitly set
+        if self.group_size == -1:
+            # group_size = 1 positive + total_negs (unless no_positive)
+            inferred_group_size = (total_negs + 1) if not self.no_positive else total_negs
+            self.group_size = inferred_group_size
+            self.n_neg = total_negs
+
         # If n_neg is -1, use all negatives; otherwise validate requested amount
         if self.n_neg > 0:
             assert self.n_neg <= total_negs, (

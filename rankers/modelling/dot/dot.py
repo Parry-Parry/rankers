@@ -252,7 +252,7 @@ class Dot(Ranker):
 
             self.transformer_class = DotTransformer
 
-    def prepare_outputs(self, query_reps, docs_batch_reps, labels=None, group_size=-1):
+    def prepare_outputs(self, query_reps, docs_batch_reps, labels=None, group_size=2):
         if group_size == -1:
             group_size = 1
         batch_size = query_reps.size(0)
@@ -294,7 +294,7 @@ class Dot(Ranker):
     def _encode_q(self, **text):
         return self.pooling(self.model(**text).last_hidden_state)
 
-    def forward(self, loss=None, queries=None, docs_batch=None, labels=None, group_size=-1):
+    def forward(self, loss=None, queries=None, docs_batch=None, labels=None, group_size=2):
         """Forward pass computing ranking loss.
 
         Encodes queries and documents separately, computes dot-product scores, and

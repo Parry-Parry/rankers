@@ -59,7 +59,7 @@ class Ranker(PreTrainedModel):
         self.tokenizer = tokenizer
 
     @abstractmethod
-    def prepare_outputs(self, logits, labels=None, group_size=-1):
+    def prepare_outputs(self, logits, labels=None, group_size=2):
         """Prepare model outputs for loss computation.
 
         This abstract method must be implemented by subclasses to transform raw model
@@ -207,7 +207,7 @@ class Ranker(PreTrainedModel):
             device=device,
         )
 
-    def forward(self, loss, sequences, labels=None, group_size=-1):
+    def forward(self, loss, sequences, labels=None, group_size=2):
         """Forward pass computing loss for a batch.
 
         Processes input sequences through the model and computes loss using the provided
