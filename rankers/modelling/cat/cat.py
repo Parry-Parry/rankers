@@ -126,7 +126,7 @@ class Cat(Ranker):
         """
         return super().from_pretrained(model_name_or_path, config, num_labels=num_labels, **kwargs)
 
-    def prepare_outputs(self, logits, labels=None):
+    def prepare_outputs(self, logits, labels=None, group_size=2):
         """Prepare model outputs for loss computation.
 
         Applies log-softmax to classification logits and extracts relevance scores.
@@ -145,8 +145,10 @@ class Cat(Ranker):
             Assumes binary classification with shape (batch_size * group_size, 2).
             Extracts positive class probabilities (index 1).
         """
-        return F.log_softmax(logits.reshape(-1, self.config.group_size, 2), dim=-1)[:, :, 1], (
-            labels.view(-1, self.config.group_size) if labels is not None else None
+        if group_size == -1:
+            group_size = 1
+        return F.log_softmax(logits.reshape(-1, group_size, 2), dim=-1)[:, :, 1], (
+            labels.view(-1, group_size) if labels is not None else None
         )
 
 

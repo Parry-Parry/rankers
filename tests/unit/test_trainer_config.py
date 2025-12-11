@@ -11,18 +11,6 @@ from rankers.train.training_arguments import RankerTrainingArguments
 class TestRankerTrainingArguments:
     """Tests for RankerTrainingArguments configuration."""
 
-    def test_default_group_size(self):
-        """Test default group size."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = RankerTrainingArguments(output_dir=tmpdir)
-            assert args.group_size == 2
-
-    def test_custom_group_size(self):
-        """Test custom group size."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            args = RankerTrainingArguments(output_dir=tmpdir, group_size=8)
-            assert args.group_size == 8
-
     def test_eval_strategy_steps(self):
         """Test evaluation strategy with steps."""
         with tempfile.TemporaryDirectory() as tmpdir:

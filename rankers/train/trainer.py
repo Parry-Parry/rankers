@@ -117,6 +117,11 @@ class RankerTrainer(Trainer):
         else:
             self.loss = loss_fn
 
+        # Infer group_size from train_dataset if available
+        self.group_size = 2  # default
+        if self.train_dataset is not None and hasattr(self.train_dataset, "group_size"):
+            self.group_size = self.train_dataset.group_size
+
         self.regularize_loss = False
         if self.args.regularization is not None:
             # if regularization is callable, use it directly
@@ -147,7 +152,6 @@ class RankerTrainer(Trainer):
         # Only set tokenizer if data_collator has one
         if hasattr(self.data_collator, "tokenizer"):
             self.tokenizer = self.data_collator.tokenizer
-        self.model.config.group_size = self.args.group_size
 
     def compute_loss(
         self,
@@ -156,7 +160,7 @@ class RankerTrainer(Trainer):
         return_outputs=False,
         **kwargs,  # handle new arguments
     ):
-        outputs = model(self.loss, **inputs)
+        outputs = model(self.loss, **inputs, group_size=self.group_size)
         # Save past state if it exists
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]

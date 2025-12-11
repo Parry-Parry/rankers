@@ -66,9 +66,9 @@ def train_with_lora_basic_example():
     model.print_trainable_parameters()
 
     # Load dataset
+    # group_size is inferred from the dataset's first entry
     dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
     )
 
     collate_fn = DotDataCollator(model.tokenizer)

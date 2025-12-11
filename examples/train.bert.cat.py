@@ -24,9 +24,9 @@ def main():
 
     model = Cat.from_pretrained(model_args.model_name_or_path)
 
+    # group_size is inferred from the dataset's first entry
     dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
         corpus=data_args.ir_dataset,
         no_positive=data_args.no_positive,
         teacher_file=data_args.teacher_file,
