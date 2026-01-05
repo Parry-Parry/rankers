@@ -243,6 +243,12 @@ class DistillationDataset(Dataset):
             )
 
         total_docs = len(ranked_docs)
+
+        # Infer group_size from first entry if not explicitly set
+        if self.group_size == -1:
+            self.group_size = total_docs
+            self.n_docs = total_docs
+
         # If n_docs is -1, use all documents; otherwise validate requested amount
         if self.n_docs > 0:
             assert self.n_docs <= total_docs, (

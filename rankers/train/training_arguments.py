@@ -31,7 +31,6 @@ class RankerTrainingArguments(TrainingArguments):
     save_total_limit: Optional[int] = field(
         default=10, metadata={"help": "Limit the total amount of checkpoints."}
     )
-    group_size: Optional[int] = field(default=2, metadata={"help": "Number of documents per query"})
     eval_metrics: Optional[List[str]] = field(
         default_factory=lambda: [], metadata={"help": "Evaluation metrics"}
     )
@@ -55,7 +54,6 @@ class RankerTrainingArguments(TrainingArguments):
 
         if self.wandb_project is not None:
             os.environ["WANDB_PROJECT"] = self.wandb_project
-        assert self.group_size > 0, "Group size must be greater than 0"
 
         self.eval_ir_metrics = (
             [parse_ir_measure(metric) for metric in self.eval_metrics]

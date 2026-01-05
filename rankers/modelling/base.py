@@ -59,7 +59,7 @@ class Ranker(PreTrainedModel):
         self.tokenizer = tokenizer
 
     @abstractmethod
-    def prepare_outputs(self, logits, labels=None):
+    def prepare_outputs(self, logits, labels=None, group_size=2):
         """Prepare model outputs for loss computation.
 
         This abstract method must be implemented by subclasses to transform raw model
@@ -154,8 +154,8 @@ class Ranker(PreTrainedModel):
                 model.save_pretrained("./my_ranker")
                 # Can later be loaded with: Dot.from_pretrained("./my_ranker")
         """
-        self.config.save_pretrained(model_dir)
         self.model.save_pretrained(model_dir)
+        self.config.save_pretrained(model_dir)
         self.tokenizer.save_pretrained(model_dir)
 
     def load_state_dict(self, model_dir):
@@ -207,7 +207,7 @@ class Ranker(PreTrainedModel):
             device=device,
         )
 
-    def forward(self, loss, sequences, labels=None):
+    def forward(self, loss, sequences, labels=None, group_size=2):
         """Forward pass computing loss for a batch.
 
         Processes input sequences through the model and computes loss using the provided
@@ -230,7 +230,7 @@ class Ranker(PreTrainedModel):
         sequences = {k: v.to(self.model.device) for k, v in sequences.items()}
         labels = labels.to(self.model.device) if labels is not None else None
         logits = self.model(**sequences).logits
-        pred, labels = self.prepare_outputs(logits, labels)
+        pred, labels = self.prepare_outputs(logits, labels, group_size=group_size)
         loss_value = loss(pred) if labels is None else loss(pred, labels)
         if type(loss_value) is tuple:
             loss_value, to_log = loss_value  # unpack tuple

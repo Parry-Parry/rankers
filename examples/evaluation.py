@@ -53,9 +53,9 @@ def evaluate_with_ir_metrics_example():
     model = Dot.from_pretrained(model_args.model_name_or_path, config=model_config)
 
     # Load training dataset
+    # group_size is inferred from the dataset's first entry
     train_dataset = TrainingDataset(
         data_args.training_dataset_file,
-        group_size=training_args.group_size,
     )
 
     # Load evaluation dataset from TREC format
