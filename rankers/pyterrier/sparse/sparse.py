@@ -3,6 +3,7 @@ import itertools
 import re
 import string
 from contextlib import ExitStack
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -62,8 +63,8 @@ class SparseTransformer(pt.Transformer):
         cls,
         model,
         tokenizer,
-        device=None,
         batch_size=32,
+        device: Union[str, torch.device, None] = None,
         text_field="text",
         fp16=False,
         topk=None,

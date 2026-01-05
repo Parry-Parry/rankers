@@ -64,11 +64,12 @@ class CatTransformer(pt.Transformer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 64,
+        device: Union[str, torch.device, None] = None,
         text_field: str = "text",
         verbose: bool = False,
     ):
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
+        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         scores = []
@@ -121,11 +122,12 @@ class PairTransformer(pt.Transformer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 64,
+        device: Union[str, torch.device, None] = None,
         text_field: str = "text",
         verbose: bool = False,
     ):
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
+        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     @classmethod
     def from_pretrained(
