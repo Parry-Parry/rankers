@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Union
 
 import numpy as np
@@ -72,6 +73,7 @@ class Seq2SeqTransformer(pt.Transformer):
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         config = AutoConfig.from_pretrained(model_name_or_path)
+        
         return cls(
             model,
             tokenizer,
@@ -89,9 +91,18 @@ class Seq2SeqTransformer(pt.Transformer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 64,
+        device: Union[str, torch.device] = None,
         text_field: str = "text",
         verbose: bool = False,
     ):
+        model_copy = deepcopy(model)
+
+        if device is None:
+            try:
+                device = next(model_copy.parameters()).device
+            except StopIteration:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+
         config = model.config
         return cls(
             model,

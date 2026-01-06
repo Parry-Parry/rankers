@@ -1,8 +1,10 @@
 import base64
+from copy import deepcopy
 import itertools
 import re
 import string
 from contextlib import ExitStack
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -62,12 +64,20 @@ class SparseTransformer(pt.Transformer):
         cls,
         model,
         tokenizer,
-        device=None,
         batch_size=32,
+        device: Union[str, torch.device] = None,
         text_field="text",
         fp16=False,
         topk=None,
     ):
+        model_copy = deepcopy(model)
+
+        if device is None:
+            try:
+                device = next(model_copy.parameters()).device
+            except StopIteration:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+
         return cls(model, tokenizer, device, batch_size, text_field, fp16, topk)
 
     def encode_queries(self, texts, out_fmt="dict", topk=None):
