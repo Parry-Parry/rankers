@@ -65,11 +65,20 @@ class CatTransformer(pt.Transformer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 64,
+        device: Union[str, torch.device] = None,
         text_field: str = "text",
         verbose: bool = False,
     ):
         config = model.config
-        return cls(model, tokenizer, config, batch_size, text_field, model.device, verbose)
+        model_copy = deepcopy(model)
+
+        if device is None:
+            try:
+                device = next(model_copy.parameters()).device
+            except StopIteration:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         scores = []
