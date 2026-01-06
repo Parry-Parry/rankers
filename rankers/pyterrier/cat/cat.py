@@ -78,7 +78,7 @@ class CatTransformer(pt.Transformer):
             except StopIteration:
                 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
+        return cls(model_copy, tokenizer, config, batch_size, text_field, device, verbose)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
         scores = []
@@ -91,9 +91,9 @@ class CatTransformer(pt.Transformer):
                 inps = self.tokenizer(
                     queries, texts, return_tensors="pt", padding=True, truncation=True
                 )
-                inps = {k: v.to(self.model.device) for k, v in inps.items()}
+                inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(
-                    F.log_softmax(self.model(**inps).logits, dim=-1)[:, 1].cpu().detach().numpy()
+                    F.log_softmax(self.model.model(**inps).logits, dim=-1)[:, 1].cpu().detach().numpy()
                 )
         res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(["qid", "score"], ascending=[True, False])
@@ -144,7 +144,7 @@ class PairTransformer(pt.Transformer):
             except StopIteration:
                 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
+        return cls(model_copy, tokenizer, config, batch_size, text_field, device, verbose)
 
     @classmethod
     def from_pretrained(
@@ -178,7 +178,7 @@ class PairTransformer(pt.Transformer):
                     queries, texts, return_tensors="pt", padding=True, truncation=True
                 )
                 inps = {k: v.to(self.device) for k, v in inps.items()}
-                scores.append(self.model(**inps).logits.cpu().detach().numpy())
+                scores.append(self.model.model(**inps).logits.cpu().detach().numpy())
         res = inp.assign(score=np.concatenate(scores))
         res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(["qid", "score"], ascending=[True, False])
