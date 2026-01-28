@@ -12,7 +12,11 @@ from tests.fixtures.data import (
     create_synthetic_qrels,
     create_synthetic_trec,
 )
-from tests.fixtures.models import TinyDotModel
+from tests.fixtures.models import (
+    TinyDotModel,
+    create_tiny_cat_ranker,
+    create_tiny_dot_ranker,
+)
 
 
 @pytest.fixture
@@ -79,6 +83,33 @@ def mock_eval_dataset():
         }
     )
     return dataset
+
+
+@pytest.fixture
+def tiny_cat_ranker():
+    """Provide a tiny Cat ranker for testing."""
+    return create_tiny_cat_ranker()
+
+
+@pytest.fixture
+def tiny_dot_ranker():
+    """Provide a tiny Dot ranker for testing."""
+    return create_tiny_dot_ranker()
+
+
+@pytest.fixture
+def sample_ranking_df():
+    """Provide a sample DataFrame for transform testing."""
+    import pandas as pd
+
+    return pd.DataFrame(
+        {
+            "qid": ["q1", "q1", "q2", "q2"],
+            "query": ["test query", "test query", "another query", "another query"],
+            "docno": ["d1", "d2", "d3", "d4"],
+            "text": ["doc one text", "doc two text", "doc three", "doc four"],
+        }
+    )
 
 
 def pytest_configure(config):

@@ -54,9 +54,14 @@ class CatTransformer(pt.Transformer):
         verbose: bool = False,
         **kwargs,
     ):
+        from ...modelling.cat import Cat
+
         config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
-        model = cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
+        raw_model = cls.cls_architecture.from_pretrained(
+            model_name_or_path, config=config, **kwargs
+        )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        model = Cat(raw_model, tokenizer, config)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     @classmethod
@@ -157,13 +162,16 @@ class PairTransformer(pt.Transformer):
         verbose: bool = False,
         **kwargs,
     ):
+        from ...modelling.cat import Cat
+
         config = cls.cls_config.from_pretrained(model_name_or_path) if config is None else config
-        model = (
+        raw_model = (
             cls.cls_architecture.from_pretrained(model_name_or_path, config=config, **kwargs)
             .cuda()
             .eval()
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        model = Cat(raw_model, tokenizer, config)
         return cls(model, tokenizer, config, batch_size, text_field, device, verbose)
 
     def transform(self, inp: pd.DataFrame) -> pd.DataFrame:
@@ -179,7 +187,6 @@ class PairTransformer(pt.Transformer):
                 )
                 inps = {k: v.to(self.device) for k, v in inps.items()}
                 scores.append(self.model.model(**inps).logits.cpu().detach().numpy())
-        res = inp.assign(score=np.concatenate(scores))
         res = inp.assign(score=np.concatenate(scores))
         res = res.sort_values(["qid", "score"], ascending=[True, False])
         return pt.model.add_ranks(res)

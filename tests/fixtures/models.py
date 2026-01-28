@@ -1,10 +1,13 @@
 """Fixtures for creating actual BERT models for testing."""
 
-from typing import Optional
-
 import torch
 import torch.nn as nn
-from transformers import BertConfig, BertModel
+from transformers import (
+    AutoTokenizer,
+    BertConfig,
+    BertForSequenceClassification,
+    BertModel,
+)
 
 
 def create_tiny_bert_model():
@@ -170,3 +173,70 @@ class PyTerrierTransformer:
             )
 
         return result_df[["qid", "docno", "score"]]
+
+
+def create_tiny_bert_config():
+    """Create a tiny BERT config for testing.
+
+    Uses vocab_size=30522 to match bert-base-uncased tokenizer.
+    """
+    return BertConfig(
+        vocab_size=30522,  # Match bert-base-uncased tokenizer
+        hidden_size=64,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=128,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=2,
+        initializer_range=0.02,
+        layer_norm_eps=1e-12,
+        pad_token_id=0,
+    )
+
+
+def create_tiny_bert_tokenizer():
+    """Create a tokenizer for testing.
+
+    Uses bert-base-uncased tokenizer which matches our config vocab_size.
+    """
+    return AutoTokenizer.from_pretrained("bert-base-uncased")
+
+
+def create_tiny_cat_ranker():
+    """Create a tiny Cat ranker for testing.
+
+    Returns:
+        Cat ranker with minimal BERT for sequence classification.
+    """
+    from rankers.modelling.cat.cat import Cat, CatConfig
+
+    bert_config = create_tiny_bert_config()
+    bert_config.num_labels = 2
+    raw_model = BertForSequenceClassification(bert_config)
+    tokenizer = create_tiny_bert_tokenizer()
+    cat_config = CatConfig()
+    cat_config.group_size = 2
+    return Cat(raw_model, tokenizer, cat_config)
+
+
+def create_tiny_dot_ranker():
+    """Create a tiny Dot ranker for testing.
+
+    Returns:
+        Dot ranker with minimal BERT encoder.
+    """
+    from rankers.modelling.dot import Dot, DotConfig
+
+    config = create_tiny_bert_config()
+    raw_model = BertModel(config)
+    tokenizer = create_tiny_bert_tokenizer()
+    dot_config = DotConfig(
+        model_name_or_path="tiny-bert",
+        pooling_type="cls",
+        model_tied=True,
+    )
+    dot_config.group_size = 2
+    return Dot(raw_model, tokenizer, dot_config)
